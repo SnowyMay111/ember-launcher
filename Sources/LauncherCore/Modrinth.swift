@@ -282,6 +282,7 @@ public final class ModrinthClient: Sendable {
         projectType: String = "mod",
         gameVersion: String? = nil,
         loader: String? = nil,
+        loaders: [String] = [],
         sortBy: String? = nil,
         limit: Int = 20,
         offset: Int = 0
@@ -296,6 +297,9 @@ public final class ModrinthClient: Sendable {
         }
         if let loader = loader, !loader.isEmpty {
             facets.append(["categories:\(loader)"])
+        }
+        if !loaders.isEmpty {
+            facets.append(loaders.map { "categories:\($0)" })
         }
         let facetsData = try JSONSerialization.data(withJSONObject: facets)
         let facetsString = String(data: facetsData, encoding: .utf8) ?? "[]"

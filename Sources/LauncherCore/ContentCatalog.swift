@@ -208,8 +208,7 @@ public final class ContentInstaller: Sendable {
             let matchingVersions = versions.filter { ver in
                 ver.loaders.isEmpty || ver.loaders.contains(where: { shaderLoaders.contains($0.lowercased()) })
             }
-            let chosenList = matchingVersions.isEmpty ? versions : matchingVersions
-            guard let version = chosenList.first(where: { $0.versionType.lowercased() == "release" }) ?? chosenList.first else {
+            guard let version = matchingVersions.first(where: { $0.versionType.lowercased() == "release" }) ?? matchingVersions.first else {
                 throw ModrinthError.noCompatibleVersion(project: idOrSlug, gameVersion: instance.minecraftVersion, loader: "iris")
             }
 
@@ -238,25 +237,31 @@ public final class ContentInstaller: Sendable {
         return try await modManager.install(project: "iris", into: instanceName)
     }
 
+    /// Loaders a modpack can ask for that the launcher can install.
+    public static let packLoaders = ["fabric", "forge", "neoforge"]
+
+    static func runnablePackVersions(_ versions: [ModrinthVersion]) -> [ModrinthVersion] {
+        versions.filter { version in
+            version.loaders.isEmpty || version.loaders.contains { packLoaders.contains($0.lowercased()) }
+        }
+    }
+
     /// Creates a new instance from a Modrinth .mrpack modpack.
     public func createInstance(
         fromModpack projectIdOrSlug: String,
         version: ModrinthVersion? = nil,
-        name: String? = nil
+        name: String? = nil,
+        gameVersion: String? = nil
     ) async throws -> ModpackCreationReport {
         let chosenVersion: ModrinthVersion
         if let version = version {
             chosenVersion = version
         } else {
-            let versions = try await client.versions(project: projectIdOrSlug)
+            let versions = Self.runnablePackVersions(try await client.versions(project: projectIdOrSlug, gameVersion: gameVersion))
             guard !versions.isEmpty else {
-                throw ContentError.notFound("No versions found for modpack '\(projectIdOrSlug)'")
+                throw ContentError.notFound("No version of modpack '\(projectIdOrSlug)' for \(gameVersion ?? "any Minecraft version") that this launcher can run")
             }
-            if let release = versions.first(where: { $0.versionType.lowercased() == "release" }) {
-                chosenVersion = release
-            } else {
-                chosenVersion = versions[0]
-            }
+            chosenVersion = versions.first(where: { $0.versionType.lowercased() == "release" }) ?? versions[0]
         }
 
         guard let primaryFile = chosenVersion.primaryFile else {
@@ -298,7 +303,8 @@ public final class ContentInstaller: Sendable {
     public func compatibility(
         project idOrSlug: String,
         kind: ContentKind,
-        instance instanceName: String
+        instance instanceName: String,
+        modpackGameVersion: String? = nil
     ) async throws -> ContentCompatibility {
         let instance = try store.load(name: instanceName)
         switch kind {
@@ -342,7 +348,7 @@ public final class ContentInstaller: Sendable {
             return versions.isEmpty ? .noRelease : .ready
 
         case .modpack:
-            let versions = try await client.versions(project: idOrSlug)
+            let versions = Self.runnablePackVersions(try await client.versions(project: idOrSlug, gameVersion: modpackGameVersion))
             return versions.isEmpty ? .noRelease : .ready
         }
     }

@@ -19,20 +19,15 @@ extension ModManager {
     /// with what is already installed. Deeper dependencies are not followed, so `needs` is a minimum.
     public func compatibility(project idOrSlug: String, instance name: String) async -> ModCompatibility {
         guard let instance = try? store.load(name: name) else { return .unknown }
+        let installed = ((try? list(instance: name)) ?? []).compactMap(\.record)
+        let installedIDs = Set(installed.map(\.projectId))
         let version: ModrinthVersion?
         do {
-            version = try await client.bestVersion(
-                project: idOrSlug,
-                gameVersion: instance.minecraftVersion,
-                loader: instance.loader.lowercased()
-            )
+            version = try await resolveVersion(project: idOrSlug, instance: instance, installed: installed)
         } catch {
             return .unknown
         }
         guard let version else { return .unavailable }
-
-        let installed = ((try? list(instance: name)) ?? []).compactMap(\.record)
-        let installedIDs = Set(installed.map(\.projectId))
 
         for dependency in version.dependencies where dependency.type == .incompatible {
             guard let id = dependency.projectId,

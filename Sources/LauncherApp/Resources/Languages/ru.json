@@ -319,5 +319,11 @@
   "The update's signature is not valid.": "Подпись обновления недействительна.",
   "Move Voxel to the Applications folder first, then update.": "Сначала перенесите Voxel в папку «Программы», потом обновляйте.",
   "Voxel is not running as an app, so it can't update itself.": "Voxel запущен не как приложение, поэтому обновить себя не сможет.",
-  "Couldn't start the update installer.": "Не удалось запустить установку обновления."
+  "Couldn't start the update installer.": "Не удалось запустить установку обновления.",
+  "Show incompatible": "Показать несовместимые",
+  "%d hidden": "Скрыто: %d",
+  "Any version": "Любая версия",
+  "Current instance": "Как у сборки",
+  "Checking compatibility…": "Проверяю совместимость…",
+  "Nothing fits this instance. Turn on Show incompatible to see the rest.": "Ничего не подходит этой сборке. Включите «Показать несовместимые», чтобы увидеть остальное."
 }

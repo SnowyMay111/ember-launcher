@@ -78,6 +78,12 @@ struct ModsScreen: View {
                     ForEach(ContentKind.allCases, id: \.rawValue) { item in
                         FilterChip(title: Self.title(of: item), isActive: mods.kind == item) { mods.kind = item }
                     }
+                    Spacer(minLength: 16)
+                    if mods.hiddenCount > 0 {
+                        Text(verbatim: L("%d hidden", mods.hiddenCount)).style(.secondary)
+                    }
+                    if mods.kind == .modpack { modpackVersionMenu }
+                    FilterChip(title: "Show incompatible", isActive: mods.showIncompatible) { mods.showIncompatible.toggle() }
                 }
                 .padding(.horizontal, 40)
                 .padding(.top, 12)
@@ -130,6 +136,7 @@ struct ModsScreen: View {
         }
         .onChange(of: query) { _, _ in runSearch(delay: 350) }
         .onChange(of: mods.kind) { _, _ in runSearch(delay: 0) }
+        .onChange(of: mods.modpackVersionChoice) { _, _ in runSearch(delay: 0) }
         .onChange(of: tab) { _, value in
             if value == .browse, mods.results.isEmpty { runSearch(delay: 0) }
         }
@@ -284,12 +291,28 @@ struct ModsScreen: View {
 
     // MARK: - Browse
 
-    private var browseList: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            if mods.results.isEmpty, !mods.isSearching {
-                Text(tr: "Nothing found.").style(.body16).frame(maxWidth: .infinity).padding(.top, 50)
+    private var modpackVersionMenu: some View {
+        let choice = mods.modpackVersionChoice
+        let value = choice == ModsController.anyVersion ? L("Any version") : (mods.modpackGameVersion ?? L("Any version"))
+        return VoxelMenu(label: "Minecraft version", value: value, minWidth: 150) {
+            Button(L("Current instance")) { mods.modpackVersionChoice = nil }
+            Button(L("Any version")) { mods.modpackVersionChoice = ModsController.anyVersion }
+            ForEach(app.launchableVersions(includeSnapshots: false).prefix(40), id: \.id) { entry in
+                Button(entry.id) { mods.modpackVersionChoice = entry.id }
             }
-            ForEach(mods.results, id: \.projectId) { hit in
+        }
+    }
+
+    private var browseList: some View {
+        let shown = mods.visibleResults
+        return VStack(alignment: .leading, spacing: 10) {
+            if shown.isEmpty, mods.isChecking {
+                Text(tr: "Checking compatibility…").style(.body16).frame(maxWidth: .infinity).padding(.top, 50)
+            } else if shown.isEmpty, !mods.isSearching {
+                Text(tr: mods.hiddenCount > 0 ? "Nothing fits this instance. Turn on Show incompatible to see the rest." : "Nothing found.")
+                    .style(.body16).frame(maxWidth: .infinity).padding(.top, 50)
+            }
+            ForEach(shown, id: \.projectId) { hit in
                 browseRow(hit)
             }
         }
@@ -352,6 +375,7 @@ struct ModsScreen: View {
         .padding(14)
         .background(RoundedRectangle(cornerRadius: Theme.radiusInput).fill(Theme.white04))
         .overlay(RoundedRectangle(cornerRadius: Theme.radiusInput).strokeBorder(Theme.line, lineWidth: 1))
+        .opacity(canInstall || isInstalled || mods.needsFabric ? 1 : 0.55)
     }
 
     /// The line under the download count; nothing while the check is still running or failed.

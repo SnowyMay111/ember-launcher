@@ -274,12 +274,12 @@ public final class ModManager: Sendable {
             throw ModManagerError.unsupportedLoader(instance.loader)
         }
 
-        guard let version = try await client.bestVersion(project: idOrSlug, gameVersion: instance.minecraftVersion, loader: loader) else {
+        var currentRecords = loadRecords(instance: name)
+        guard let version = try await resolveVersion(project: idOrSlug, instance: instance, installed: currentRecords) else {
             throw ModrinthError.noCompatibleVersion(project: idOrSlug, gameVersion: instance.minecraftVersion, loader: loader)
         }
 
         let project = try await client.project(idOrSlug: version.projectId)
-        var currentRecords = loadRecords(instance: name)
         if let existing = currentRecords.first(where: { $0.projectId == project.id }) {
             return ModInstallResult(
                 installed: [],
@@ -345,10 +345,12 @@ public final class ModManager: Sendable {
                     }
 
                     let depVersion: ModrinthVersion
-                    if let vid = dep.versionId, !vid.isEmpty {
-                        depVersion = try await client.version(id: vid)
+                    if let vid = dep.versionId, !vid.isEmpty,
+                       let pinned = try? await client.version(id: vid),
+                       pinned.gameVersions.contains(instance.minecraftVersion), pinned.loaders.contains(loader) {
+                        depVersion = pinned
                     } else {
-                        guard let best = try await client.bestVersion(project: depProjectId, gameVersion: instance.minecraftVersion, loader: loader) else {
+                        guard let best = try await resolveVersion(project: depProjectId, instance: instance, installed: loadRecords(instance: name)) else {
                             throw ModrinthError.noCompatibleVersion(project: depProjectId, gameVersion: instance.minecraftVersion, loader: loader)
                         }
                         depVersion = best
@@ -417,7 +419,8 @@ public final class ModManager: Sendable {
             }
 
             do {
-                if let best = try await client.bestVersion(project: record.projectId, gameVersion: instance.minecraftVersion, loader: instance.loader) {
+                let others = records.filter { $0.projectId != record.projectId }
+                if let best = try await resolveVersion(project: record.projectId, instance: instance, installed: others) {
                     if best.id != record.versionId {
                         updates.append(ModUpdate(record: record, newVersion: best))
                     }

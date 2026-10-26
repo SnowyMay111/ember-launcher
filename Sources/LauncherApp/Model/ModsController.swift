@@ -22,9 +22,17 @@ final class ModsController: ObservableObject {
             results = []
             compat = [:]
             contentCompat = [:]
+            isChecking = false
         }
     }
     @Published var contentCompat: [String: ContentCompatibility] = [:]
+    /// Browse lists only what fits the current instance; this brings the rest back, greyed out and not installable.
+    @Published var showIncompatible = false
+    /// True while the compatibility of the current results is still being checked.
+    @Published var isChecking = false
+    /// Minecraft version the modpack list is limited to: nil follows the current instance, `anyVersion` lifts the limit.
+    @Published var modpackVersionChoice: String?
+    static let anyVersion = "*"
     /// Installed shaders and resource packs of the current instance.
     @Published var contentRecords: [ContentRecord] = []
 
@@ -62,6 +70,42 @@ final class ModsController: ObservableObject {
         switch kind {
         case .mod, .shader, .resourcepack: return app.current != nil
         case .modpack: return true
+        }
+    }
+
+    /// The Minecraft version modpacks are searched for; nil lists them all.
+    var modpackGameVersion: String? {
+        switch modpackVersionChoice {
+        case nil: return app.current?.minecraftVersion
+        case Self.anyVersion: return nil
+        case let version?: return version
+        }
+    }
+
+    /// What Browse shows: only results known to fit, unless the toggle is on or the instance cannot install them anyway.
+    var visibleResults: [ModrinthHit] {
+        if showIncompatible || needsFabric { return results }
+        return results.filter(isUsable)
+    }
+
+    var hiddenCount: Int {
+        showIncompatible || needsFabric || isChecking ? 0 : results.count - visibleResults.count
+    }
+
+    /// A result whose check has not finished stays out of the list; one whose check failed is given the benefit of the doubt.
+    private func isUsable(_ hit: ModrinthHit) -> Bool {
+        if kind == .mod {
+            guard let value = compat[hit.projectId] else { return !isChecking }
+            switch value {
+            case .unavailable, .conflict: return false
+            case .ready, .needs, .unknown: return true
+            }
+        }
+        guard let value = contentCompat[hit.projectId] else { return !isChecking }
+        switch value {
+        case .noRelease: return false
+        case .ready: return true
+        case .needsOther(let text): return text == "needsShaderLoader"
         }
     }
 
@@ -152,7 +196,13 @@ final class ModsController: ObservableObject {
             guard searchCounter == searchID else { return }
             results = hits
             compat = [:]
-            if canInstall { Task { await checkCompatibility(of: hits, searchID: searchID) } }
+            isChecking = canInstall
+            if canInstall {
+                Task {
+                    await checkCompatibility(of: hits, searchID: searchID)
+                    if searchCounter == searchID { isChecking = false }
+                }
+            }
         } catch {
             guard searchCounter == searchID else { return }
             message = error.localizedDescription
@@ -221,13 +271,20 @@ final class ModsController: ObservableObject {
             let hits = try await manager.client.search(
                 query: query,
                 projectType: kind.projectType,
-                gameVersion: kind == .modpack ? nil : app.current?.minecraftVersion,
+                gameVersion: kind == .modpack ? modpackGameVersion : app.current?.minecraftVersion,
+                loaders: kind == .modpack ? ContentInstaller.packLoaders : [],
                 sortBy: query.isEmpty ? "downloads" : nil
             )
             guard searchCounter == searchID else { return }
             results = hits
             contentCompat = [:]
-            if !needsFabric { Task { await checkContentCompatibility(of: hits, kind: kind, searchID: searchID) } }
+            isChecking = !needsFabric
+            if !needsFabric {
+                Task {
+                    await checkContentCompatibility(of: hits, kind: kind, searchID: searchID)
+                    if searchCounter == searchID { isChecking = false }
+                }
+            }
         } catch {
             guard searchCounter == searchID else { return }
             message = error.localizedDescription
@@ -238,12 +295,13 @@ final class ModsController: ObservableObject {
     private func checkContentCompatibility(of hits: [ModrinthHit], kind: ContentKind, searchID: Int) async {
         guard let name = instanceName else { return }
         let content = self.content
+        let modpackVersion = modpackGameVersion
         var index = 0
         while index < hits.count, searchCounter == searchID {
             let batch = hits[index..<min(index + 5, hits.count)]
             let found = await withTaskGroup(of: (String, ContentCompatibility?).self) { group in
                 for hit in batch {
-                    group.addTask { (hit.projectId, try? await content.compatibility(project: hit.projectId, kind: kind, instance: name)) }
+                    group.addTask { (hit.projectId, try? await content.compatibility(project: hit.projectId, kind: kind, instance: name, modpackGameVersion: modpackVersion)) }
                 }
                 var pairs: [String: ContentCompatibility] = [:]
                 for await (id, value) in group {
@@ -279,7 +337,7 @@ final class ModsController: ObservableObject {
                 let result = try await content.install(project: hit.projectId, kind: .resourcepack, into: name)
                 finishInstall(result, title: hit.title, withIris: false)
             case .modpack:
-                let report = try await content.createInstance(fromModpack: hit.projectId)
+                let report = try await content.createInstance(fromModpack: hit.projectId, gameVersion: modpackGameVersion)
                 app.reload()
                 app.currentID = report.instanceName
                 app.screen = .play

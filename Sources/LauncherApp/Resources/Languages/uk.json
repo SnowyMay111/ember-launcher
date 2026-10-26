@@ -319,5 +319,11 @@
   "The update's signature is not valid.": "Підпис оновлення недійсний.",
   "Move Voxel to the Applications folder first, then update.": "Спершу перенесіть Voxel у теку «Програми», потім оновлюйте.",
   "Voxel is not running as an app, so it can't update itself.": "Voxel запущено не як застосунок, тому оновити себе не зможе.",
-  "Couldn't start the update installer.": "Не вдалося запустити встановлення оновлення."
+  "Couldn't start the update installer.": "Не вдалося запустити встановлення оновлення.",
+  "Show incompatible": "Показати несумісні",
+  "%d hidden": "Приховано: %d",
+  "Any version": "Будь-яка версія",
+  "Current instance": "Як у збірки",
+  "Checking compatibility…": "Перевіряю сумісність…",
+  "Nothing fits this instance. Turn on Show incompatible to see the rest.": "Нічого не підходить цій збірці. Увімкніть «Показати несумісні», щоб побачити решту."
 }
