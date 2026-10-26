@@ -74,7 +74,6 @@ struct PlayScreen: View {
                     }
                     VersionMenu(item: item)
                     SecondaryPill(title: "Instance settings") { app.modal = .instanceSettings(item.name) }
-                    SecondaryPill(title: "Logs") { app.modal = .gameLog(item.name) }
                     if player.hasReport(for: item.name) {
                         SecondaryPill(title: "Health") { app.modal = .sessionHealth(item.name) }
                     }

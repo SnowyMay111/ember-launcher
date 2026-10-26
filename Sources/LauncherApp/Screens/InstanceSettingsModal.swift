@@ -88,6 +88,7 @@ struct InstanceSettingsModal: View {
                             SecondaryPill(title: isCopying ? "Copying…" : "Duplicate", action: duplicate)
                         }
                         HStack(spacing: 10) {
+                            SecondaryPill(title: "Logs") { app.modal = .gameLog(instance.name) }
                             SecondaryPill(title: isExporting ? "Exporting…" : "Export .mrpack", action: exportPack)
                             SecondaryPill(title: "Delete") { confirmingDelete = true }
                         }

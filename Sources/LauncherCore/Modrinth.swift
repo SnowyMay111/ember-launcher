@@ -279,13 +279,18 @@ public final class ModrinthClient: Sendable {
 
     public func search(
         query: String,
+        projectType: String = "mod",
         gameVersion: String? = nil,
         loader: String? = nil,
+        sortBy: String? = nil,
         limit: Int = 20,
         offset: Int = 0
     ) async throws -> [ModrinthHit] {
         var components = URLComponents(string: "https://api.modrinth.com/v2/search")
-        var facets: [[String]] = [["project_type:mod"]]
+        var facets: [[String]] = []
+        if !projectType.isEmpty {
+            facets.append(["project_type:\(projectType)"])
+        }
         if let gameVersion = gameVersion, !gameVersion.isEmpty {
             facets.append(["versions:\(gameVersion)"])
         }
@@ -295,7 +300,7 @@ public final class ModrinthClient: Sendable {
         let facetsData = try JSONSerialization.data(withJSONObject: facets)
         let facetsString = String(data: facetsData, encoding: .utf8) ?? "[]"
 
-        let index = query.isEmpty ? "downloads" : "relevance"
+        let index = sortBy ?? (query.isEmpty ? "downloads" : "relevance")
         components?.queryItems = [
             URLQueryItem(name: "query", value: query),
             URLQueryItem(name: "limit", value: String(limit)),

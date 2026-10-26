@@ -58,6 +58,9 @@ guard args.count >= 2 else {
     print("                        Import a Modrinth .mrpack modpack")
     print("  ai-plan \"description\" [--version 1.21.4] [--provider claude|gemini] [--key-env VAR] [--model id] [--answer file.json] [--install <instance>]")
     print("                        Ask the AI for a Fabric mod list (key is read from the environment variable); --answer uses a saved reply instead")
+    print("  catalog search <mod|modpack|shader|resourcepack> <query> [--game-version V]")
+    print("  catalog install <kind> <slug> <instance>")
+    print("  catalog modpack <slug> [name]")
     exit(1)
 }
 
@@ -80,12 +83,20 @@ do {
     case "versions":
         let installer = VersionInstaller(paths: paths, downloader: downloader)
         let manifest = try await installer.fetchManifest()
-        print("Latest release: \(manifest.latest.release)")
-        print("Latest snapshot: \(manifest.latest.snapshot)")
-        print("Recent releases:")
-        let releases = manifest.versions.filter { $0.type == "release" }.prefix(10)
-        for version in releases {
-            print("  - \(version.id)")
+        if flag("--all") {
+            let versions = VersionCatalog.launchable(manifest, includeSnapshots: true, includeOld: true)
+            for version in versions {
+                let kind = VersionCatalog.kind(for: version.type).rawValue
+                print("  - \(version.id) [\(kind)]")
+            }
+        } else {
+            print("Latest release: \(manifest.latest.release)")
+            print("Latest snapshot: \(manifest.latest.snapshot)")
+            print("Recent releases:")
+            let releases = manifest.versions.filter { $0.type == "release" }.prefix(10)
+            for version in releases {
+                print("  - \(version.id)")
+            }
         }
 
     case "install":
@@ -101,10 +112,14 @@ do {
             printer.update(phase: phase, progress: progress)
         }
 
-        let component = versionJSON.javaVersion?.component ?? "java-runtime-delta"
+        let defaultComponent = versionJSON.javaVersion?.component ?? (versionJSON.arguments == nil ? "jre-legacy" : "java-runtime-delta")
+        let component = versionJSON.javaVersion?.component ?? defaultComponent
+        let hasArm64 = (versionJSON.libraries ?? []).contains {
+            $0.name.contains("natives-macos-arm64") || ($0.downloads?.classifiers?["natives-macos-arm64"] != nil)
+        }
         print("Ensuring Java runtime (\(component))...")
         let runtimeManager = JavaRuntimeManager(paths: paths, downloader: downloader)
-        let javaURL = try await runtimeManager.ensureRuntime(component: component) { progress in
+        let javaURL = try await runtimeManager.ensureRuntime(component: component, hasArm64Natives: hasArm64) { progress in
             printer.update(phase: "runtime", progress: progress)
         }
 
@@ -632,6 +647,97 @@ do {
             for line in report.skipped {
                 print("Skipped: \(line)")
             }
+        }
+
+    case "catalog":
+        guard args.count >= 3 else {
+            print("Usage: launcher-cli catalog <search|install|modpack> [options]")
+            exit(1)
+        }
+        let sub = args[2]
+        let store = InstanceStore(paths: paths)
+        let client = ModrinthClient(downloader: downloader)
+        let installer = ContentInstaller(store: store, client: client, downloader: downloader)
+
+        switch sub {
+        case "search":
+            guard args.count >= 5 else {
+                print("Usage: launcher-cli catalog search <mod|modpack|shader|resourcepack> <query> [--game-version V]")
+                exit(1)
+            }
+            guard let kind = ContentKind(rawValue: args[3].lowercased()) else {
+                print("Error: Invalid kind '\(args[3])'. Allowed: mod, modpack, shader, resourcepack")
+                exit(1)
+            }
+            let query = args[4]
+            let gameVersion = option("--game-version")
+            let hits = try await client.search(
+                query: query,
+                projectType: kind.projectType,
+                gameVersion: gameVersion
+            )
+            for hit in hits {
+                print("\(hit.title) (\(hit.slug)) - \(hit.description)")
+            }
+
+        case "install":
+            guard args.count >= 6 else {
+                print("Usage: launcher-cli catalog install <kind> <slug> <instance>")
+                exit(1)
+            }
+            guard let kind = ContentKind(rawValue: args[3].lowercased()) else {
+                print("Error: Invalid kind '\(args[3])'. Allowed: mod, modpack, shader, resourcepack")
+                exit(1)
+            }
+            let slug = args[4]
+            let instanceName = args[5]
+            let result = try await installer.install(project: slug, kind: kind, into: instanceName)
+            switch result {
+            case .installed(let title, let fileName):
+                print("Installed \(title) (\(fileName))")
+            case .mod(let modResult):
+                for mod in modResult.installed {
+                    if mod.isDependency {
+                        print("Installed \(mod.title) \(mod.versionNumber) (dependency)")
+                    } else {
+                        print("Installed \(mod.title) \(mod.versionNumber)")
+                    }
+                }
+                for skip in modResult.skipped {
+                    print("Skipped: \(skip)")
+                }
+                for warning in modResult.warnings {
+                    print("Warning: \(warning)")
+                }
+            case .skipped(let reason):
+                print("Skipped: \(reason)")
+            case .needsShaderLoader:
+                print("Requirement: needsShaderLoader")
+            case .unsupported(let reason):
+                print("Unsupported: \(reason)")
+            }
+
+        case "modpack":
+            guard args.count >= 4 else {
+                print("Usage: launcher-cli catalog modpack <slug> [name]")
+                exit(1)
+            }
+            let slug = args[3]
+            let customName = args.count >= 5 && !args[4].hasPrefix("-") ? args[4] : nil
+            let report = try await installer.createInstance(fromModpack: slug, name: customName)
+            if let loaderVersion = report.loaderVersion, !loaderVersion.isEmpty {
+                print("Created instance '\(report.instanceName)' (Minecraft \(report.minecraftVersion), loader \(report.loader) \(loaderVersion))")
+            } else {
+                print("Created instance '\(report.instanceName)' (Minecraft \(report.minecraftVersion), loader \(report.loader))")
+            }
+            print("Installed \(report.filesInstalled) files")
+            for warning in report.warnings {
+                print("Warning: \(warning)")
+            }
+
+        default:
+            print("Unknown catalog subcommand: \(sub)")
+            exit(1)
         }
 
     default:

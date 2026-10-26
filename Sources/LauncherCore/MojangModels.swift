@@ -185,6 +185,34 @@ public struct AssetIndexReference: Codable, Sendable {
     }
 }
 
+public struct AssetIndexData: Decodable, Sendable {
+    public struct AssetObject: Decodable, Sendable {
+        public let hash: String
+        public let size: Int
+
+        public init(hash: String, size: Int) {
+            self.hash = hash
+            self.size = size
+        }
+    }
+
+    public let objects: [String: AssetObject]
+    public let virtual: Bool?
+    public let mapToResources: Bool?
+
+    private enum CodingKeys: String, CodingKey {
+        case objects
+        case virtual
+        case mapToResources = "map_to_resources"
+    }
+
+    public init(objects: [String: AssetObject], virtual: Bool? = nil, mapToResources: Bool? = nil) {
+        self.objects = objects
+        self.virtual = virtual
+        self.mapToResources = mapToResources
+    }
+}
+
 public struct VersionDownloads: Codable, Sendable {
     public let client: DownloadArtifact?
 
@@ -259,7 +287,41 @@ public struct Library: Codable, Sendable {
         self.extract = extract
     }
 
+    public var nativeClassifier: String? {
+        guard let osx = natives?["osx"] else { return nil }
+        return osx.replacingOccurrences(of: "${arch}", with: "64")
+    }
+
     public var resolvedArtifact: (path: String, url: URL, sha1: String?, size: Int?)? {
+        if natives != nil {
+            guard let classifier = nativeClassifier else {
+                return nil
+            }
+            if let classifierArtifact = downloads?.classifiers?[classifier] {
+                let relativePath: String
+                if let customPath = classifierArtifact.path {
+                    relativePath = customPath
+                } else if let mavenPath = Self.pathFromMavenCoordinates("\(name):\(classifier)") {
+                    relativePath = mavenPath
+                } else {
+                    relativePath = classifierArtifact.url.lastPathComponent
+                }
+                return (path: relativePath, url: classifierArtifact.url, sha1: classifierArtifact.sha1, size: classifierArtifact.size)
+            }
+            let coordsWithClassifier = "\(name):\(classifier)"
+            guard let path = Self.pathFromMavenCoordinates(coordsWithClassifier) else {
+                return nil
+            }
+            var base = url ?? "https://libraries.minecraft.net/"
+            if !base.hasSuffix("/") {
+                base.append("/")
+            }
+            guard let artifactURL = URL(string: base + path) else {
+                return nil
+            }
+            return (path: path, url: artifactURL, sha1: nil, size: nil)
+        }
+
         if let artifact = downloads?.artifact {
             let relativePath: String
             if let customPath = artifact.path {

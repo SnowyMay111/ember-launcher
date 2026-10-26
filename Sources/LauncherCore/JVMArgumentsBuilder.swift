@@ -61,6 +61,9 @@ public enum JVMArgumentsBuilder {
         javaMajor: Int?,
         systemMemoryMB: Int = JVMArgumentsBuilder.systemMemoryMB
     ) -> GCProfile {
+        if let javaMajor, javaMajor <= 8, requested == .zeroStutterZGC {
+            return .tunedG1GC
+        }
         guard requested == .auto else { return requested }
         if let javaMajor, javaMajor >= 21, systemMemoryMB >= 15_000 {
             return .zeroStutterZGC
@@ -78,6 +81,9 @@ public enum JVMArgumentsBuilder {
         case .auto, .none:
             return []
         case .zeroStutterZGC:
+            if let javaMajor, javaMajor <= 8 {
+                return []
+            }
             var args = ["-XX:+UseZGC"]
             // Generational mode is opt-in on Java 21-23, always on in 24+ (the flag is obsolete there).
             if let javaMajor, (21...23).contains(javaMajor) {

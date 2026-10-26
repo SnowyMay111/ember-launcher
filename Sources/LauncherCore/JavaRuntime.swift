@@ -4,6 +4,7 @@ public enum JavaRuntimeError: Error, LocalizedError, Sendable {
     case unsupportedPlatform(String)
     case componentNotFound(String)
     case javaBinaryNotFound(String)
+    case rosettaRequired
 
     public var errorDescription: String? {
         switch self {
@@ -13,6 +14,80 @@ public enum JavaRuntimeError: Error, LocalizedError, Sendable {
             return "Java runtime component '\(component)' not found"
         case .javaBinaryNotFound(let path):
             return "Java binary not found in '\(path)'"
+        case .rosettaRequired:
+            return "This version needs Rosetta. Run in Terminal: softwareupdate --install-rosetta --agree-to-license"
+        }
+    }
+}
+
+public struct JavaRuntimeResolution: Sendable {
+    public let component: String
+    public let platform: String
+    public let directoryName: String
+    public let requiresRosetta: Bool
+
+    public init(component: String, platform: String, directoryName: String, requiresRosetta: Bool) {
+        self.component = component
+        self.platform = platform
+        self.directoryName = directoryName
+        self.requiresRosetta = requiresRosetta
+    }
+}
+
+public enum JavaRuntime {
+    public static func resolve(
+        component: String,
+        hostIsArm64: Bool
+    ) -> JavaRuntimeResolution {
+        let arm64Components: Set<String> = ["java-runtime-gamma", "java-runtime-delta", "java-runtime-epsilon", "gamma-snapshot"]
+        let isArm64Runtime = arm64Components.contains(component)
+        return resolve(component: component, hasArm64Natives: isArm64Runtime, hostIsArm64: hostIsArm64)
+    }
+
+    public static func resolve(
+        component: String,
+        hasArm64Natives: Bool = false,
+        hostIsArm64: Bool = {
+            #if arch(arm64)
+            return true
+            #else
+            return false
+            #endif
+        }()
+    ) -> JavaRuntimeResolution {
+        if hostIsArm64 {
+            let arm64Components: Set<String> = [
+                "java-runtime-gamma",
+                "java-runtime-delta",
+                "java-runtime-epsilon",
+                "gamma-snapshot"
+            ]
+            var targetComponent = component
+            if targetComponent == "java-runtime-alpha" || targetComponent == "java-runtime-beta" {
+                targetComponent = "java-runtime-gamma"
+            }
+            if hasArm64Natives && arm64Components.contains(targetComponent) {
+                return JavaRuntimeResolution(
+                    component: targetComponent,
+                    platform: "mac-os-arm64",
+                    directoryName: targetComponent,
+                    requiresRosetta: false
+                )
+            } else {
+                return JavaRuntimeResolution(
+                    component: component,
+                    platform: "mac-os",
+                    directoryName: "\(component)-x64",
+                    requiresRosetta: true
+                )
+            }
+        } else {
+            return JavaRuntimeResolution(
+                component: component,
+                platform: "mac-os",
+                directoryName: component,
+                requiresRosetta: false
+            )
         }
     }
 }
@@ -28,9 +103,18 @@ public final class JavaRuntimeManager: Sendable {
 
     public func ensureRuntime(
         component: String,
+        hasArm64Natives: Bool = false,
         progress: (@Sendable (DownloadProgress) -> Void)? = nil
     ) async throws -> URL {
-        let runtimeDir = paths.runtimes.appendingPathComponent(component, isDirectory: true)
+        let resolution = JavaRuntime.resolve(component: component, hasArm64Natives: hasArm64Natives)
+        if resolution.requiresRosetta {
+            let rosettaPath = "/Library/Apple/usr/share/rosetta/rosetta"
+            if !FileManager.default.fileExists(atPath: rosettaPath) {
+                throw JavaRuntimeError.rosettaRequired
+            }
+        }
+
+        let runtimeDir = paths.runtimes.appendingPathComponent(resolution.directoryName, isDirectory: true)
         let marker = runtimeDir.appendingPathComponent(".installed")
         let fileManager = FileManager.default
 
@@ -43,18 +127,12 @@ public final class JavaRuntimeManager: Sendable {
         let allManifestURL = URL(string: "https://launchermeta.mojang.com/v1/products/java-runtime/2ec0cc96c44e5a76b9c8b7c39df7210883d12871/all.json")!
         let allData = try await downloader.fetchJSON([String: [String: [RuntimeComponentEntry]]].self, from: allManifestURL)
 
-        // Never fall back to the x64 build on Apple Silicon: it would run under Rosetta 2.
-        #if arch(arm64)
-        let platformKey = "mac-os-arm64"
-        #else
-        let platformKey = "mac-os"
-        #endif
-        guard let platformComponents = allData[platformKey] else {
-            throw JavaRuntimeError.unsupportedPlatform(platformKey)
+        guard let platformComponents = allData[resolution.platform] else {
+            throw JavaRuntimeError.unsupportedPlatform(resolution.platform)
         }
 
-        guard let entries = platformComponents[component], let firstEntry = entries.first else {
-            throw JavaRuntimeError.componentNotFound(component)
+        guard let entries = platformComponents[resolution.component], let firstEntry = entries.first else {
+            throw JavaRuntimeError.componentNotFound(resolution.component)
         }
 
         let manifestRef = firstEntry.manifest

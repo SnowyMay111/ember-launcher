@@ -145,8 +145,16 @@ public final class GameLauncher: Sendable {
         progress: (@Sendable (DownloadProgress) -> Void)? = nil
     ) async throws -> LaunchCommand {
         let version = try resolveInstalled(instance)
-        let component = version.javaVersion?.component ?? "java-runtime-delta"
-        let java = try await runtimeManager.ensureRuntime(component: component, progress: progress)
+        let defaultComponent = version.javaVersion?.component ?? (version.arguments == nil ? "jre-legacy" : "java-runtime-delta")
+        let component = version.javaVersion?.component ?? defaultComponent
+        let hasArm64Natives = version.libraries.contains {
+            $0.name.contains("natives-macos-arm64") || ($0.downloads?.classifiers?["natives-macos-arm64"] != nil)
+        }
+        let java = try await runtimeManager.ensureRuntime(
+            component: component,
+            hasArm64Natives: hasArm64Natives,
+            progress: progress
+        )
         return try buildCommand(instance: instance, account: account, javaExecutable: java)
     }
 
@@ -155,12 +163,13 @@ public final class GameLauncher: Sendable {
         guard let mainClass = version.mainClass else {
             throw GameLauncherError.missingMainClass(version.id)
         }
-        guard let arguments = version.arguments else {
+        guard version.arguments != nil || version.minecraftArguments != nil || mainClass == "net.minecraft.client.Minecraft" else {
             throw GameLauncherError.unsupportedLegacyVersion(version.id)
         }
 
         let fm = FileManager.default
         let gameDir = store.gameDirectory(for: instance.name)
+        let instanceDir = store.instanceDirectory(for: instance.name)
         let nativesDir = paths.versionDir(version.id).appendingPathComponent("natives", isDirectory: true)
         try fm.createDirectory(at: gameDir, withIntermediateDirectories: true, attributes: nil)
         try fm.createDirectory(at: nativesDir, withIntermediateDirectories: true, attributes: nil)
@@ -186,6 +195,20 @@ public final class GameLauncher: Sendable {
             guard RuleEvaluator.isAllowed(rules: library.rules),
                   let artifact = library.resolvedArtifact else { continue }
             let file = paths.libraries.appendingPathComponent(artifact.path)
+
+            if library.nativeClassifier != nil || library.extract != nil {
+                if fm.fileExists(atPath: file.path) {
+                    try? ZipArchive.extract(file, to: nativesDir)
+                    if let excludes = library.extract?.exclude {
+                        for pattern in excludes {
+                            let clean = pattern.hasSuffix("/") ? String(pattern.dropLast()) : pattern
+                            let target = nativesDir.appendingPathComponent(clean)
+                            try? fm.removeItem(at: target)
+                        }
+                    }
+                }
+            }
+
             guard seen.insert(file.path).inserted else { continue }
             guard fm.fileExists(atPath: file.path) else {
                 throw GameLauncherError.missingLibrary(artifact.path)
@@ -199,8 +222,47 @@ public final class GameLauncher: Sendable {
         classpath.append(clientJar.path)
         let classpathString = classpath.joined(separator: ":")
 
+        var assetsDirPath = paths.assetsRoot.path
+        var gameAssetsDirPath = paths.assetsRoot.path
+        if let assetIndexRef = version.assetIndex {
+            let indexFile = paths.assetsIndexes.appendingPathComponent("\(assetIndexRef.id).json")
+            if let indexData = try? Data(contentsOf: indexFile),
+               let assetIndex = try? JSONDecoder().decode(AssetIndexData.self, from: indexData) {
+                if assetIndex.virtual == true {
+                    let virtualDir = paths.assetsRoot.appendingPathComponent("virtual/\(assetIndexRef.id)", isDirectory: true)
+                    assetsDirPath = virtualDir.path
+                    gameAssetsDirPath = virtualDir.path
+                    for (relPath, object) in assetIndex.objects {
+                        let hash = object.hash
+                        let first2 = String(hash.prefix(2))
+                        let src = paths.assetsObjects.appendingPathComponent(first2).appendingPathComponent(hash)
+                        let dest = virtualDir.appendingPathComponent(relPath)
+                        if !fm.fileExists(atPath: dest.path) {
+                            try? fm.createDirectory(at: dest.deletingLastPathComponent(), withIntermediateDirectories: true, attributes: nil)
+                            try? fm.copyItem(at: src, to: dest)
+                        }
+                    }
+                }
+                if assetIndex.mapToResources == true {
+                    let resourcesDir = gameDir.appendingPathComponent("resources", isDirectory: true)
+                    gameAssetsDirPath = resourcesDir.path
+                    for (relPath, object) in assetIndex.objects {
+                        let hash = object.hash
+                        let first2 = String(hash.prefix(2))
+                        let src = paths.assetsObjects.appendingPathComponent(first2).appendingPathComponent(hash)
+                        let dest = resourcesDir.appendingPathComponent(relPath)
+                        if !fm.fileExists(atPath: dest.path) {
+                            try? fm.createDirectory(at: dest.deletingLastPathComponent(), withIntermediateDirectories: true, attributes: nil)
+                            try? fm.copyItem(at: src, to: dest)
+                        }
+                    }
+                }
+            }
+        }
+
         let variables: [String: String] = [
             "auth_player_name": account.name,
+            "auth_session": "token:0:0",
             "auth_uuid": account.uuid.replacingOccurrences(of: "-", with: ""),
             "auth_access_token": "0",
             "auth_xuid": "0",
@@ -210,7 +272,8 @@ public final class GameLauncher: Sendable {
             "version_name": version.id,
             "version_type": "release",
             "game_directory": gameDir.path,
-            "assets_root": paths.assetsRoot.path,
+            "game_assets": gameAssetsDirPath,
+            "assets_root": assetsDirPath,
             "assets_index_name": version.assets ?? version.assetIndex?.id ?? "legacy",
             "natives_directory": nativesDir.path,
             "library_directory": paths.libraries.path,
@@ -220,24 +283,64 @@ public final class GameLauncher: Sendable {
             "classpath": classpathString,
         ]
 
-        var jvmArguments = expand(arguments.jvm, variables: variables)
-        if !jvmArguments.contains("-cp") && !jvmArguments.contains("-classpath") {
-            jvmArguments += ["-cp", classpathString]
-        }
-        let gameArguments = expand(arguments.game, variables: variables)
+        let rawLegacyArgs = version.minecraftArguments ?? ""
+        let hasGameDirPlaceholder = rawLegacyArgs.contains("${game_directory}") || (version.arguments?.game?.contains(where: {
+            switch $0 {
+            case .plain(let s): return s.contains("${game_directory}")
+            case .conditional(_, let v): return v.asList.contains(where: { $0.contains("${game_directory}") })
+            }
+        }) ?? false)
 
-        let instanceDir = store.instanceDirectory(for: instance.name)
+        var userHomeArg: String?
+        if !hasGameDirPlaceholder {
+            if let homeDir = setupLegacyHomeDirectory(instanceDir: instanceDir, gameDir: gameDir) {
+                userHomeArg = "-Duser.home=\(homeDir.path)"
+            }
+        }
+
+        var jvmArguments: [String]
+        let gameArguments: [String]
+
+        if let arguments = version.arguments {
+            jvmArguments = expand(arguments.jvm, variables: variables)
+            if !jvmArguments.contains("-cp") && !jvmArguments.contains("-classpath") {
+                jvmArguments += ["-cp", classpathString]
+            }
+            gameArguments = expand(arguments.game, variables: variables)
+        } else {
+            jvmArguments = [
+                "-Djava.library.path=\(nativesDir.path)",
+                "-Dminecraft.launcher.name=\(LauncherInfo.name)",
+                "-Dminecraft.launcher.version=\(LauncherInfo.version)",
+                "-cp",
+                classpathString
+            ]
+            if mainClass == "net.minecraft.client.Minecraft" {
+                gameArguments = [account.name, "token:0:0"]
+            } else if let rawArgs = version.minecraftArguments {
+                let tokens = rawArgs.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }
+                gameArguments = tokens.map { substitute($0, variables: variables) }
+            } else {
+                gameArguments = []
+            }
+        }
+
+        if let userHomeArg = userHomeArg {
+            jvmArguments.append(userHomeArg)
+        }
+
         DiagnosticJVMFlags.prepare(instanceDirectory: instanceDir)
+        let effectiveJavaMajor = version.javaVersion?.majorVersion ?? (version.arguments == nil ? 8 : nil)
         let diagnosticArgs = DiagnosticJVMFlags.arguments(
             instanceDirectory: instanceDir,
-            javaMajor: version.javaVersion?.majorVersion,
+            javaMajor: effectiveJavaMajor,
             userArguments: instance.extraJVMArgs
         )
 
         let memory = JVMArgumentsBuilder.arguments(
             memoryMB: instance.memoryMB,
             profile: instance.gcProfile,
-            javaMajor: version.javaVersion?.majorVersion,
+            javaMajor: effectiveJavaMajor,
             userArguments: instance.extraJVMArgs
         )
         let all = memory + diagnosticArgs + instance.extraJVMArgs + jvmArguments + [mainClass] + gameArguments
@@ -255,6 +358,13 @@ public final class GameLauncher: Sendable {
     /// Starts the game; its output goes to `command.logURL`. The caller waits on the returned process.
     public func launch(_ command: LaunchCommand) throws -> Process {
         let fm = FileManager.default
+        if command.executable.path.contains("-x64") {
+            let rosettaPath = "/Library/Apple/usr/share/rosetta/rosetta"
+            if !fm.fileExists(atPath: rosettaPath) {
+                throw JavaRuntimeError.rosettaRequired
+            }
+        }
+
         try fm.createDirectory(
             at: command.logURL.deletingLastPathComponent(),
             withIntermediateDirectories: true,
@@ -277,6 +387,20 @@ public final class GameLauncher: Sendable {
             throw GameLauncherError.launchFailed(error.localizedDescription)
         }
         return process
+    }
+
+    private func setupLegacyHomeDirectory(instanceDir: URL, gameDir: URL) -> URL? {
+        let homeDir = instanceDir.appendingPathComponent(".home", isDirectory: true)
+        let appSupport = homeDir
+            .appendingPathComponent("Library", isDirectory: true)
+            .appendingPathComponent("Application Support", isDirectory: true)
+        let mcSymlink = appSupport.appendingPathComponent("minecraft")
+        let fm = FileManager.default
+        try? fm.createDirectory(at: appSupport, withIntermediateDirectories: true, attributes: nil)
+        if !fm.fileExists(atPath: mcSymlink.path) && (try? fm.destinationOfSymbolicLink(atPath: mcSymlink.path)) == nil {
+            try? fm.createSymbolicLink(at: mcSymlink, withDestinationURL: gameDir)
+        }
+        return homeDir
     }
 
     // MARK: - Helpers

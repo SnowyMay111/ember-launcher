@@ -26,6 +26,7 @@ public struct ResolvedVersion: Codable, Sendable {
     public let id: String
     public let clientJarID: String
     public let mainClass: String?
+    public let minecraftArguments: String?
     public let arguments: VersionArguments?
     public let assetIndex: AssetIndexReference?
     public let assets: String?
@@ -37,6 +38,7 @@ public struct ResolvedVersion: Codable, Sendable {
         id: String,
         clientJarID: String,
         mainClass: String? = nil,
+        minecraftArguments: String? = nil,
         arguments: VersionArguments? = nil,
         assetIndex: AssetIndexReference? = nil,
         assets: String? = nil,
@@ -47,6 +49,7 @@ public struct ResolvedVersion: Codable, Sendable {
         self.id = id
         self.clientJarID = clientJarID
         self.mainClass = mainClass
+        self.minecraftArguments = minecraftArguments
         self.arguments = arguments
         self.assetIndex = assetIndex
         self.assets = assets
@@ -54,14 +57,6 @@ public struct ResolvedVersion: Codable, Sendable {
         self.libraries = libraries
         self.javaVersion = javaVersion
     }
-}
-
-private struct AssetIndexData: Decodable {
-    struct AssetObject: Decodable {
-        let hash: String
-        let size: Int
-    }
-    let objects: [String: AssetObject]
 }
 
 public final class VersionInstaller: Sendable {
@@ -99,9 +94,12 @@ public final class VersionInstaller: Sendable {
 
         let versionJSON = try installFromLocalJSON(versionId)
 
-        // 1. Download libraries allowed by RuleEvaluator
+        // 1. Download libraries allowed by RuleEvaluator and extract natives
         if let libraries = versionJSON.libraries {
             var libraryItems: [DownloadItem] = []
+            var nativeExtractItems: [(url: URL, exclude: [String]?)] = []
+            let nativesDir = paths.versionDir(versionId).appendingPathComponent("natives", isDirectory: true)
+
             for lib in libraries {
                 guard RuleEvaluator.isAllowed(rules: lib.rules) else { continue }
                 guard let artifact = lib.resolvedArtifact else { continue }
@@ -112,9 +110,29 @@ public final class VersionInstaller: Sendable {
                     sha1: artifact.sha1,
                     size: artifact.size
                 ))
+                if lib.nativeClassifier != nil || lib.extract != nil {
+                    nativeExtractItems.append((url: dest, exclude: lib.extract?.exclude))
+                }
             }
             try await downloader.downloadAll(libraryItems) { prog in
                 progress("libraries", prog)
+            }
+
+            if !nativeExtractItems.isEmpty {
+                let fm = FileManager.default
+                try fm.createDirectory(at: nativesDir, withIntermediateDirectories: true, attributes: nil)
+                for item in nativeExtractItems {
+                    if fm.fileExists(atPath: item.url.path) {
+                        try? ZipArchive.extract(item.url, to: nativesDir)
+                        if let excludes = item.exclude {
+                            for pattern in excludes {
+                                let clean = pattern.hasSuffix("/") ? String(pattern.dropLast()) : pattern
+                                let target = nativesDir.appendingPathComponent(clean)
+                                try? fm.removeItem(at: target)
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -151,6 +169,21 @@ public final class VersionInstaller: Sendable {
 
             try await downloader.downloadAll(assetItems) { prog in
                 progress("assets", prog)
+            }
+
+            if assetIndex.virtual == true {
+                let fm = FileManager.default
+                let virtualDir = paths.assetsRoot.appendingPathComponent("virtual/\(assetIndexRef.id)", isDirectory: true)
+                for (relPath, object) in assetIndex.objects {
+                    let hash = object.hash
+                    let first2 = String(hash.prefix(2))
+                    let src = paths.assetsObjects.appendingPathComponent(first2).appendingPathComponent(hash)
+                    let dest = virtualDir.appendingPathComponent(relPath)
+                    if !fm.fileExists(atPath: dest.path) {
+                        try? fm.createDirectory(at: dest.deletingLastPathComponent(), withIntermediateDirectories: true, attributes: nil)
+                        try? fm.copyItem(at: src, to: dest)
+                    }
+                }
             }
         }
 
@@ -205,6 +238,7 @@ public final class VersionInstaller: Sendable {
                 id: child.id,
                 clientJarID: child.id,
                 mainClass: child.mainClass,
+                minecraftArguments: child.minecraftArguments,
                 arguments: child.arguments,
                 assetIndex: child.assetIndex,
                 assets: child.assets,
@@ -276,6 +310,7 @@ public final class VersionInstaller: Sendable {
             id: child.id,
             clientJarID: parent.id,
             mainClass: child.mainClass ?? parent.mainClass,
+            minecraftArguments: child.minecraftArguments ?? parent.minecraftArguments,
             arguments: mergedArguments,
             assetIndex: child.assetIndex ?? parent.assetIndex,
             assets: child.assets ?? parent.assets,
@@ -291,9 +326,9 @@ public final class VersionInstaller: Sendable {
             coords = String(coords[..<atIndex])
         }
         let parts = coords.split(separator: ":", omittingEmptySubsequences: false)
-        if parts.count > 3 {
-            // The classifier is part of the identity: LWJGL ships natives-macos and natives-macos-arm64 next to the main jar.
-            return "\(parts[0]):\(parts[1]):\(parts[3])"
+        let classifier = parts.count > 3 ? String(parts[3]) : library.nativeClassifier
+        if let classifier = classifier, !classifier.isEmpty {
+            return "\(parts[0]):\(parts[1]):\(classifier)"
         }
         if parts.count >= 2 {
             return "\(parts[0]):\(parts[1])"

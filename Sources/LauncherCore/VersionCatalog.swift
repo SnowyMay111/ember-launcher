@@ -1,17 +1,36 @@
 import Foundation
 
-public enum VersionCatalog {
-    public static let firstLaunchableReleaseTime = "2018-07-18" // 1.13: older versions use legacy launch arguments we do not support yet
+public enum VersionKind: String, Codable, Sendable {
+    case release
+    case snapshot
+    case beta
+    case alpha
+}
 
-    public static func launchable(_ manifest: VersionManifest, includeSnapshots: Bool) -> [ManifestVersion] {
+public enum VersionCatalog {
+    public static func kind(for type: String) -> VersionKind {
+        switch type {
+        case "release": return .release
+        case "snapshot": return .snapshot
+        case "old_beta": return .beta
+        case "old_alpha": return .alpha
+        default: return .release
+        }
+    }
+
+    public static func kind(for version: ManifestVersion) -> VersionKind {
+        kind(for: version.type)
+    }
+
+    public static func launchable(_ manifest: VersionManifest, includeSnapshots: Bool, includeOld: Bool = false) -> [ManifestVersion] {
         manifest.versions.filter { version in
-            guard let releaseTime = version.releaseTime, releaseTime >= firstLaunchableReleaseTime else {
-                return false
-            }
             if version.type == "release" {
                 return true
             }
             if includeSnapshots && version.type == "snapshot" {
+                return true
+            }
+            if includeOld && (version.type == "old_beta" || version.type == "old_alpha") {
                 return true
             }
             return false
