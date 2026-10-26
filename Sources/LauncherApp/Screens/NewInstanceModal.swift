@@ -11,6 +11,14 @@ struct NewInstanceModal: View {
     @Local private var group = GroupName.vanilla
     @Local private var fabricVersions: Set<String>?
     @Local private var errorText = ""
+    @Local private var mode = Mode.custom
+    @Local private var pack: MrpackSummary?
+    @Local private var packURL: URL?
+    @Local private var isImporting = false
+    @Local private var importProgress = ""
+    @Local private var importReport: MrpackImportReport?
+
+    private enum Mode { case custom, mrpack }
 
     /// Versions the chosen loader can run; Fabric supports only some of them.
     private var versions: [ManifestVersion] {
@@ -27,15 +35,22 @@ struct NewInstanceModal: View {
         VoxelModal(title: "New instance") {
             VStack(alignment: .leading, spacing: 18) {
                 HStack(spacing: 8) {
-                    FilterChip(title: "Custom", isActive: true) {}
-                    FilterChip(title: "Import .mrpack", isActive: false, isDisabled: true) {}
+                    FilterChip(title: "Custom", isActive: mode == .custom) { mode = .custom }
+                    FilterChip(title: "Import .mrpack", isActive: mode == .mrpack) { mode = .mrpack }
                     FilterChip(title: "Describe with AI", isActive: false, isDisabled: true) {}
                 }
 
-                ModalField(label: "Name") {
-                    VoxelInput(label: "Name", text: $name, placeholder: namePlaceholder)
+                if mode == .mrpack {
+                    packPicker
                 }
 
+                if mode == .custom || pack != nil {
+                    ModalField(label: "Name") {
+                        VoxelInput(label: "Name", text: $name, placeholder: mode == .mrpack ? (pack?.name ?? "") : namePlaceholder)
+                    }
+                }
+
+                if mode == .custom {
                 HStack(alignment: .top, spacing: 24) {
                     ModalField(label: "Minecraft version") {
                         VoxelMenu(label: "Minecraft version", value: version.isEmpty ? "…" : version, minWidth: 170) {
@@ -53,9 +68,12 @@ struct NewInstanceModal: View {
                         .frame(height: 40)
                     }
                 }
+                }
 
-                ModalField(label: "Group") {
-                    GroupPicker(group: $group)
+                if mode == .custom || pack != nil {
+                    ModalField(label: "Group") {
+                        GroupPicker(group: $group)
+                    }
                 }
 
                 if app.manifest == nil {
@@ -66,8 +84,16 @@ struct NewInstanceModal: View {
                 }
             }
         } footer: {
-            ModalCancel()
-            PrimaryPill(title: "Create", isDisabled: version.isEmpty, action: create)
+            if let importReport, !importReport.failed.isEmpty {
+                PrimaryPill(title: "Done") { app.modal = nil }
+            } else {
+                ModalCancel()
+                if mode == .mrpack {
+                    PrimaryPill(title: isImporting ? "Importing…" : "Import", isDisabled: pack == nil || isImporting, action: importPack)
+                } else {
+                    PrimaryPill(title: "Create", isDisabled: version.isEmpty, action: create)
+                }
+            }
         }
         .task { await prepare() }
         .onChange(of: loader) { old, new in
@@ -75,6 +101,86 @@ struct NewInstanceModal: View {
             chooseVersion()
         }
         .onChange(of: versions.map(\.id)) { chooseVersion() }
+    }
+
+    /// The file chooser, and once a pack is picked, what is inside it.
+    @ViewBuilder
+    private var packPicker: some View {
+        if let pack {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(verbatim: pack.name).style(.row)
+                Text(verbatim: packDetails(pack)).style(.secondary)
+            }
+        } else {
+            Text(tr: "Packs from Modrinth and other launchers work. Forge packs are not supported yet.").style(.secondary)
+        }
+        if !isImporting, importReport == nil {
+            SecondaryPill(title: pack == nil ? "Choose .mrpack file…" : "Choose another file…", action: choosePack)
+        }
+        if isImporting {
+            Text(verbatim: importProgress).style(.secondary)
+        }
+        if let importReport, !importReport.failed.isEmpty {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(verbatim: L("Imported, but %d files could not be downloaded:", importReport.failed.count)).style(.secondary)
+                ForEach(importReport.failed.prefix(8), id: \.self) { line in
+                    Text(verbatim: line).style(.secondary).lineLimit(1)
+                }
+            }
+        }
+    }
+
+    private func packDetails(_ pack: MrpackSummary) -> String {
+        let loaderName = pack.loader == "fabric" ? "Fabric" : "Vanilla"
+        let size = ByteCountFormatter.string(fromByteCount: pack.downloadBytes, countStyle: .file)
+        return L("Minecraft %@ · %@ · %d files · %@", pack.minecraftVersion, loaderName, pack.fileCount, size)
+    }
+
+    private func choosePack() {
+        guard let url = app.chooseMrpack() else { return }
+        errorText = ""
+        Task {
+            do {
+                pack = try await app.inspectPack(url)
+                packURL = url
+                if group == GroupName.automatic(for: .vanilla) {
+                    group = GroupName.automatic(for: pack?.loader == "fabric" ? .fabric : .vanilla)
+                }
+            } catch {
+                pack = nil
+                packURL = nil
+                errorText = error.localizedDescription
+            }
+        }
+    }
+
+    private func importPack() {
+        guard let packURL, !isImporting else { return }
+        let chosen = group.trimmingCharacters(in: .whitespacesAndNewlines)
+        let loaderKind: LoaderKind = pack?.loader == "fabric" ? .fabric : .vanilla
+        let saved = chosen.isEmpty || chosen == GroupName.automatic(for: loaderKind) ? nil : chosen
+        isImporting = true
+        errorText = ""
+        importProgress = L("Reading the pack")
+        Task {
+            do {
+                let report = try await app.importPack(
+                    packURL, name: name, group: saved, memoryMB: Int(settings.memoryGB) * 1024
+                ) { phase, fraction in
+                    let text = L(phase) + (fraction > 0 && fraction < 1 ? " · \(Int(fraction * 100))%" : "")
+                    Task { @MainActor in importProgress = text }
+                }
+                isImporting = false
+                if report.failed.isEmpty {
+                    app.modal = nil
+                } else {
+                    importReport = report
+                }
+            } catch {
+                isImporting = false
+                errorText = error.localizedDescription
+            }
+        }
     }
 
     private func title(for entry: ManifestVersion) -> String {

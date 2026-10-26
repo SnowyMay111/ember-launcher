@@ -228,5 +228,21 @@
   "Compatible": "Підходить",
   "Compatible · +%@ required": "Підходить · ще потрібно: %@",
   "Conflicts with %@": "Конфлікт з %@",
-  "No release for this version": "Немає версії для цієї збірки"
+  "No release for this version": "Немає версії для цієї збірки",
+  "Export": "Експорт",
+  "Exporting…": "Експорт…",
+  "Export .mrpack": "Експорт .mrpack",
+  "Import": "Імпорт",
+  "Importing…": "Імпорт…",
+  "Done": "Готово",
+  "Choose .mrpack file…": "Обрати файл .mrpack…",
+  "Choose another file…": "Обрати інший файл…",
+  "Packs from Modrinth and other launchers work. Forge packs are not supported yet.": "Підходять збірки з Modrinth та інших лаунчерів. Збірки на Forge поки не підтримуються.",
+  "Exported: %d linked mods, %d bundled, %d other files.": "Готово: модів за посиланням — %d, всередині файлу — %d, інших файлів — %d.",
+  "Imported, but %d files could not be downloaded:": "Імпортовано, але не завантажилися файли: %d.",
+  "Minecraft %@ · %@ · %d files · %@": "Minecraft %@ · %@ · файлів: %d · %@",
+  "Reading the pack": "Читаю збірку",
+  "Downloading mods": "Завантажую моди",
+  "Copying files": "Копіюю файли",
+  "Finishing": "Завершую"
 }

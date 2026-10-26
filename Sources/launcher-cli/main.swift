@@ -50,6 +50,12 @@ guard args.count >= 2 else {
     print("                        Restore instance from snapshot")
     print("  optimize <instance> --preset <maxFPS_PvP|balancedLoD|shadersVisual|heavyModpack> [--shaders] [--lod] [--framegen] [--os mac|windows] [--apply] [--optional]")
     print("                        Optimize instance mods and configuration")
+    print("  mrpack export <instance> <file.mrpack> [--version 1.0.0] [--no-shaders] [--no-config]")
+    print("                        Export instance to a Modrinth .mrpack modpack")
+    print("  mrpack inspect <file.mrpack>")
+    print("                        Inspect a Modrinth .mrpack modpack")
+    print("  mrpack import <file.mrpack> [--name \"My pack\"] [--group Mods] [--memory 6144]")
+    print("                        Import a Modrinth .mrpack modpack")
     exit(1)
 }
 
@@ -484,6 +490,113 @@ do {
             }
         } else {
             print("\nDry run only. Use --apply to install mods.")
+        }
+
+    case "mrpack":
+        guard args.count >= 3 else {
+            print("Usage: launcher-cli mrpack <subcommand> [options]")
+            exit(1)
+        }
+        let sub = args[2]
+        switch sub {
+        case "export":
+            guard args.count >= 5 else {
+                print("Error: Missing arguments. Usage: launcher-cli mrpack export <instance> <file.mrpack> [--version 1.0.0] [--no-shaders] [--no-config]")
+                exit(1)
+            }
+            let instanceName = args[3]
+            let destPath = args[4]
+            let destination = URL(fileURLWithPath: destPath)
+            let store = InstanceStore(paths: paths)
+            let client = ModrinthClient(downloader: downloader)
+            let manager = ModpackManager(store: store, client: client, downloader: downloader)
+
+            let versionLabel = option("--version") ?? "1.0.0"
+            let options = MrpackExportOptions(
+                includeConfig: !flag("--no-config"),
+                includeShaders: !flag("--no-shaders"),
+                versionLabel: versionLabel
+            )
+
+            let report = try await manager.export(instance: instanceName, to: destination, options: options)
+            for warning in report.warnings {
+                print("Warning: \(warning)")
+            }
+            print("Exported \(report.modsLinked) linked mods, \(report.modsBundled) bundled, \(report.overrideFiles) override files -> \(report.archive.path)")
+
+        case "inspect":
+            guard args.count >= 4 else {
+                print("Error: Missing archive path. Usage: launcher-cli mrpack inspect <file.mrpack>")
+                exit(1)
+            }
+            let archivePath = args[3]
+            let archiveURL = URL(fileURLWithPath: archivePath)
+            let store = InstanceStore(paths: paths)
+            let client = ModrinthClient(downloader: downloader)
+            let manager = ModpackManager(store: store, client: client, downloader: downloader)
+
+            let summary = try manager.inspect(archiveURL)
+            print("Name: \(summary.name)")
+            print("Version: \(summary.versionLabel)")
+            if let s = summary.summary, !s.isEmpty {
+                print("Summary: \(s)")
+            }
+            print("Minecraft: \(summary.minecraftVersion)")
+            if let loaderVersion = summary.loaderVersion, !loaderVersion.isEmpty {
+                print("Loader: \(summary.loader) (\(loaderVersion))")
+            } else {
+                print("Loader: \(summary.loader)")
+            }
+            let mb = Double(summary.downloadBytes) / 1_048_576.0
+            print("Files: \(summary.fileCount) (\(String(format: "%.1f MB", mb)))")
+            print("Overrides: \(summary.overrideFileCount)")
+
+        case "import":
+            guard args.count >= 4 else {
+                print("Error: Missing archive path. Usage: launcher-cli mrpack import <file.mrpack> [--name \"My pack\"] [--group Mods] [--memory 6144]")
+                exit(1)
+            }
+            let archivePath = args[3]
+            let archiveURL = URL(fileURLWithPath: archivePath)
+            let store = InstanceStore(paths: paths)
+            let client = ModrinthClient(downloader: downloader)
+            let manager = ModpackManager(store: store, client: client, downloader: downloader)
+
+            let customName = option("--name")
+            let group = option("--group")
+            let memoryMB = option("--memory").flatMap { Int($0) } ?? 4096
+
+            var lastPhase = ""
+            var lastPercent = -10
+            let report = try await manager.importPack(
+                from: archiveURL,
+                name: customName,
+                group: group,
+                memoryMB: memoryMB
+            ) { phase, fraction in
+                let percent = Int(fraction * 100)
+                let decile = (percent / 10) * 10
+                if phase != lastPhase {
+                    lastPhase = phase
+                    lastPercent = decile
+                    print("[\(phase)]")
+                } else if phase == "Downloading mods" && decile >= lastPercent + 10 {
+                    lastPercent = decile
+                    print("[\(phase)] \(percent)%")
+                }
+            }
+
+            for f in report.failed {
+                print("Failed: \(f)")
+            }
+            for w in report.warnings {
+                print("Warning: \(w)")
+            }
+            print("Imported \(report.filesInstalled) files, \(report.overrideFiles) overrides -> \(report.instanceName)")
+
+        default:
+            print("Unknown mrpack subcommand: \(sub)")
+            exit(1)
         }
 
     default:

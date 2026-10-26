@@ -141,7 +141,7 @@ public final class ModManager: Sendable {
         store.instanceDirectory(for: instanceName).appendingPathComponent("mods.json")
     }
 
-    private func loadRecords(instance name: String) -> [ModRecord] {
+    func loadRecords(instance name: String) -> [ModRecord] {
         let jsonURL = modsJSONURL(for: name)
         guard FileManager.default.fileExists(atPath: jsonURL.path),
               let data = try? Data(contentsOf: jsonURL),
@@ -151,7 +151,7 @@ public final class ModManager: Sendable {
         return records
     }
 
-    private func saveRecords(_ records: [ModRecord], instance name: String) throws {
+    func saveRecords(_ records: [ModRecord], instance name: String) throws {
         let instDir = store.instanceDirectory(for: name)
         let fm = FileManager.default
         if !fm.fileExists(atPath: instDir.path) {

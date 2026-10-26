@@ -14,6 +14,8 @@ struct InstanceSettingsModal: View {
     @Local private var javaArgs: String
     @Local private var confirmingDelete = false
     @Local private var isCopying = false
+    @Local private var isExporting = false
+    @Local private var statusText = ""
     @Local private var errorText = ""
 
     init(instance: LibraryInstance) {
@@ -79,14 +81,22 @@ struct InstanceSettingsModal: View {
                         }
                     }
                 } else {
-                    HStack(spacing: 10) {
-                        SecondaryPill(title: "Optimize") { app.modal = .optimize(instance.name) }
-                        SecondaryPill(title: "Open folder") { app.openFolder(instance.name) }
-                        SecondaryPill(title: isCopying ? "Copying…" : "Duplicate", action: duplicate)
-                        SecondaryPill(title: "Delete") { confirmingDelete = true }
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack(spacing: 10) {
+                            SecondaryPill(title: "Optimize") { app.modal = .optimize(instance.name) }
+                            SecondaryPill(title: "Open folder") { app.openFolder(instance.name) }
+                            SecondaryPill(title: isCopying ? "Copying…" : "Duplicate", action: duplicate)
+                        }
+                        HStack(spacing: 10) {
+                            SecondaryPill(title: isExporting ? "Exporting…" : "Export .mrpack", action: exportPack)
+                            SecondaryPill(title: "Delete") { confirmingDelete = true }
+                        }
                     }
                 }
 
+                if !statusText.isEmpty {
+                    Text(verbatim: statusText).style(.secondary)
+                }
                 if !errorText.isEmpty {
                     Text(verbatim: errorText).style(.secondary)
                 }
@@ -152,6 +162,26 @@ struct InstanceSettingsModal: View {
             } catch {
                 errorText = error.localizedDescription
                 isCopying = false
+            }
+        }
+    }
+
+    /// Writes the instance as a .mrpack: mods Modrinth hosts are linked, the rest is bundled.
+    private func exportPack() {
+        guard !isExporting else { return }
+        isExporting = true
+        errorText = ""
+        statusText = ""
+        Task {
+            defer { isExporting = false }
+            do {
+                guard let report = try await app.exportPack(instance.name) else { return }
+                statusText = L("Exported: %d linked mods, %d bundled, %d other files.", report.modsLinked, report.modsBundled, report.overrideFiles)
+                if !report.warnings.isEmpty {
+                    statusText += " " + report.warnings.joined(separator: " ")
+                }
+            } catch {
+                errorText = error.localizedDescription
             }
         }
     }
