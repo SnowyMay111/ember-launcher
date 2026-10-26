@@ -19,7 +19,7 @@ extension OptimizationNotice {
     var localizedMessage: String {
         switch code {
         case "native_vulkan":
-            return L("Mojang native Vulkan renderer active for Minecraft 26.3+.")
+            return L("Mojang native Vulkan renderer is available in Minecraft 26.2+ (experimental). Sodium supports it, VulkanMod is not needed.")
         case "vulkanmod_mac_moltenvk":
             return L("VulkanMod runs through MoltenVK on macOS and may be unstable; using Sodium instead.")
         case "voxy_mac_opengl":

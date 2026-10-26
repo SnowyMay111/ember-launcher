@@ -150,7 +150,7 @@
   "VulkanMod is incompatible with shaders or heavy modpack configurations.": "VulkanMod несовместим с шейдерами и тяжёлыми модпаками.",
   "C2ME breaks custom mod structures in heavy modpacks.": "C2ME нарушает генерацию кастомных структур в тяжёлых модпаках.",
   "Apple froze OpenGL at 4.1; this mod requires OpenGL 4.4-4.6 and crashes on macOS.": "Apple остановила поддержку OpenGL на версии 4.1; моду требуется OpenGL 4.4–4.6, поэтому он падает на macOS.",
-  "Mojang native Vulkan renderer active for Minecraft 26.3+.": "Встроенный рендерер Vulkan от Mojang активен для Minecraft 26.3+.",
+  "Mojang native Vulkan renderer is available in Minecraft 26.2+ (experimental). Sodium supports it, VulkanMod is not needed.": "Встроенный рендерер Vulkan от Mojang доступен в Minecraft 26.2+ (экспериментально). Sodium его поддерживает, VulkanMod не нужен.",
   "VulkanMod runs through MoltenVK on macOS and may be unstable; using Sodium instead.": "VulkanMod работает через MoltenVK на macOS и может быть нестабилен; вместо него используется Sodium.",
   "Apple froze OpenGL at 4.1. Voxy and GGTU require OpenGL 4.4-4.6 (compute shaders / DSA) and crash on Mac; using Distant Horizons instead.": "Apple остановила поддержку OpenGL на версии 4.1. Voxy и GGTU требуют OpenGL 4.4–4.6 и падают на Mac; вместо них используется Distant Horizons.",
   "GGTU frame generation may introduce noticeable input lag.": "Генерация кадров GGTU может вызывать заметную задержку ввода.",

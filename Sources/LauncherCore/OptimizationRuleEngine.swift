@@ -140,8 +140,9 @@ public struct OptimizationPlan: Codable, Sendable, Equatable {
 }
 
 public enum OptimizationRuleEngine {
-    /// Mojang native Vulkan renderer version threshold (unverified, easy to change).
-    public static let nativeVulkanSince = "26.3"
+    /// First Minecraft version with Mojang's own (experimental, opt-in) Vulkan renderer.
+    /// Checked on Modrinth 2026-10-26: Sodium 0.9.0 for 26.2 supports it, VulkanMod has no builds after 26.1.2.
+    public static let nativeVulkanSince = "26.2"
 
     /// Compares two Minecraft version strings using numeric dot components.
     /// Non-numeric suffixes like "-snapshot-5" / "-rc-1" sort before the plain release of the same numbers.
@@ -244,7 +245,7 @@ public enum OptimizationRuleEngine {
         if isNativeVulkan {
             notices.append(OptimizationNotice(
                 kind: .info,
-                message: "Mojang native Vulkan renderer active for Minecraft \(nativeVulkanSince)+.",
+                message: "Mojang native Vulkan renderer is available in Minecraft \(nativeVulkanSince)+ (experimental). Sodium supports it, VulkanMod is not needed.",
                 code: "native_vulkan"
             ))
             if context.loader == .forge {
