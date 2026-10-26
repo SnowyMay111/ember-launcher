@@ -1,7 +1,13 @@
 import SwiftUI
+import LauncherCore
 
 struct SettingsScreen: View {
     @EnvironmentObject var settings: SettingsStore
+
+    private var recommendedMemoryText: String {
+        let range = JVMArgumentsBuilder.memoryRecommendation(isModded: false).recommendedRangeMB
+        return L("Recommended: %d-%d GB", range.lowerBound / 1024, range.upperBound / 1024)
+    }
 
     var body: some View {
         ScrollView {
@@ -13,10 +19,14 @@ struct SettingsScreen: View {
                         VoxelInput(label: "Nickname", text: $settings.nickname, width: 220)
                     }
                     SettingsRow(title: "Memory", detail: "Default RAM for new instances.") {
-                        VoxelSlider(label: "Memory", value: $settings.memoryGB, range: SettingsStore.memoryRange, valueText: settings.memoryText)
+                        VStack(alignment: .trailing, spacing: 4) {
+                            VoxelSlider(label: "Memory", value: $settings.memoryGB, range: SettingsStore.memoryRange, valueText: settings.memoryText)
+                            Text(recommendedMemoryText)
+                                .style(.init(size: 12, weight: .regular, color: Theme.muted))
+                        }
                     }
                     SettingsRow(title: "Java", detail: "Runtime used to start the game.") {
-                        VoxelInput(label: "Java", text: $settings.java, width: 220)
+                        MonoBadge(text: L("Bundled"))
                     }
                     SettingsRow(title: "Window size", detail: "Game window size at launch.") {
                         HStack(spacing: 10) {

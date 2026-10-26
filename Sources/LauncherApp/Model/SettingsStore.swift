@@ -1,14 +1,14 @@
 import SwiftUI
+import LauncherCore
 
 /// Launcher-wide settings, saved to UserDefaults.
 final class SettingsStore: ObservableObject {
-    static let memoryRange: ClosedRange<Double> = 1...16
+    static let memoryRange: ClosedRange<Double> = 1...Double(max(2, JVMArgumentsBuilder.memoryRecommendation(isModded: false).overAllocationWarningThresholdMB / 1024))
 
     private let defaults: UserDefaults
 
     @Published var nickname: String { didSet { defaults.set(nickname, forKey: "nickname") } }
     @Published var memoryGB: Double { didSet { defaults.set(memoryGB, forKey: "memoryGB") } }
-    @Published var java: String { didSet { defaults.set(java, forKey: "java") } }
     @Published var windowWidth: String { didSet { defaults.set(windowWidth, forKey: "windowWidth") } }
     @Published var windowHeight: String { didSet { defaults.set(windowHeight, forKey: "windowHeight") } }
     @Published var closeOnStart: Bool { didSet { defaults.set(closeOnStart, forKey: "closeOnStart") } }
@@ -18,8 +18,10 @@ final class SettingsStore: ObservableObject {
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         nickname = defaults.string(forKey: "nickname") ?? "Player"
-        memoryGB = defaults.object(forKey: "memoryGB") as? Double ?? 4
-        java = defaults.string(forKey: "java") ?? "Bundled · Java 21"
+        let loadedMemory = defaults.object(forKey: "memoryGB") as? Double ?? 4
+        let clampedMemory = min(max(loadedMemory, SettingsStore.memoryRange.lowerBound), SettingsStore.memoryRange.upperBound)
+        memoryGB = clampedMemory
+        defaults.set(clampedMemory, forKey: "memoryGB")
         windowWidth = defaults.string(forKey: "windowWidth") ?? "1920"
         windowHeight = defaults.string(forKey: "windowHeight") ?? "1080"
         closeOnStart = defaults.object(forKey: "closeOnStart") as? Bool ?? true

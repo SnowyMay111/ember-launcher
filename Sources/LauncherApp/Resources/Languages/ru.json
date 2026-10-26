@@ -29,6 +29,7 @@
   "Applies to every instance.": "Действует для всех сборок.",
   "Maximum RAM given to the game.": "Сколько памяти получает игра.",
   "Runtime used to start the game.": "Java, с которой запускается игра.",
+  "Bundled": "Встроенная",
   "Window size": "Размер окна",
   "Window width": "Ширина окна",
   "Window height": "Высота окна",
