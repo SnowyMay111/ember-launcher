@@ -8,6 +8,7 @@ struct ModsScreen: View {
     @Local private var tab = ModsTab.installed
     @Local private var query = ""
     @Local private var confirmingRemove: String?
+    @Local private var confirmingRemoveContent: String?
     @Local private var searchTask: Task<Void, Never>?
 
     init(app: AppState) {
@@ -19,10 +20,40 @@ struct ModsScreen: View {
         case browse = "Browse"
     }
 
+    /// The kind Browse is on; the Installed tab always talks about mods.
+    private var activeKind: ContentKind { tab == .browse ? mods.kind : .mod }
+
     private var subtitle: String {
+        if activeKind == .modpack { return "Creates a new instance from a Modrinth pack." }
         guard let current = app.current else { return "Pick an instance in Library first." }
-        guard mods.canInstall else { return "Mods need a Fabric instance." }
-        return L("For %@ · %@ · Fabric", current.name, current.minecraftVersion)
+        switch activeKind {
+        case .shader:
+            guard mods.canInstall else { return "Shaders need a Fabric instance." }
+            return L("For %@ · %@ · Fabric + Iris", current.name, current.minecraftVersion)
+        case .resourcepack:
+            return L("For %@ · %@", current.name, current.minecraftVersion)
+        default:
+            guard mods.canInstall else { return "Mods need a Fabric instance." }
+            return L("For %@ · %@ · Fabric", current.name, current.minecraftVersion)
+        }
+    }
+
+    private var searchPlaceholder: String {
+        switch mods.kind {
+        case .mod: return "Search mods"
+        case .modpack: return "Search modpacks"
+        case .shader: return "Search shaders"
+        case .resourcepack: return "Search resource packs"
+        }
+    }
+
+    private static func title(of kind: ContentKind) -> String {
+        switch kind {
+        case .mod: return "Mods"
+        case .modpack: return "Modpacks"
+        case .shader: return "Shaders"
+        case .resourcepack: return "Resource packs"
+        }
     }
 
     var body: some View {
@@ -36,11 +67,21 @@ struct ModsScreen: View {
                 }
                 Spacer(minLength: 16)
                 if tab == .browse {
-                    SearchField(placeholder: "Search Modrinth", text: $query)
+                    SearchField(placeholder: searchPlaceholder, text: $query)
                 }
             }
             .padding(.horizontal, 40)
             .padding(.top, 22)
+
+            if tab == .browse {
+                HStack(spacing: 8) {
+                    ForEach(ContentKind.allCases, id: \.rawValue) { item in
+                        FilterChip(title: Self.title(of: item), isActive: mods.kind == item) { mods.kind = item }
+                    }
+                }
+                .padding(.horizontal, 40)
+                .padding(.top, 12)
+            }
 
             if let message = mods.message {
                 HStack(spacing: 10) {
@@ -56,12 +97,16 @@ struct ModsScreen: View {
             }
 
             ScrollView {
-                if app.current == nil || !mods.canInstall {
-                    Color.clear.frame(height: 1)
-                } else if tab == .installed {
-                    installedList
-                } else {
+                if tab == .installed {
+                    if app.current == nil {
+                        Color.clear.frame(height: 1)
+                    } else {
+                        installedList
+                    }
+                } else if mods.canBrowse {
                     browseList
+                } else {
+                    Color.clear.frame(height: 1)
                 }
             }
         }
@@ -72,6 +117,7 @@ struct ModsScreen: View {
             runSearch(delay: 0)
         }
         .onChange(of: query) { _, _ in runSearch(delay: 350) }
+        .onChange(of: mods.kind) { _, _ in runSearch(delay: 0) }
         .onChange(of: tab) { _, value in
             if value == .browse, mods.results.isEmpty { runSearch(delay: 0) }
         }
@@ -91,6 +137,19 @@ struct ModsScreen: View {
     // MARK: - Installed
 
     private var installedList: some View {
+        VStack(alignment: .leading, spacing: 28) {
+            if mods.canInstall {
+                modsSection
+            }
+            if !mods.contentRecords.isEmpty {
+                contentSection
+            }
+        }
+        .padding(.horizontal, 40)
+        .padding(.vertical, 24)
+    }
+
+    private var modsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 12) {
                 Text(verbatim: L("%d mods", mods.installed.count)).style(.eyebrow)
@@ -116,8 +175,49 @@ struct ModsScreen: View {
                 installedRow(mod)
             }
         }
-        .padding(.horizontal, 40)
-        .padding(.vertical, 24)
+    }
+
+    private var contentSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(tr: "Shaders & resource packs").style(.eyebrow).padding(.bottom, 4)
+            ForEach(mods.contentRecords, id: \.fileName) { record in
+                contentRow(record)
+            }
+        }
+    }
+
+    private func contentRow(_ record: ContentRecord) -> some View {
+        let isBusy = mods.busy.contains(record.fileName)
+        return HStack(spacing: 14) {
+            ModIcon(url: record.iconURL)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(verbatim: record.title).style(.row).lineLimit(1)
+                Text(verbatim: record.kind == .shader ? L("Shader") + " · " + record.versionNumber : L("Resource pack") + " · " + record.versionNumber)
+                    .style(.secondary)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 12)
+            if confirmingRemoveContent == record.fileName {
+                Text(verbatim: L("Move %@ to the Trash?", record.title)).style(.secondary).lineLimit(1)
+                SecondaryPill(title: "Keep it") { confirmingRemoveContent = nil }
+                PrimaryPill(title: "Move to Trash", height: 36, horizontalPadding: 22) {
+                    confirmingRemoveContent = nil
+                    mods.remove(record)
+                }
+            } else {
+                Button { confirmingRemoveContent = record.fileName } label: {
+                    Text(verbatim: "×").style(.init(size: 20, weight: .regular, color: Theme.muted))
+                        .frame(width: 36, height: 36)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(L("Remove"))
+            }
+        }
+        .padding(14)
+        .background(RoundedRectangle(cornerRadius: Theme.radiusInput).fill(Theme.white04))
+        .overlay(RoundedRectangle(cornerRadius: Theme.radiusInput).strokeBorder(Theme.line, lineWidth: 1))
+        .opacity(isBusy ? 0.5 : 1)
     }
 
     private func installedRow(_ mod: InstalledMod) -> some View {
@@ -187,7 +287,19 @@ struct ModsScreen: View {
     }
 
     private func browseRow(_ hit: ModrinthHit) -> some View {
-        let isInstalled = mods.installedProjectIDs.contains(hit.projectId)
+        let kind = mods.kind
+        let isInstalled: Bool
+        let note: (text: String, isWarning: Bool)?
+        let canInstall: Bool
+        if kind == .mod {
+            isInstalled = mods.installedProjectIDs.contains(hit.projectId)
+            note = Self.compatNote(mods.compat[hit.projectId])
+            canInstall = Self.canInstall(mods.compat[hit.projectId])
+        } else {
+            isInstalled = kind != .modpack && mods.contentProjectIDs.contains(hit.projectId)
+            note = Self.contentNote(mods.contentCompat[hit.projectId])
+            canInstall = Self.canInstall(content: mods.contentCompat[hit.projectId])
+        }
         let isBusy = mods.busy.contains(hit.projectId)
         return HStack(spacing: 14) {
             ModIcon(url: hit.iconURL)
@@ -201,7 +313,7 @@ struct ModsScreen: View {
             Spacer(minLength: 12)
             VStack(alignment: .trailing, spacing: 3) {
                 Text(verbatim: L("%@ downloads", Self.short(hit.downloads))).style(.eyebrow)
-                if !isInstalled, let note = Self.compatNote(mods.compat[hit.projectId]) {
+                if !isInstalled, let note {
                     Text(verbatim: note.text).style(note.isWarning ? .secondary : .eyebrow).lineLimit(1)
                 }
             }
@@ -210,8 +322,14 @@ struct ModsScreen: View {
                     .allowsHitTesting(false)
                     .opacity(0.6)
             } else {
-                PrimaryPill(title: isBusy ? "Installing…" : "Install", height: 36, horizontalPadding: 22, isDisabled: isBusy || !Self.canInstall(mods.compat[hit.projectId])) {
-                    Task { await mods.install(hit) }
+                PrimaryPill(title: isBusy ? "Installing…" : "Install", height: 36, horizontalPadding: 22, isDisabled: isBusy || !canInstall) {
+                    Task {
+                        if kind == .mod {
+                            await mods.install(hit)
+                        } else {
+                            await mods.installContent(hit)
+                        }
+                    }
                 }
             }
         }
@@ -234,6 +352,27 @@ struct ModsScreen: View {
     private static func canInstall(_ value: ModCompatibility?) -> Bool {
         switch value {
         case .conflict, .unavailable: return false
+        default: return true
+        }
+    }
+
+    /// What `ContentInstaller.compatibility` answers for a shader when Iris is not installed yet; Install then adds Iris first.
+    private static let needsShaderLoader = "needsShaderLoader"
+
+    private static func contentNote(_ value: ContentCompatibility?) -> (text: String, isWarning: Bool)? {
+        switch value {
+        case .ready: return (L("Compatible"), false)
+        case .needsOther(let text) where text == needsShaderLoader: return (L("Compatible · Iris is added"), false)
+        case .needsOther(let text): return (L(text), true)
+        case .noRelease: return (L("No release for this version"), true)
+        case nil: return nil
+        }
+    }
+
+    private static func canInstall(content value: ContentCompatibility?) -> Bool {
+        switch value {
+        case .needsOther(let text): return text == needsShaderLoader
+        case .noRelease: return false
         default: return true
         }
     }

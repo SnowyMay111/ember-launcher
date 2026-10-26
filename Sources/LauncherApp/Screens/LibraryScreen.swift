@@ -23,6 +23,8 @@ struct LibraryScreen: View {
                 ForEach(LoaderFilter.allCases) { filter in
                     FilterChip(title: filter.rawValue, isActive: app.filter == filter) { app.filter = filter }
                 }
+                Spacer(minLength: 16)
+                SecondaryPill(title: "All versions") { app.modal = .allVersions }
             }
             .padding(.horizontal, 40)
             .padding(.top, 22)

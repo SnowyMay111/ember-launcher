@@ -144,18 +144,27 @@ public final class GameLauncher: Sendable {
         account: OfflineAccount,
         progress: (@Sendable (DownloadProgress) -> Void)? = nil
     ) async throws -> LaunchCommand {
+        let java = try await ensureJava(for: instance, progress: progress)
+        return try buildCommand(instance: instance, account: account, javaExecutable: java)
+    }
+
+    /// Downloads Mojang's Java for the installed version if it is missing and returns its `java` executable.
+    @discardableResult
+    public func ensureJava(
+        for instance: Instance,
+        progress: (@Sendable (DownloadProgress) -> Void)? = nil
+    ) async throws -> URL {
         let version = try resolveInstalled(instance)
         let defaultComponent = version.javaVersion?.component ?? (version.arguments == nil ? "jre-legacy" : "java-runtime-delta")
         let component = version.javaVersion?.component ?? defaultComponent
         let hasArm64Natives = version.libraries.contains {
             $0.name.contains("natives-macos-arm64") || ($0.downloads?.classifiers?["natives-macos-arm64"] != nil)
         }
-        let java = try await runtimeManager.ensureRuntime(
+        return try await runtimeManager.ensureRuntime(
             component: component,
             hasArm64Natives: hasArm64Natives,
             progress: progress
         )
-        return try buildCommand(instance: instance, account: account, javaExecutable: java)
     }
 
     public func buildCommand(instance: Instance, account: OfflineAccount, javaExecutable: URL) throws -> LaunchCommand {

@@ -124,6 +124,7 @@ struct PlayScreen: View {
                 SecondaryPill(title: "Start with latest release") {
                     app.useLatest(snapshot: false, memoryMB: Int(settings.memoryGB) * 1024)
                 }
+                SecondaryPill(title: "All versions") { app.modal = .allVersions }
             }
             .padding(.top, 26)
         }
@@ -147,6 +148,8 @@ private struct VersionMenu: View {
             } else {
                 Text(tr: "Version list unavailable")
             }
+            Divider()
+            Button(L("All versions…")) { app.modal = .allVersions }
             Divider()
             ForEach(app.instances) { instance in
                 Button((instance.id == item.id ? "✓ " : "") + instance.name) { app.currentID = instance.id }

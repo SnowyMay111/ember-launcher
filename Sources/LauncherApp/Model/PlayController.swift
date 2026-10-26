@@ -210,6 +210,10 @@ final class PlayController: ObservableObject {
 
     func play(_ item: LibraryInstance, settings: SettingsStore, app: AppState) {
         guard !isBusy else { return }
+        guard app.downloads[item.minecraftVersion] == nil else {
+            state = .failed(L("This version is still downloading."))
+            return
+        }
         refreshRateBox.value = NSScreen.main?.maximumFramesPerSecond
         state = .preparing(L("Preparing…"))
         let nickname = settings.nickname

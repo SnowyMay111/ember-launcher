@@ -20,6 +20,7 @@ enum AppModal: Equatable {
     case optimize(String)
     case changeVersion(String)
     case sessionHealth(String)
+    case allVersions
 }
 
 @MainActor
@@ -36,6 +37,10 @@ final class AppState: ObservableObject {
     @Published var modal: AppModal?
     /// Mojang's version list; nil until it has been fetched, or while offline.
     @Published private(set) var manifest: VersionManifest?
+    /// Versions being downloaded from All versions: Minecraft version → percent done.
+    @Published var downloads: [String: Int] = [:]
+    /// Why the last download of a version failed; cleared when it is started again.
+    @Published var downloadErrors: [String: String] = [:]
 
     let paths: LauncherPaths
     let store: InstanceStore
