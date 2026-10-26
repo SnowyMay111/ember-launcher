@@ -43,8 +43,14 @@ public final class JavaRuntimeManager: Sendable {
         let allManifestURL = URL(string: "https://launchermeta.mojang.com/v1/products/java-runtime/2ec0cc96c44e5a76b9c8b7c39df7210883d12871/all.json")!
         let allData = try await downloader.fetchJSON([String: [String: [RuntimeComponentEntry]]].self, from: allManifestURL)
 
-        guard let platformComponents = allData["mac-os-arm64"] ?? allData["mac-os"] else {
-            throw JavaRuntimeError.unsupportedPlatform("mac-os-arm64")
+        // Never fall back to the x64 build on Apple Silicon: it would run under Rosetta 2.
+        #if arch(arm64)
+        let platformKey = "mac-os-arm64"
+        #else
+        let platformKey = "mac-os"
+        #endif
+        guard let platformComponents = allData[platformKey] else {
+            throw JavaRuntimeError.unsupportedPlatform(platformKey)
         }
 
         guard let entries = platformComponents[component], let firstEntry = entries.first else {

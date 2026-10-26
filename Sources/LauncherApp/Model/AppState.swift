@@ -136,10 +136,11 @@ final class AppState: ObservableObject {
         return finalName
     }
 
-    func updateInstance(_ name: String, newName: String, memoryMB: Int, javaArgs: [String], group: String?) throws {
+    func updateInstance(_ name: String, newName: String, memoryMB: Int, gcProfile: GCProfile, javaArgs: [String], group: String?) throws {
         defer { reload() }
         var instance = try store.load(name: name)
         instance.memoryMB = memoryMB
+        instance.gcProfile = gcProfile
         instance.extraJVMArgs = javaArgs
         instance.group = group
         try store.save(instance)

@@ -113,5 +113,14 @@
   "Try again. If it repeats, lower the memory in Instance settings.": "Спробуйте ще раз. Якщо повториться, зменшіть пам'ять у налаштуваннях збірки.",
   "The last lines of the log below usually show the cause.": "Останні рядки логу нижче зазвичай показують причину.",
   "Java could not start with these settings": "Java не запустилась з такими налаштуваннями",
+  "Recommended: %d-%d GB": "Рекомендовано: %d-%d ГБ",
+  "More than this Mac has: the game will swap and freeze.": "Більше, ніж є в цього Mac: гра використовуватиме своп і зависатиме.",
+  "Too much memory causes long garbage collector pauses and stutters.": "Забагато пам'яті спричиняє довгі паузи збирача сміття та зависання.",
+  "Garbage collector": "Збирач сміття",
+  "Automatic": "Автоматично",
+  "Balanced (G1)": "Збалансований (G1)",
+  "Low pause (ZGC)": "Мінімальні паузи (ZGC)",
+  "Launcher default": "За замовчуванням для лаунчера",
+  "Automatic picks ZGC on Java 21+ with 16 GB or more, G1 otherwise.": "«Автоматично» обирає ZGC на Java 21+ з 16 ГБ і більше, інакше G1.",
   "Check the memory and Java arguments in Instance settings.": "Перевірте пам'ять і аргументи Java в налаштуваннях збірки."
 }

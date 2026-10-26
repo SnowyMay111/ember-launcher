@@ -56,6 +56,7 @@ struct LibraryInstance: Identifiable, Equatable {
     let playtimeSeconds: Int
     let lastPlayed: Date?
     let memoryMB: Int
+    let gcProfile: GCProfile
     let javaArgs: [String]
     let glow: PreviewGlow
 
@@ -72,6 +73,7 @@ struct LibraryInstance: Identifiable, Equatable {
         playtimeSeconds = instance.playtimeSeconds
         lastPlayed = instance.lastPlayed
         memoryMB = instance.memoryMB
+        gcProfile = instance.gcProfile
         javaArgs = instance.extraJVMArgs
         glow = Self.glow(for: instance.name)
     }

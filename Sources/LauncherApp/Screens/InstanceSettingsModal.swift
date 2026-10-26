@@ -1,3 +1,4 @@
+import LauncherCore
 import SwiftUI
 
 struct InstanceSettingsModal: View {
@@ -9,6 +10,7 @@ struct InstanceSettingsModal: View {
     @Local private var name: String
     @Local private var group: String
     @Local private var memoryGB: Double
+    @Local private var gcProfile: GCProfile
     @Local private var javaArgs: String
     @Local private var confirmingDelete = false
     @Local private var isCopying = false
@@ -19,6 +21,7 @@ struct InstanceSettingsModal: View {
         _name = Local(wrappedValue: instance.name)
         _group = Local(wrappedValue: instance.group)
         _memoryGB = Local(wrappedValue: Double(max(1, instance.memoryMB / 1024)))
+        _gcProfile = Local(wrappedValue: instance.gcProfile)
         _javaArgs = Local(wrappedValue: instance.javaArgs.joined(separator: " "))
     }
 
@@ -42,6 +45,19 @@ struct InstanceSettingsModal: View {
                 }
                 ModalField(label: "Memory") {
                     VoxelSlider(label: "Memory", value: $memoryGB, range: memoryRange, valueText: L("%d GB", Int(memoryGB)))
+                    Text(verbatim: memoryHint).style(.secondary)
+                }
+                ModalField(label: "Garbage collector") {
+                    VoxelMenu(label: "Garbage collector", value: gcProfileTitle(gcProfile), minWidth: 160) {
+                        ForEach([GCProfile.auto, .tunedG1GC, .zeroStutterZGC, .none], id: \.self) { profile in
+                            Button(gcProfileTitle(profile)) {
+                                gcProfile = profile
+                            }
+                        }
+                    }
+                    if gcProfile == .auto {
+                        Text(verbatim: L("Automatic picks ZGC on Java 21+ with 16 GB or more, G1 otherwise.")).style(.secondary)
+                    }
                 }
                 ModalField(label: "Java arguments") {
                     VoxelInput(label: "Java arguments", text: $javaArgs, placeholder: "-XX:+UseG1GC")
@@ -87,12 +103,34 @@ struct InstanceSettingsModal: View {
                 instance.name,
                 newName: name,
                 memoryMB: Int(memoryGB) * 1024,
+                gcProfile: gcProfile,
                 javaArgs: javaArgs.split(whereSeparator: \.isWhitespace).map(String.init),
                 group: saved
             )
             app.modal = nil
         } catch {
             errorText = error.localizedDescription
+        }
+    }
+
+    private var memoryHint: String {
+        let recommendation = JVMArgumentsBuilder.memoryRecommendation(isModded: instance.loader != .vanilla)
+        let memoryMB = Int(memoryGB * 1024)
+        if memoryMB > recommendation.systemMemoryMB {
+            return L("More than this Mac has: the game will swap and freeze.")
+        } else if memoryMB > recommendation.overAllocationWarningThresholdMB {
+            return L("Too much memory causes long garbage collector pauses and stutters.")
+        } else {
+            return L("Recommended: %d-%d GB", recommendation.recommendedRangeMB.lowerBound / 1024, recommendation.recommendedRangeMB.upperBound / 1024)
+        }
+    }
+
+    private func gcProfileTitle(_ profile: GCProfile) -> String {
+        switch profile {
+        case .auto: return L("Automatic")
+        case .tunedG1GC: return L("Balanced (G1)")
+        case .zeroStutterZGC: return L("Low pause (ZGC)")
+        case .none: return L("Launcher default")
         }
     }
 

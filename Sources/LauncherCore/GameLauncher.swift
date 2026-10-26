@@ -210,7 +210,12 @@ public final class GameLauncher: Sendable {
         }
         let gameArguments = expand(arguments.game, variables: variables)
 
-        let memory = ["-Xms\(min(instance.memoryMB, 512))M", "-Xmx\(instance.memoryMB)M"]
+        let memory = JVMArgumentsBuilder.arguments(
+            memoryMB: instance.memoryMB,
+            profile: instance.gcProfile,
+            javaMajor: version.javaVersion?.majorVersion,
+            userArguments: instance.extraJVMArgs
+        )
         let all = memory + instance.extraJVMArgs + jvmArguments + [mainClass] + gameArguments
 
         return LaunchCommand(
