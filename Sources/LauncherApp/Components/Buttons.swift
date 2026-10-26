@@ -18,6 +18,7 @@ struct PrimaryPill: View {
     /// Fixed height (toolbar: 42). Without it the pill uses 13pt vertical padding (hero).
     var height: CGFloat? = nil
     var horizontalPadding: CGFloat = 30
+    var isDisabled = false
     var action: () -> Void = {}
 
     var body: some View {
@@ -40,6 +41,8 @@ struct PrimaryPill: View {
             .contentShape(Capsule())
         }
         .buttonStyle(PressDimStyle())
+        .disabled(isDisabled)
+        .opacity(isDisabled ? 0.6 : 1)
     }
 }
 

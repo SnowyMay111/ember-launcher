@@ -36,6 +36,7 @@ struct PageHeader: View {
 struct InstanceCard: View {
     let instance: LibraryInstance
     var onOpen: () -> Void
+    var onPlay: () -> Void = {}
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -55,7 +56,7 @@ struct InstanceCard: View {
                     .style(.init(size: 11, weight: .regular, mono: true, tracking: 0.14, color: Theme.muted, uppercase: true))
                     .lineLimit(1)
                 Spacer(minLength: 8)
-                RoundPlayButton(instanceName: instance.name)
+                RoundPlayButton(instanceName: instance.name, action: onPlay)
             }
             .padding(.top, 12)
         }

@@ -3,6 +3,7 @@ import SwiftUI
 /// Top bar on every screen: native window buttons on the left, brand, navigation, Java badge and account.
 struct TopBar: View {
     @EnvironmentObject var app: AppState
+    @EnvironmentObject var settings: SettingsStore
 
     var body: some View {
         HStack(spacing: 0) {
@@ -28,7 +29,7 @@ struct TopBar: View {
 
             HStack(spacing: 12) {
                 MonoBadge(text: "Java 21")
-                AccountPill(name: "Nickname")
+                AccountPill(name: settings.nickname)
             }
             .padding(.trailing, 20)
         }

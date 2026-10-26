@@ -39,5 +39,14 @@
   "Include snapshot versions in the list.": "Добавить снапшоты в список версий.",
   "Update automatically": "Обновлять автоматически",
   "Keep the launcher up to date.": "Держать лаунчер актуальным.",
-  "Coming soon.": "Скоро."
+  "Coming soon.": "Скоро.",
+  "Starting…": "Запуск…",
+  "Playing": "Играем",
+  "Preparing…": "Подготовка…",
+  "Downloading game files %d%%": "Загрузка файлов игры: %d%%",
+  "Downloading Java %d%%": "Загрузка Java: %d%%",
+  "The game closed with code %d.": "Игра закрылась с кодом %d.",
+  "Forge is not supported yet.": "Forge пока не поддерживается.",
+  "Nickname": "Ник",
+  "Name you play under. Offline mode.": "Имя в игре. Офлайн-режим."
 }

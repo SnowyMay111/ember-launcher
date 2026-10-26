@@ -2,6 +2,8 @@ import SwiftUI
 
 struct LibraryScreen: View {
     @EnvironmentObject var app: AppState
+    @EnvironmentObject var settings: SettingsStore
+    @EnvironmentObject var player: PlayController
 
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 16), count: 3)
 
@@ -35,7 +37,10 @@ struct LibraryScreen: View {
                 } else {
                     LazyVGrid(columns: columns, spacing: 16) {
                         ForEach(items) { item in
-                            InstanceCard(instance: item) { app.open(item) }
+                            InstanceCard(instance: item, onOpen: { app.open(item) }, onPlay: {
+                                app.open(item)
+                                player.play(item, settings: settings)
+                            })
                         }
                     }
                     .padding(.horizontal, 40)

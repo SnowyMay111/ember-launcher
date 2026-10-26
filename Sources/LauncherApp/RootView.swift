@@ -3,6 +3,7 @@ import SwiftUI
 struct RootView: View {
     @StateObject private var app = AppState()
     @StateObject private var settings = SettingsStore()
+    @StateObject private var player = PlayController()
 
     var body: some View {
         ZStack {
@@ -20,6 +21,7 @@ struct RootView: View {
         .ignoresSafeArea()
         .environmentObject(app)
         .environmentObject(settings)
+        .environmentObject(player)
         .background(WindowConfigurator())
         .frame(minWidth: 900, minHeight: 600)
         .preferredColorScheme(.dark)

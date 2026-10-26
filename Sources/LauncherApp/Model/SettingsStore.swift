@@ -6,6 +6,7 @@ final class SettingsStore: ObservableObject {
 
     private let defaults: UserDefaults
 
+    @Published var nickname: String { didSet { defaults.set(nickname, forKey: "nickname") } }
     @Published var memoryGB: Double { didSet { defaults.set(memoryGB, forKey: "memoryGB") } }
     @Published var java: String { didSet { defaults.set(java, forKey: "java") } }
     @Published var windowWidth: String { didSet { defaults.set(windowWidth, forKey: "windowWidth") } }
@@ -16,6 +17,7 @@ final class SettingsStore: ObservableObject {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        nickname = defaults.string(forKey: "nickname") ?? "Player"
         memoryGB = defaults.object(forKey: "memoryGB") as? Double ?? 4
         java = defaults.string(forKey: "java") ?? "Bundled · Java 21"
         windowWidth = defaults.string(forKey: "windowWidth") ?? "1920"

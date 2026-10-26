@@ -3,6 +3,22 @@ import SwiftUI
 struct PlayScreen: View {
     @EnvironmentObject var app: AppState
     @EnvironmentObject var settings: SettingsStore
+    @EnvironmentObject var player: PlayController
+
+    private var playTitle: String {
+        switch player.state {
+        case .idle, .failed: return "Play"
+        case .preparing: return "Starting…"
+        case .running: return "Playing"
+        }
+    }
+
+    private var statusText: String {
+        switch player.state {
+        case .preparing(let text), .failed(let text): return text
+        case .idle, .running: return ""
+        }
+    }
 
     var body: some View {
         if let item = app.current {
@@ -32,10 +48,19 @@ struct PlayScreen: View {
                     .padding(.top, 14)
 
                 HStack(spacing: 12) {
-                    PrimaryPill(title: "Play", showsPlay: true)
+                    PrimaryPill(title: playTitle, showsPlay: !player.isBusy, isDisabled: player.isBusy) {
+                        player.play(item, settings: settings)
+                    }
                     SecondaryPill(title: "Instance settings")
                 }
                 .padding(.top, 26)
+
+                Text(verbatim: statusText)
+                    .style(.init(size: 13, weight: .regular, color: Theme.muted))
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .frame(maxWidth: 560, minHeight: 18)
+                    .padding(.top, 14)
 
                 Spacer(minLength: 24)
 

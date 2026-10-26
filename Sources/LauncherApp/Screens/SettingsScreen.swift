@@ -9,6 +9,9 @@ struct SettingsScreen: View {
                 PageHeader(eyebrow: "Settings", title: "Preferences", subtitle: "Applies to every instance.")
 
                 VStack(spacing: 0) {
+                    SettingsRow(title: "Nickname", detail: "Name you play under. Offline mode.") {
+                        VoxelInput(label: "Nickname", text: $settings.nickname, width: 220)
+                    }
                     SettingsRow(title: "Memory", detail: "Maximum RAM given to the game.") {
                         VoxelSlider(label: "Memory", value: $settings.memoryGB, range: SettingsStore.memoryRange, valueText: settings.memoryText)
                     }
