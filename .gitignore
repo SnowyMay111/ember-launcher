@@ -3,3 +3,5 @@
 *.app
 .DS_Store
 build/
+sessions/
+backups/
