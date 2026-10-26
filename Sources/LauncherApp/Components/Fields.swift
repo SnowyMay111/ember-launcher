@@ -104,3 +104,96 @@ struct VoxelSlider: View {
         }
     }
 }
+
+/// Same look as `VoxelInput`, but the text is hidden (API keys).
+struct VoxelSecureInput: View {
+    let label: String
+    @Binding var text: String
+    var width: CGFloat? = nil
+    var placeholder = ""
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        SecureField("", text: $text, prompt: Text(verbatim: placeholder).foregroundColor(Theme.muted))
+            .textFieldStyle(.plain)
+            .font(fieldFont)
+            .foregroundColor(.white)
+            .focused($focused)
+            .padding(.horizontal, 14)
+            .frame(width: width, height: 40)
+            .background(RoundedRectangle(cornerRadius: Theme.radiusInput, style: .continuous).fill(Theme.black45))
+            .overlay(RoundedRectangle(cornerRadius: Theme.radiusInput, style: .continuous).strokeBorder(Theme.lineStrong, lineWidth: 1))
+            .contentShape(Rectangle())
+            .onTapGesture { focused = true }
+            .accessibilityLabel(L(label))
+    }
+}
+
+/// Several lines of text in the input look (the AI pack description).
+struct VoxelTextArea: View {
+    let label: String
+    @Binding var text: String
+    var placeholder = ""
+    var height: CGFloat = 96
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            TextEditor(text: $text)
+                .scrollContentBackground(.hidden)
+                .font(fieldFont)
+                .foregroundColor(.white)
+                .focused($focused)
+                .padding(.horizontal, 9)
+                .padding(.vertical, 8)
+            if text.isEmpty {
+                Text(verbatim: placeholder)
+                    .font(fieldFont)
+                    .foregroundColor(Theme.muted)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .allowsHitTesting(false)
+            }
+        }
+        .frame(height: height)
+        .background(RoundedRectangle(cornerRadius: Theme.radiusInput, style: .continuous).fill(Theme.black45))
+        .overlay(RoundedRectangle(cornerRadius: Theme.radiusInput, style: .continuous).strokeBorder(Theme.lineStrong, lineWidth: 1))
+        .accessibilityLabel(L(label))
+    }
+}
+
+private struct CheckMark: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX + rect.width * 0.22, y: rect.midY))
+        path.addLine(to: CGPoint(x: rect.minX + rect.width * 0.43, y: rect.maxY - rect.height * 0.25))
+        path.addLine(to: CGPoint(x: rect.maxX - rect.width * 0.2, y: rect.minY + rect.height * 0.28))
+        return path
+    }
+}
+
+/// Square check box: white when on, outline when off.
+struct VoxelCheckbox: View {
+    let label: String
+    @Binding var isOn: Bool
+
+    var body: some View {
+        Button { isOn.toggle() } label: {
+            ZStack {
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(isOn ? Color.white : Theme.black45)
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .strokeBorder(isOn ? Color.white : Theme.lineStrong, lineWidth: 1)
+                if isOn {
+                    CheckMark()
+                        .stroke(Color.black, style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+                }
+            }
+            .frame(width: 20, height: 20)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(L(label))
+        .accessibilityValue(isOn ? "on" : "off")
+    }
+}

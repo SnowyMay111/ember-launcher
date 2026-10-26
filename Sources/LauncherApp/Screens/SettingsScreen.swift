@@ -41,8 +41,21 @@ struct SettingsScreen: View {
                     SettingsRow(title: "Show snapshots", detail: "Include snapshot versions in the list.") {
                         VoxelToggle(label: "Show snapshots", isOn: $settings.showSnapshots)
                     }
-                    SettingsRow(title: "Update automatically", detail: "Keep the launcher up to date.", isLast: true) {
+                    SettingsRow(title: "Update automatically", detail: "Keep the launcher up to date.") {
                         VoxelToggle(label: "Update automatically", isOn: $settings.autoUpdate)
+                    }
+                    SettingsRow(title: "AI provider", detail: "Builds pack suggestions from your description.") {
+                        VoxelMenu(label: "AI provider", value: settings.aiProvider.displayName, minWidth: 150) {
+                            ForEach(AIProviderKind.allCases, id: \.self) { kind in
+                                Button(kind.displayName) { settings.aiProvider = kind }
+                            }
+                        }
+                    }
+                    SettingsRow(title: "API key", detail: "Your own key. Kept in the macOS Keychain.") {
+                        AIKeyField()
+                    }
+                    SettingsRow(title: "AI model", detail: "Leave empty to use the default.", isLast: true) {
+                        VoxelInput(label: "AI model", text: $settings.aiModel, width: 220, placeholder: settings.aiProvider.defaultModel)
                     }
                 }
                 .glass()
@@ -53,6 +66,29 @@ struct SettingsScreen: View {
             .padding(.bottom, 40)
             .padding(.horizontal, 40)
             .frame(maxWidth: .infinity)
+        }
+    }
+}
+
+/// No key yet: a hidden input and Save. Key saved: a badge and Remove (it is never shown again).
+private struct AIKeyField: View {
+    @EnvironmentObject var settings: SettingsStore
+    @Local private var draft = ""
+
+    var body: some View {
+        if settings.hasAIKey {
+            HStack(spacing: 12) {
+                MonoBadge(text: L("Saved"))
+                SecondaryPill(title: "Remove", action: settings.removeAIKey)
+            }
+        } else {
+            HStack(spacing: 10) {
+                VoxelSecureInput(label: "API key", text: $draft, width: 200, placeholder: "sk-…")
+                SecondaryPill(title: "Save") {
+                    settings.saveAIKey(draft)
+                    draft = ""
+                }
+            }
         }
     }
 }

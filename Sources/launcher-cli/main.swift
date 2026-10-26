@@ -56,6 +56,8 @@ guard args.count >= 2 else {
     print("                        Inspect a Modrinth .mrpack modpack")
     print("  mrpack import <file.mrpack> [--name \"My pack\"] [--group Mods] [--memory 6144]")
     print("                        Import a Modrinth .mrpack modpack")
+    print("  ai-plan \"description\" [--version 1.21.4] [--provider claude|gemini] [--key-env VAR] [--model id] [--answer file.json] [--install <instance>]")
+    print("                        Ask the AI for a Fabric mod list (key is read from the environment variable); --answer uses a saved reply instead")
     exit(1)
 }
 
@@ -597,6 +599,39 @@ do {
         default:
             print("Unknown mrpack subcommand: \(sub)")
             exit(1)
+        }
+
+    case "ai-plan":
+        guard args.count >= 3 else {
+            print("Error: Missing description. Usage: launcher-cli ai-plan \"description\" [--version 1.21.4] [--provider claude|gemini] [--key-env VAR] [--answer file.json] [--install <instance>]")
+            exit(1)
+        }
+        let description = args[2]
+        let gameVersion = option("--version") ?? "1.21.4"
+        let client: any AIChatClient
+        if let answerPath = option("--answer") {
+            client = SavedAnswerClient(text: try String(contentsOfFile: answerPath, encoding: .utf8))
+        } else {
+            let kind = AIProviderKind(rawValue: option("--provider") ?? "claude") ?? .claude
+            let envName = option("--key-env") ?? (kind == .claude ? "ANTHROPIC_API_KEY" : "GEMINI_API_KEY")
+            client = try makeAIClient(kind: kind, apiKey: ProcessInfo.processInfo.environment[envName] ?? "", model: option("--model"))
+        }
+        let plan = try await ModpackPlanner(client: client).plan(description: description, minecraftVersion: gameVersion)
+        print("\(plan.name) (Minecraft \(plan.minecraftVersion)): \(plan.summary)")
+        for mod in plan.mods {
+            print("  \(mod.title) [\(mod.slug)] - \(mod.reason)")
+        }
+        for name in plan.unresolved {
+            print("  not found: \(name)")
+        }
+        if let target = option("--install") {
+            let report = await ModpackBuilder(mods: ModManager(store: InstanceStore(paths: paths))).install(plan.mods, into: target) { title, done, total in
+                print("[\(done + 1)/\(total)] \(title)")
+            }
+            print("Installed \(report.installed.count) mods + \(report.dependencies) dependencies into \(target)")
+            for line in report.skipped {
+                print("Skipped: \(line)")
+            }
         }
 
     default:

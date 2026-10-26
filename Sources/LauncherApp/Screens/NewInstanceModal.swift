@@ -17,18 +17,46 @@ struct NewInstanceModal: View {
     @Local private var isImporting = false
     @Local private var importProgress = ""
     @Local private var importReport: MrpackImportReport?
+    @Local private var aiText = ""
+    @Local private var plan: ModpackPlan?
+    @Local private var picked: Set<String> = []
+    @Local private var isPlanning = false
+    @Local private var isBuilding = false
+    @Local private var buildProgress = ""
+    @Local private var buildReport: ModpackBuildReport?
 
-    private enum Mode { case custom, mrpack }
+    private enum Mode { case custom, mrpack, ai }
+
+    /// AI packs are always Fabric.
+    private var activeLoader: LoaderKind { mode == .ai ? .fabric : loader }
 
     /// Versions the chosen loader can run; Fabric supports only some of them.
     private var versions: [ManifestVersion] {
         let all = app.launchableVersions(includeSnapshots: settings.showSnapshots)
-        guard loader == .fabric, let fabric = fabricVersions else { return all }
+        guard activeLoader == .fabric, let fabric = fabricVersions else { return all }
         return all.filter { fabric.contains($0.id) }
     }
 
     private var namePlaceholder: String {
-        "\(loader.rawValue) \(version)"
+        "\(activeLoader.rawValue) \(version)"
+    }
+
+    private var versionMenu: some View {
+        ModalField(label: "Minecraft version") {
+            VoxelMenu(label: "Minecraft version", value: version.isEmpty ? "…" : version, minWidth: 170) {
+                ForEach(versions, id: \.id) { entry in
+                    Button(title(for: entry)) { version = entry.id }
+                }
+            }
+        }
+    }
+
+    private var showsNameAndGroup: Bool {
+        switch mode {
+        case .custom: return true
+        case .mrpack: return pack != nil
+        case .ai: return plan != nil
+        }
     }
 
     var body: some View {
@@ -37,28 +65,25 @@ struct NewInstanceModal: View {
                 HStack(spacing: 8) {
                     FilterChip(title: "Custom", isActive: mode == .custom) { mode = .custom }
                     FilterChip(title: "Import .mrpack", isActive: mode == .mrpack) { mode = .mrpack }
-                    FilterChip(title: "Describe with AI", isActive: false, isDisabled: true) {}
+                    FilterChip(title: "Describe with AI", isActive: mode == .ai) { mode = .ai }
                 }
 
                 if mode == .mrpack {
                     packPicker
                 }
+                if mode == .ai {
+                    aiPicker
+                }
 
-                if mode == .custom || pack != nil {
+                if showsNameAndGroup {
                     ModalField(label: "Name") {
-                        VoxelInput(label: "Name", text: $name, placeholder: mode == .mrpack ? (pack?.name ?? "") : namePlaceholder)
+                        VoxelInput(label: "Name", text: $name, placeholder: mode == .mrpack ? (pack?.name ?? "") : (mode == .ai ? (plan?.name ?? "") : namePlaceholder))
                     }
                 }
 
                 if mode == .custom {
                 HStack(alignment: .top, spacing: 24) {
-                    ModalField(label: "Minecraft version") {
-                        VoxelMenu(label: "Minecraft version", value: version.isEmpty ? "…" : version, minWidth: 170) {
-                            ForEach(versions, id: \.id) { entry in
-                                Button(title(for: entry)) { version = entry.id }
-                            }
-                        }
-                    }
+                    versionMenu
                     ModalField(label: "Loader") {
                         HStack(spacing: 8) {
                             ForEach([LoaderKind.vanilla, .fabric]) { kind in
@@ -70,7 +95,7 @@ struct NewInstanceModal: View {
                 }
                 }
 
-                if mode == .custom || pack != nil {
+                if showsNameAndGroup {
                     ModalField(label: "Group") {
                         GroupPicker(group: $group)
                     }
@@ -84,12 +109,26 @@ struct NewInstanceModal: View {
                 }
             }
         } footer: {
-            if let importReport, !importReport.failed.isEmpty {
+            if (importReport.map { !$0.failed.isEmpty } ?? false) || buildReport != nil {
                 PrimaryPill(title: "Done") { app.modal = nil }
             } else {
                 ModalCancel()
                 if mode == .mrpack {
                     PrimaryPill(title: isImporting ? "Importing…" : "Import", isDisabled: pack == nil || isImporting, action: importPack)
+                } else if mode == .ai {
+                    if plan == nil {
+                        PrimaryPill(
+                            title: isPlanning ? "Thinking…" : "Suggest mods",
+                            isDisabled: isPlanning || version.isEmpty || !settings.hasAIKey || aiText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                            action: generate
+                        )
+                    } else {
+                        PrimaryPill(
+                            title: isBuilding ? "Installing…" : L("Create with %d mods", picked.count),
+                            isDisabled: isBuilding || picked.isEmpty,
+                            action: buildAIPack
+                        )
+                    }
                 } else {
                     PrimaryPill(title: "Create", isDisabled: version.isEmpty, action: create)
                 }
@@ -101,6 +140,121 @@ struct NewInstanceModal: View {
             chooseVersion()
         }
         .onChange(of: versions.map(\.id)) { chooseVersion() }
+        .onChange(of: mode) { _, new in
+            if new == .ai { group = GroupName.automatic(for: .fabric) }
+            if new == .custom { group = GroupName.automatic(for: loader) }
+            errorText = ""
+            chooseVersion()
+        }
+    }
+
+    /// The description box and version first; after "Suggest mods", the list to tick.
+    @ViewBuilder
+    private var aiPicker: some View {
+        if let plan {
+            Text(verbatim: plan.summary).style(.secondary)
+            ScrollView {
+                VStack(spacing: 0) {
+                    ForEach(plan.mods) { mod in
+                        HStack(alignment: .top, spacing: 14) {
+                            VoxelCheckbox(label: mod.title, isOn: Binding(
+                                get: { picked.contains(mod.projectId) },
+                                set: { isOn in
+                                    if isOn { picked.insert(mod.projectId) } else { picked.remove(mod.projectId) }
+                                }
+                            ))
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(verbatim: mod.title).style(.row)
+                                Text(verbatim: mod.reason).style(.secondary).lineLimit(2)
+                            }
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.vertical, 8)
+                    }
+                }
+            }
+            .frame(maxHeight: 230)
+            if !plan.unresolved.isEmpty {
+                Text(verbatim: L("No %@ release found for: %@", plan.minecraftVersion, plan.unresolved.joined(separator: ", "))).style(.secondary)
+            }
+            if isBuilding {
+                Text(verbatim: buildProgress).style(.secondary)
+            }
+            if let buildReport {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(verbatim: L("Installed %d mods, but %d were skipped:", buildReport.installed.count, buildReport.skipped.count)).style(.secondary)
+                    ForEach(buildReport.skipped.prefix(8), id: \.self) { line in
+                        Text(verbatim: line).style(.secondary).lineLimit(1)
+                    }
+                }
+            }
+        } else {
+            ModalField(label: "Describe your pack") {
+                VoxelTextArea(
+                    label: "Describe your pack",
+                    text: $aiText,
+                    placeholder: L("A cozy survival pack with better graphics, a minimap and some farming mods")
+                )
+            }
+            versionMenu
+            if !settings.hasAIKey {
+                Text(tr: "Add your AI key in Settings first.").style(.secondary)
+                SecondaryPill(title: "Open Settings") {
+                    app.modal = nil
+                    app.screen = .settings
+                }
+            } else {
+                Text(tr: "The AI only suggests mods. You tick what to keep before anything is installed.").style(.secondary)
+            }
+        }
+    }
+
+    private func generate() {
+        guard !isPlanning else { return }
+        isPlanning = true
+        errorText = ""
+        Task {
+            do {
+                let result = try await app.planPack(description: aiText, minecraftVersion: version, settings: settings)
+                plan = result
+                picked = Set(result.mods.map(\.projectId))
+            } catch {
+                errorText = error.localizedDescription
+            }
+            isPlanning = false
+        }
+    }
+
+    private func buildAIPack() {
+        guard let plan, !isBuilding else { return }
+        let chosen = plan.mods.filter { picked.contains($0.projectId) }
+        let trimmed = group.trimmingCharacters(in: .whitespacesAndNewlines)
+        let saved = trimmed.isEmpty || trimmed == GroupName.automatic(for: .fabric) ? nil : trimmed
+        isBuilding = true
+        errorText = ""
+        Task {
+            do {
+                let report = try await app.buildPack(
+                    name: name.isEmpty ? plan.name : name,
+                    minecraftVersion: plan.minecraftVersion,
+                    group: saved,
+                    memoryMB: Int(settings.memoryGB) * 1024,
+                    mods: chosen
+                ) { title, done, total in
+                    let text = L("Installing %@ (%d of %d)", title, done + 1, total)
+                    Task { @MainActor in buildProgress = text }
+                }
+                isBuilding = false
+                if report.skipped.isEmpty {
+                    app.modal = nil
+                } else {
+                    buildReport = report
+                }
+            } catch {
+                isBuilding = false
+                errorText = error.localizedDescription
+            }
+        }
     }
 
     /// The file chooser, and once a pack is picked, what is inside it.
