@@ -2,8 +2,15 @@ import SwiftUI
 
 struct RootView: View {
     @StateObject private var app = AppState()
-    @StateObject private var settings = SettingsStore()
+    @StateObject private var settings: SettingsStore
     @StateObject private var player = PlayController()
+    @StateObject private var updates: UpdateController
+
+    init() {
+        let settings = SettingsStore()
+        _settings = StateObject(wrappedValue: settings)
+        _updates = StateObject(wrappedValue: UpdateController(settings: settings))
+    }
 
     var body: some View {
         ZStack {
@@ -16,6 +23,7 @@ struct RootView: View {
                     Glow(app.screen == .play ? .play : .page)
                     screen
                 }
+                .overlay(alignment: .top) { UpdateNotice() }
             }
         }
         .ignoresSafeArea()
@@ -23,6 +31,12 @@ struct RootView: View {
         .environmentObject(app)
         .environmentObject(settings)
         .environmentObject(player)
+        .environmentObject(updates)
+        .onAppear { updates.start() }
+        .onChange(of: player.isBusy) { _, busy in updates.gameIsBusy = busy }
+        .onChange(of: settings.autoUpdate) { _, isOn in
+            if isOn { updates.autoUpdateEnabled() }
+        }
         .background(WindowConfigurator())
         .frame(minWidth: 900, minHeight: 600)
         .preferredColorScheme(.dark)

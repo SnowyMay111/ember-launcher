@@ -61,6 +61,7 @@ guard args.count >= 2 else {
     print("  catalog search <mod|modpack|shader|resourcepack> <query> [--game-version V]")
     print("  catalog install <kind> <slug> <instance>")
     print("  catalog modpack <slug> [name]")
+    print("  update check          Look for a newer launcher on GitHub Releases (VOXEL_UPDATE_URL overrides the address)")
     exit(1)
 }
 
@@ -738,6 +739,17 @@ do {
         default:
             print("Unknown catalog subcommand: \(sub)")
             exit(1)
+        }
+
+    case "update":
+        guard args.count >= 3, args[2] == "check" else {
+            print("Usage: launcher-cli update check")
+            exit(1)
+        }
+        if let update = try await UpdateChecker.checkReportingErrors(currentVersion: LauncherInfo.version) {
+            print("update \(update.version) available \(update.assetURL.absoluteString)")
+        } else {
+            print("up to date")
         }
 
     default:

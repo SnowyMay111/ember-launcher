@@ -28,6 +28,7 @@ struct TopBar: View {
             Spacer(minLength: 16)
 
             HStack(spacing: 12) {
+                UpdatePill()
                 MonoBadge(text: "Java 21")
                 AccountPill(name: settings.nickname)
             }
@@ -35,6 +36,55 @@ struct TopBar: View {
         }
         .frame(height: 56)
         .topBarBackground()
+    }
+}
+
+/// Shown while a newer launcher is known: offers it, shows the download, then offers the restart.
+private struct UpdatePill: View {
+    @EnvironmentObject var updates: UpdateController
+
+    private var content: (title: String, isDisabled: Bool)? {
+        switch updates.state {
+        case .idle:
+            return nil
+        case .available, .failed:
+            guard let info = updates.info else { return nil }
+            return (L("Update to %@", info.version), false)
+        case .downloading(let fraction):
+            return (L("Updating… %d%%", Int(fraction * 100)), true)
+        case .ready:
+            return updates.isWaitingForGame ? (L("Update after you close the game"), true) : (L("Restart to update"), false)
+        }
+    }
+
+    var body: some View {
+        if let content {
+            PrimaryPill(title: content.title, height: 32, horizontalPadding: 16, isDisabled: content.isDisabled) {
+                updates.pillAction()
+            }
+        }
+    }
+}
+
+/// Why the last update failed, floating under the top bar until it is dismissed or tried again.
+struct UpdateNotice: View {
+    @EnvironmentObject var updates: UpdateController
+
+    var body: some View {
+        if case .failed(let message) = updates.state {
+            HStack(spacing: 12) {
+                Text(verbatim: message).style(.secondary)
+                Button(action: updates.dismissError) {
+                    Text(tr: "Dismiss").style(.init(size: 13, weight: .medium, color: Theme.text))
+                }
+                .buttonStyle(PressDimStyle())
+            }
+            .padding(.horizontal, 16)
+            .frame(height: 34)
+            .background(Capsule().fill(Theme.black40))
+            .overlay(Capsule().strokeBorder(Theme.line, lineWidth: 1))
+            .padding(.top, 10)
+        }
     }
 }
 

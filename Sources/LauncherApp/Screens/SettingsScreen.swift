@@ -3,6 +3,18 @@ import LauncherCore
 
 struct SettingsScreen: View {
     @EnvironmentObject var settings: SettingsStore
+    @EnvironmentObject var updates: UpdateController
+
+    private var updateDetail: String {
+        switch updates.checkStatus {
+        case .checking: return L("Checking…")
+        case .failed(let message): return message
+        case .upToDate: return L("You're up to date.")
+        case .idle:
+            if let info = updates.info { return L("Version %@ is available.", info.version) }
+            return "Looks for a newer version on GitHub."
+        }
+    }
 
     private var recommendedMemoryText: String {
         let range = JVMArgumentsBuilder.memoryRecommendation(isModded: false).recommendedRangeMB
@@ -43,6 +55,9 @@ struct SettingsScreen: View {
                     }
                     SettingsRow(title: "Update automatically", detail: "Keep the launcher up to date.") {
                         VoxelToggle(label: "Update automatically", isOn: $settings.autoUpdate)
+                    }
+                    SettingsRow(title: L("Version %@", LauncherInfo.version), detail: updateDetail) {
+                        SecondaryPill(title: updates.checkStatus == .checking ? "Checking…" : "Check for updates", action: updates.checkNow)
                     }
                     SettingsRow(title: "AI provider", detail: "Builds pack suggestions from your description.") {
                         VoxelMenu(label: "AI provider", value: settings.aiProvider.displayName, minWidth: 150) {
