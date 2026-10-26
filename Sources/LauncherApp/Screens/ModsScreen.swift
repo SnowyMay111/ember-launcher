@@ -199,13 +199,18 @@ struct ModsScreen: View {
                 Text(verbatim: hit.description).style(.secondary).lineLimit(2)
             }
             Spacer(minLength: 12)
-            Text(verbatim: L("%@ downloads", Self.short(hit.downloads))).style(.eyebrow)
+            VStack(alignment: .trailing, spacing: 3) {
+                Text(verbatim: L("%@ downloads", Self.short(hit.downloads))).style(.eyebrow)
+                if !isInstalled, let note = Self.compatNote(mods.compat[hit.projectId]) {
+                    Text(verbatim: note.text).style(note.isWarning ? .secondary : .eyebrow).lineLimit(1)
+                }
+            }
             if isInstalled {
                 SecondaryPill(title: "Installed")
                     .allowsHitTesting(false)
                     .opacity(0.6)
             } else {
-                PrimaryPill(title: isBusy ? "Installing…" : "Install", height: 36, horizontalPadding: 22, isDisabled: isBusy) {
+                PrimaryPill(title: isBusy ? "Installing…" : "Install", height: 36, horizontalPadding: 22, isDisabled: isBusy || !Self.canInstall(mods.compat[hit.projectId])) {
                     Task { await mods.install(hit) }
                 }
             }
@@ -213,6 +218,24 @@ struct ModsScreen: View {
         .padding(14)
         .background(RoundedRectangle(cornerRadius: Theme.radiusInput).fill(Theme.white04))
         .overlay(RoundedRectangle(cornerRadius: Theme.radiusInput).strokeBorder(Theme.line, lineWidth: 1))
+    }
+
+    /// The line under the download count; nothing while the check is still running or failed.
+    private static func compatNote(_ value: ModCompatibility?) -> (text: String, isWarning: Bool)? {
+        switch value {
+        case .ready: return (L("Compatible"), false)
+        case .needs(let count): return (L("Compatible · +%@ required", String(count)), false)
+        case .conflict(let title): return (L("Conflicts with %@", title), true)
+        case .unavailable: return (L("No release for this version"), true)
+        case .unknown, nil: return nil
+        }
+    }
+
+    private static func canInstall(_ value: ModCompatibility?) -> Bool {
+        switch value {
+        case .conflict, .unavailable: return false
+        default: return true
+        }
     }
 
     /// 1234 → "1.2K", 1_500_000 → "1.5M".

@@ -224,5 +224,9 @@
   "Before restore": "Перед відкатом",
   "Before %@": "Перед зміною на %@",
   "Backing up worlds and mods": "Зберігаю копію світів і модів",
-  "Installing Minecraft %@ and Fabric": "Ставлю Minecraft %@ і Fabric"
+  "Installing Minecraft %@ and Fabric": "Ставлю Minecraft %@ і Fabric",
+  "Compatible": "Підходить",
+  "Compatible · +%@ required": "Підходить · ще потрібно: %@",
+  "Conflicts with %@": "Конфлікт з %@",
+  "No release for this version": "Немає версії для цієї збірки"
 }

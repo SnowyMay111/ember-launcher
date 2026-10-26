@@ -7,6 +7,7 @@ import SwiftUI
 final class ModsController: ObservableObject {
     @Published var installed: [InstalledMod] = []
     @Published var results: [ModrinthHit] = []
+    @Published var compat: [String: ModCompatibility] = [:]
     @Published var isSearching: Bool = false
     @Published var updates: [ModUpdate] = []
     @Published var isCheckingUpdates: Bool = false
@@ -70,9 +71,32 @@ final class ModsController: ObservableObject {
             )
             guard searchCounter == searchID else { return }
             results = hits
+            compat = [:]
+            Task { await checkCompatibility(of: hits, searchID: searchID) }
         } catch {
             guard searchCounter == searchID else { return }
             message = error.localizedDescription
+        }
+    }
+
+    /// Fills `compat` for the search results, a few requests at a time; a newer search cancels the rest.
+    private func checkCompatibility(of hits: [ModrinthHit], searchID: Int) async {
+        guard let name = instanceName else { return }
+        let manager = self.manager
+        var index = 0
+        while index < hits.count, searchCounter == searchID {
+            let batch = hits[index..<min(index + 5, hits.count)]
+            let found = await withTaskGroup(of: (String, ModCompatibility).self) { group in
+                for hit in batch {
+                    group.addTask { (hit.projectId, await manager.compatibility(project: hit.projectId, instance: name)) }
+                }
+                var pairs: [String: ModCompatibility] = [:]
+                for await (id, value) in group { pairs[id] = value }
+                return pairs
+            }
+            guard searchCounter == searchID else { return }
+            compat.merge(found) { _, new in new }
+            index += 5
         }
     }
 
