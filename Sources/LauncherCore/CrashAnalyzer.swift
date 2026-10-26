@@ -3,6 +3,7 @@ import Foundation
 public enum CrashKind: String, Sendable, CaseIterable {
     case outOfMemory
     case wrongJavaVersion
+    case badJavaArguments
     case missingDependency
     case modConflict
     case brokenMod
@@ -58,6 +59,31 @@ public enum CrashAnalyzer {
                 kind: .wrongJavaVersion,
                 culprit: nil,
                 detail: lines[idx].trimmingCharacters(in: .whitespaces),
+                excerpt: makeExcerpt(lines: lines, index: idx),
+                reportFile: reportFile
+            )
+        }
+
+        // Bad Java arguments
+        if let idx = lines.firstIndex(where: {
+            $0.contains("Error occurred during initialization of VM") ||
+            $0.contains("Unrecognized VM option") ||
+            $0.contains("Invalid maximum heap size") ||
+            $0.contains("Invalid initial heap size") ||
+            $0.contains("Could not create the Java Virtual Machine") ||
+            $0.contains("Could not reserve enough space")
+        }) {
+            let detail: String
+            if let initVmIdx = lines.firstIndex(where: { $0.contains("Error occurred during initialization of VM") }),
+               let nextNonEmpty = lines[(initVmIdx + 1)...].first(where: { !$0.trimmingCharacters(in: .whitespaces).isEmpty }) {
+                detail = nextNonEmpty.trimmingCharacters(in: .whitespaces)
+            } else {
+                detail = lines[idx].trimmingCharacters(in: .whitespaces)
+            }
+            return CrashDiagnosis(
+                kind: .badJavaArguments,
+                culprit: nil,
+                detail: detail,
                 excerpt: makeExcerpt(lines: lines, index: idx),
                 reportFile: reportFile
             )

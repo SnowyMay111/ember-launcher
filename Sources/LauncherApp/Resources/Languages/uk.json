@@ -111,5 +111,7 @@
   "Update the mod named here, or remove it.": "Оновіть названий тут мод або приберіть його.",
   "Update macOS, then try a smaller window size in Settings.": "Оновіть macOS і спробуйте менший розмір вікна в налаштуваннях.",
   "Try again. If it repeats, lower the memory in Instance settings.": "Спробуйте ще раз. Якщо повториться, зменшіть пам'ять у налаштуваннях збірки.",
-  "The last lines of the log below usually show the cause.": "Останні рядки логу нижче зазвичай показують причину."
+  "The last lines of the log below usually show the cause.": "Останні рядки логу нижче зазвичай показують причину.",
+  "Java could not start with these settings": "Java не запустилась з такими налаштуваннями",
+  "Check the memory and Java arguments in Instance settings.": "Перевірте пам'ять і аргументи Java в налаштуваннях збірки."
 }

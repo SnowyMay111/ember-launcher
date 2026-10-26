@@ -6,6 +6,7 @@ extension CrashKind {
         switch self {
         case .outOfMemory: return L("The game ran out of memory")
         case .wrongJavaVersion: return L("Wrong Java version")
+        case .badJavaArguments: return L("Java could not start with these settings")
         case .missingDependency: return L("A mod is missing something it needs")
         case .modConflict: return L("Two mods do not work together")
         case .brokenMod: return L("A mod crashed the game")
@@ -19,6 +20,7 @@ extension CrashKind {
         switch self {
         case .outOfMemory: return L("Give the game more memory in Instance settings.")
         case .wrongJavaVersion: return L("Clear the Java field in Settings so the launcher picks the right Java itself.")
+        case .badJavaArguments: return L("Check the memory and Java arguments in Instance settings.")
         case .missingDependency: return L("Install the missing mod, or remove the mod that needs it.")
         case .modConflict: return L("Remove one of the two mods.")
         case .brokenMod: return L("Update the mod named here, or remove it.")
