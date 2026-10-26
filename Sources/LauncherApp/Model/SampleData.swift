@@ -1,5 +1,8 @@
 import Foundation
 
+// Old placeholder data, unused since the Library reads real instances.
+// It targets the previous LibraryInstance init, so it is compiled out (delete the file once you say so).
+#if SAMPLE_DATA
 enum SampleData {
     static let instances: [LibraryInstance] = [
         LibraryInstance(name: "Survival", minecraftVersion: "1.21.4", loader: .fabric, modCount: 42, playtimeMinutes: 18 * 60 + 24, lastPlayedDaysAgo: 2, glow: PreviewGlow(x: 0.30, y: 0.20, opacity: 0.22)),
@@ -12,3 +15,4 @@ enum SampleData {
         LibraryInstance(name: "Old Realm", minecraftVersion: "1.12.2", loader: .forge, modCount: 64, playtimeMinutes: 55 * 60, lastPlayedDaysAgo: 40, glow: PreviewGlow(x: 0.25, y: 0.55, opacity: 0.20)),
     ]
 }
+#endif

@@ -95,6 +95,46 @@ public final class GameLauncher: Sendable {
         return try store.create(name: name, minecraftVersion: minecraftVersion)
     }
 
+    public func ensureInstalled(
+        _ instance: Instance,
+        force: Bool = false,
+        progress: @escaping @Sendable (String, DownloadProgress) -> Void = { _, _ in }
+    ) async throws -> Instance {
+        var updated = instance
+        let fm = FileManager.default
+        if instance.loader == "fabric" {
+            let needsInstall = force
+                || instance.versionId.isEmpty
+                || !fm.fileExists(atPath: paths.versionJSON(instance.versionId).path)
+                || !fm.fileExists(atPath: paths.versionJSON(instance.minecraftVersion).path)
+            if needsInstall {
+                let fabricInstaller = FabricInstaller(paths: paths, installer: installer)
+                let profileId = try await fabricInstaller.install(
+                    minecraftVersion: instance.minecraftVersion,
+                    loaderVersion: instance.loaderVersion,
+                    progress: progress
+                )
+                let prefix = "fabric-loader-"
+                let suffix = "-\(instance.minecraftVersion)"
+                let loaderVersion = String(
+                    profileId.dropFirst(prefix.count).dropLast(suffix.count)
+                )
+                updated.versionId = profileId
+                updated.loaderVersion = loaderVersion
+                if updated != instance {
+                    try store.save(updated)
+                }
+            }
+            return updated
+        } else {
+            let needsInstall = force || !fm.fileExists(atPath: paths.versionJSON(instance.versionId).path)
+            if needsInstall {
+                _ = try await installer.install(versionId: instance.versionId, progress: progress)
+            }
+            return updated
+        }
+    }
+
     // MARK: - Command
 
     /// Makes sure Mojang's Java for this version is present, then builds the command.

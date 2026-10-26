@@ -41,6 +41,24 @@ private final class ProgressRelay: @unchecked Sendable {
     }
 }
 
+/// Hands out the seconds played since it was last asked, so a periodic save and the final save never count the same second twice.
+private final class PlayClock: @unchecked Sendable {
+    private let lock = NSLock()
+    private var mark: Date
+
+    init(start: Date) {
+        mark = start
+    }
+
+    func take() -> Int {
+        lock.lock()
+        defer { lock.unlock() }
+        let seconds = max(0, Int(Date().timeIntervalSince(mark)))
+        mark = mark.addingTimeInterval(Double(seconds))
+        return seconds
+    }
+}
+
 private extension GameLauncherError {
     /// The game files are missing or incomplete, so installing them may fix it.
     var needsInstall: Bool {
@@ -55,6 +73,13 @@ private extension GameLauncherError {
 @MainActor
 final class PlayController: ObservableObject {
     @Published private(set) var state: PlayState = .idle
+    /// Why the last run ended badly, and which instance it was; nil after a clean run or before the first run.
+    @Published private(set) var diagnosis: CrashDiagnosis?
+    @Published private(set) var diagnosisInstance: String?
+    /// When the running game was started.
+    @Published private(set) var runningSince: Date?
+    /// Counts game starts, so the log console knows the log file was started over.
+    @Published private(set) var runCount = 0
 
     private let paths = LauncherPaths()
     private let launcher: GameLauncher
@@ -70,33 +95,61 @@ final class PlayController: ObservableObject {
         }
     }
 
-    func play(_ item: LibraryInstance, settings: SettingsStore) {
+    func play(_ item: LibraryInstance, settings: SettingsStore, app: AppState) {
         guard !isBusy else { return }
         state = .preparing(L("Preparing…"))
         let nickname = settings.nickname
-        let memoryMB = Int(settings.memoryGB) * 1024
         let hideLauncher = settings.closeOnStart
-        Task { await run(item, nickname: nickname, memoryMB: memoryMB, hideLauncher: hideLauncher) }
+        Task { await run(item, nickname: nickname, hideLauncher: hideLauncher, app: app) }
     }
 
-    private func run(_ item: LibraryInstance, nickname: String, memoryMB: Int, hideLauncher: Bool) async {
+    private func run(_ item: LibraryInstance, nickname: String, hideLauncher: Bool, app: AppState) async {
         do {
             guard item.loader != .forge else { throw PlayError.forgeUnsupported }
             let account = try OfflineAccount(name: nickname)
             try paths.ensureDirectories()
-            let command = try await prepareCommand(item, account: account, memoryMB: memoryMB)
+            let command = try await prepareCommand(item.name, account: account)
             let process = try launcher.launch(command)
+            let started = Date()
+            runCount += 1
+            diagnosis = nil
+            diagnosisInstance = nil
+            runningSince = started
             state = .running
             if hideLauncher { NSApp.hide(nil) }
+
+            // Playtime is saved every minute, so quitting the launcher mid-game loses at most a minute.
+            let clock = PlayClock(start: started)
+            let checkpoint = Task { @MainActor in
+                while !Task.isCancelled {
+                    try? await Task.sleep(for: .seconds(60))
+                    guard !Task.isCancelled else { return }
+                    try? launcher.store.recordPlay(name: item.name, seconds: clock.take(), at: started)
+                    app.reload()
+                }
+            }
 
             let status = await Task.detached {
                 process.waitUntilExit()
                 return process.terminationStatus
             }.value
 
+            checkpoint.cancel()
+            runningSince = nil
             if hideLauncher {
                 NSApp.unhide(nil)
                 NSApp.activate(ignoringOtherApps: true)
+            }
+            try? launcher.store.recordPlay(name: item.name, seconds: clock.take(), at: started)
+            app.reload()
+            if status != 0 {
+                diagnosis = await Self.diagnose(
+                    logURL: command.logURL,
+                    gameDirectory: command.workingDirectory,
+                    since: started,
+                    exitCode: status
+                )
+                diagnosisInstance = item.name
             }
             state = status == 0 ? .idle : .failed(L("The game closed with code %d.", Int(status)))
         } catch {
@@ -104,38 +157,29 @@ final class PlayController: ObservableObject {
         }
     }
 
-    /// Builds the launch command; if the game files are missing, installs them once and tries again.
-    private func prepareCommand(_ item: LibraryInstance, account: OfflineAccount, memoryMB: Int) async throws -> LaunchCommand {
+    /// Reads the game's log and its crash report (if it wrote one) off the main thread and names the likely cause.
+    private nonisolated static func diagnose(logURL: URL, gameDirectory: URL, since: Date, exitCode: Int32) async -> CrashDiagnosis {
+        await Task.detached {
+            let log = GameLog.tail(of: logURL)
+            let file = GameLog.latestCrashFile(gameDirectory: gameDirectory, since: since.addingTimeInterval(-5))
+            let report = file.flatMap { try? String(contentsOf: $0, encoding: .utf8) }
+            return CrashAnalyzer.analyze(log: log, crashReport: report, reportFile: file, exitCode: exitCode)
+        }.value
+    }
+
+    /// Builds the launch command; installs the game files first when they are missing, and once more if the build still reports a gap.
+    private func prepareCommand(_ name: String, account: OfflineAccount) async throws -> LaunchCommand {
         let relay = ProgressRelay { [weak self] phase, percent in
             Task { @MainActor in self?.showDownload(phase: phase, percent: percent) }
         }
-        var installed = false
-        while true {
-            do {
-                var instance = try launcher.prepareInstance(
-                    name: item.name,
-                    minecraftVersion: item.minecraftVersion,
-                    fabric: item.loader == .fabric
-                )
-                if instance.memoryMB != memoryMB {
-                    instance.memoryMB = memoryMB
-                    try launcher.store.save(instance)
-                }
-                return try await launcher.makeCommand(instance: instance, account: account) { relay.report("runtime", $0) }
-            } catch let error as GameLauncherError where !installed && error.needsInstall {
-                installed = true
-                try await install(item, relay: relay)
-            }
-        }
-    }
-
-    private func install(_ item: LibraryInstance, relay: ProgressRelay) async throws {
         let progress: @Sendable (String, DownloadProgress) -> Void = { relay.report($0, $1) }
-        if item.loader == .fabric {
-            let fabric = FabricInstaller(paths: paths, installer: launcher.installer)
-            _ = try await fabric.install(minecraftVersion: item.minecraftVersion, progress: progress)
-        } else {
-            _ = try await launcher.installer.install(versionId: item.minecraftVersion, progress: progress)
+        var instance = try launcher.store.load(name: name)
+        instance = try await launcher.ensureInstalled(instance, progress: progress)
+        do {
+            return try await launcher.makeCommand(instance: instance, account: account) { relay.report("runtime", $0) }
+        } catch let error as GameLauncherError where error.needsInstall {
+            instance = try await launcher.ensureInstalled(instance, force: true, progress: progress)
+            return try await launcher.makeCommand(instance: instance, account: account) { relay.report("runtime", $0) }
         }
     }
 

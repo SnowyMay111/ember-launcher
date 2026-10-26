@@ -68,6 +68,7 @@ struct SecondaryPill: View {
 struct FilterChip: View {
     let title: String
     let isActive: Bool
+    var isDisabled = false
     var action: () -> Void
 
     var body: some View {
@@ -82,6 +83,8 @@ struct FilterChip: View {
                 .contentShape(Capsule())
         }
         .buttonStyle(PressDimStyle())
+        .disabled(isDisabled)
+        .opacity(isDisabled ? 0.45 : 1)
         .accessibilityAddTraits(isActive ? .isSelected : [])
     }
 }

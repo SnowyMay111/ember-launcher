@@ -29,6 +29,11 @@ private struct FabricProfileResponse: Decodable {
     let id: String
 }
 
+private struct FabricGameVersion: Decodable {
+    let version: String
+    let stable: Bool
+}
+
 public final class FabricInstaller: Sendable {
     public let paths: LauncherPaths
     public let installer: VersionInstaller
@@ -38,6 +43,14 @@ public final class FabricInstaller: Sendable {
         self.paths = paths
         self.installer = installer
         self.downloader = downloader
+    }
+
+    public func supportedGameVersions() async throws -> Set<String> {
+        guard let url = URL(string: "https://meta.fabricmc.net/v2/versions/game") else {
+            throw FabricInstallerError.invalidURL("https://meta.fabricmc.net/v2/versions/game")
+        }
+        let entries = try await downloader.fetchJSON([FabricGameVersion].self, from: url)
+        return Set(entries.map { $0.version })
     }
 
     public func latestStableLoader(for mc: String) async throws -> String {

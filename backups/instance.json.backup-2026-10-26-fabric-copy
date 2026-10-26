@@ -1,0 +1,12 @@
+{
+  "extraJVMArgs" : [
+
+  ],
+  "loader" : "fabric",
+  "loaderVersion" : "0.20.1",
+  "memoryMB" : 16384,
+  "minecraftVersion" : "1.21.4",
+  "name" : "Fabric 1.21.4 copy",
+  "playtimeSeconds" : 0,
+  "versionId" : "fabric-loader-0.20.1-1.21.4"
+}

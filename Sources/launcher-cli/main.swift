@@ -32,6 +32,8 @@ guard args.count >= 2 else {
     print("                        Install Fabric for an installed Minecraft version")
     print("  launch <mc> [--fabric] [--name <nick>] [--instance <name>] [--dry-run]")
     print("                        Start the game (offline nick, default Player)")
+    print("  diagnose <instance-name>")
+    print("                        Diagnose crash from logs and crash reports")
     exit(1)
 }
 
@@ -127,6 +129,38 @@ do {
             print("Game exited with code \(process.terminationStatus)")
             exit(process.terminationStatus)
         }
+
+    case "diagnose":
+        guard args.count >= 3 else {
+            print("Error: Missing instance name. Usage: launcher-cli diagnose <instance-name>")
+            exit(1)
+        }
+        let instanceName = args[2]
+        let store = InstanceStore(paths: paths)
+        let instance = try store.load(name: instanceName)
+        let instanceDir = store.instanceDirectory(for: instance.name)
+        let gameDir = store.gameDirectory(for: instance.name)
+
+        let logURL = instanceDir.appendingPathComponent("launcher.log")
+        let logText = GameLog.tail(of: logURL)
+
+        let crashFile = GameLog.latestCrashFile(gameDirectory: gameDir, since: .distantPast)
+        let crashReportText = crashFile.flatMap { try? String(contentsOf: $0, encoding: .utf8) }
+
+        let diagnosis = CrashAnalyzer.analyze(
+            log: logText,
+            crashReport: crashReportText,
+            reportFile: crashFile,
+            exitCode: 1
+        )
+
+        print("Kind: \(diagnosis.kind.rawValue)")
+        if let culprit = diagnosis.culprit {
+            print("Culprit: \(culprit)")
+        }
+        print("Detail: \(diagnosis.detail)")
+        print("Excerpt:")
+        print(diagnosis.excerpt)
 
     default:
         print("Unknown command: \(command)")

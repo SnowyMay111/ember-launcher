@@ -14,7 +14,7 @@ struct LibraryScreen: View {
                 Spacer(minLength: 16)
                 HStack(spacing: 12) {
                     SearchField(placeholder: "Search instances", text: $app.search)
-                    PrimaryPill(title: "New instance", height: 42, horizontalPadding: 22)
+                    PrimaryPill(title: "New instance", height: 42, horizontalPadding: 22) { app.modal = .newInstance }
                 }
             }
             .padding(.horizontal, 40)
@@ -27,20 +27,36 @@ struct LibraryScreen: View {
             .padding(.horizontal, 40)
             .padding(.top, 22)
 
-            let items = app.filteredInstances
+            let groups = app.groupedInstances
             ScrollView {
-                if items.isEmpty {
+                if app.instances.isEmpty {
+                    Text(tr: "No instances yet. Press New instance to create one.")
+                        .style(.body16)
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 60)
+                } else if groups.isEmpty {
                     Text(tr: "No instances found.")
                         .style(.body16)
                         .frame(maxWidth: .infinity)
                         .padding(.top, 60)
                 } else {
-                    LazyVGrid(columns: columns, spacing: 16) {
-                        ForEach(items) { item in
-                            InstanceCard(instance: item, onOpen: { app.open(item) }, onPlay: {
-                                app.open(item)
-                                player.play(item, settings: settings)
-                            })
+                    VStack(alignment: .leading, spacing: 28) {
+                        ForEach(groups, id: \.name) { group in
+                            VStack(alignment: .leading, spacing: 14) {
+                                Text(verbatim: L(group.name) + " · \(group.items.count)").style(.eyebrow)
+                                LazyVGrid(columns: columns, spacing: 16) {
+                                    ForEach(group.items) { item in
+                                        InstanceCard(instance: item, onOpen: { app.open(item) }, onPlay: {
+                                            app.open(item)
+                                            player.play(item, settings: settings, app: app)
+                                        })
+                                        .contextMenu {
+                                            Button(L("Instance settings")) { app.modal = .instanceSettings(item.name) }
+                                            Button(L("Open folder")) { app.openFolder(item.name) }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                     .padding(.horizontal, 40)

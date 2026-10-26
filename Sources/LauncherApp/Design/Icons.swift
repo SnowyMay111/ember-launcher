@@ -91,3 +91,13 @@ public struct SearchIcon: Shape {
         return path
     }
 }
+
+public struct ChevronDownIcon: Shape {
+    public func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX + rect.width * 0.12, y: rect.minY + rect.height * 0.32))
+        path.addLine(to: CGPoint(x: rect.midX, y: rect.minY + rect.height * 0.68))
+        path.addLine(to: CGPoint(x: rect.maxX - rect.width * 0.12, y: rect.minY + rect.height * 0.32))
+        return path
+    }
+}

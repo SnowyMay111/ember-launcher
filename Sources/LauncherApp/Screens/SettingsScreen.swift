@@ -12,7 +12,7 @@ struct SettingsScreen: View {
                     SettingsRow(title: "Nickname", detail: "Name you play under. Offline mode.") {
                         VoxelInput(label: "Nickname", text: $settings.nickname, width: 220)
                     }
-                    SettingsRow(title: "Memory", detail: "Maximum RAM given to the game.") {
+                    SettingsRow(title: "Memory", detail: "Default RAM for new instances.") {
                         VoxelSlider(label: "Memory", value: $settings.memoryGB, range: SettingsStore.memoryRange, valueText: settings.memoryText)
                     }
                     SettingsRow(title: "Java", detail: "Runtime used to start the game.") {

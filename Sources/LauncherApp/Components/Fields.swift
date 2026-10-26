@@ -36,10 +36,11 @@ struct VoxelInput: View {
     @Binding var text: String
     var width: CGFloat? = nil
     var alignment: TextAlignment = .leading
+    var placeholder = ""
     @FocusState private var focused: Bool
 
     var body: some View {
-        TextField("", text: $text)
+        TextField("", text: $text, prompt: Text(verbatim: placeholder).foregroundColor(Theme.muted))
             .textFieldStyle(.plain)
             .font(fieldFont)
             .foregroundColor(.white)

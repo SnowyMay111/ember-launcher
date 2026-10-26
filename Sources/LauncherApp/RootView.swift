@@ -19,12 +19,32 @@ struct RootView: View {
             }
         }
         .ignoresSafeArea()
+        .overlay { modalLayer }
         .environmentObject(app)
         .environmentObject(settings)
         .environmentObject(player)
         .background(WindowConfigurator())
         .frame(minWidth: 900, minHeight: 600)
         .preferredColorScheme(.dark)
+    }
+
+    /// Dialog over a dimmed backdrop; the backdrop also stops clicks reaching the screen below.
+    @ViewBuilder private var modalLayer: some View {
+        if let modal = app.modal {
+            ZStack {
+                Color.black.opacity(0.6).ignoresSafeArea()
+                switch modal {
+                case .newInstance:
+                    NewInstanceModal()
+                case .instanceSettings(let name):
+                    if let instance = app.instances.first(where: { $0.id == name }) {
+                        InstanceSettingsModal(instance: instance).id(name)
+                    }
+                case .gameLog(let name):
+                    GameLogModal(name: name).id(name)
+                }
+            }
+        }
     }
 
     @ViewBuilder private var screen: some View {

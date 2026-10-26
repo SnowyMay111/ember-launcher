@@ -8,6 +8,9 @@ public struct Instance: Codable, Sendable, Equatable {
     public var versionId: String
     public var memoryMB: Int
     public var extraJVMArgs: [String]
+    public var group: String?
+    public var lastPlayed: Date?
+    public var playtimeSeconds: Int
 
     public init(
         name: String,
@@ -16,7 +19,10 @@ public struct Instance: Codable, Sendable, Equatable {
         loaderVersion: String? = nil,
         versionId: String,
         memoryMB: Int = 4096,
-        extraJVMArgs: [String] = []
+        extraJVMArgs: [String] = [],
+        group: String? = nil,
+        lastPlayed: Date? = nil,
+        playtimeSeconds: Int = 0
     ) {
         self.name = name
         self.minecraftVersion = minecraftVersion
@@ -25,6 +31,9 @@ public struct Instance: Codable, Sendable, Equatable {
         self.versionId = versionId
         self.memoryMB = memoryMB
         self.extraJVMArgs = extraJVMArgs
+        self.group = group
+        self.lastPlayed = lastPlayed
+        self.playtimeSeconds = playtimeSeconds
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -35,6 +44,9 @@ public struct Instance: Codable, Sendable, Equatable {
         case versionId
         case memoryMB
         case extraJVMArgs
+        case group
+        case lastPlayed
+        case playtimeSeconds
     }
 
     public init(from decoder: Decoder) throws {
@@ -46,6 +58,9 @@ public struct Instance: Codable, Sendable, Equatable {
         versionId = try container.decode(String.self, forKey: .versionId)
         memoryMB = try container.decodeIfPresent(Int.self, forKey: .memoryMB) ?? 4096
         extraJVMArgs = try container.decodeIfPresent([String].self, forKey: .extraJVMArgs) ?? []
+        group = try container.decodeIfPresent(String.self, forKey: .group)
+        lastPlayed = try container.decodeIfPresent(Date.self, forKey: .lastPlayed)
+        playtimeSeconds = try container.decodeIfPresent(Int.self, forKey: .playtimeSeconds) ?? 0
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -57,16 +72,28 @@ public struct Instance: Codable, Sendable, Equatable {
         try container.encode(versionId, forKey: .versionId)
         try container.encode(memoryMB, forKey: .memoryMB)
         try container.encode(extraJVMArgs, forKey: .extraJVMArgs)
+        try container.encodeIfPresent(group, forKey: .group)
+        try container.encodeIfPresent(lastPlayed, forKey: .lastPlayed)
+        try container.encode(playtimeSeconds, forKey: .playtimeSeconds)
     }
 }
 
 public enum InstanceStoreError: Error, LocalizedError, Sendable {
     case instanceNotFound(String)
+    case invalidName
+    case nameTaken(String)
+    case trashUnsupported
 
     public var errorDescription: String? {
         switch self {
         case .instanceNotFound(let name):
             return "Instance '\(name)' not found"
+        case .invalidName:
+            return "Instance name is invalid"
+        case .nameTaken(let name):
+            return "An instance named '\(name)' already exists"
+        case .trashUnsupported:
+            return "Moving to trash is not supported on this platform"
         }
     }
 }
@@ -98,7 +125,8 @@ public final class InstanceStore: Sendable {
         loaderVersion: String? = nil,
         versionId: String? = nil,
         memoryMB: Int = 4096,
-        extraJVMArgs: [String] = []
+        extraJVMArgs: [String] = [],
+        group: String? = nil
     ) throws -> Instance {
         let vid = versionId ?? minecraftVersion
         let instance = Instance(
@@ -108,7 +136,8 @@ public final class InstanceStore: Sendable {
             loaderVersion: loaderVersion,
             versionId: vid,
             memoryMB: memoryMB,
-            extraJVMArgs: extraJVMArgs
+            extraJVMArgs: extraJVMArgs,
+            group: group
         )
         try create(instance)
         return instance
