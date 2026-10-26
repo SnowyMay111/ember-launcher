@@ -9,6 +9,7 @@ struct AllVersionsModal: View {
 
     @Local private var query = ""
     @Local private var kinds: Set<VersionKind> = [.release]
+    @Local private var confirmingDelete: String?
 
     private static let kindChips: [(kind: VersionKind, title: String)] = [
         (.release, "Releases"), (.snapshot, "Snapshots"), (.beta, "Beta"), (.alpha, "Alpha"),
@@ -94,16 +95,50 @@ struct AllVersionsModal: View {
                 Spacer(minLength: 12)
                 if let percent {
                     PrimaryPill(title: L("Downloading… %d%%", percent), height: 36, horizontalPadding: 22, isDisabled: true)
-                } else if hasInstance, error == nil {
-                    if app.isDownloaded(id) {
-                        Text(tr: "Installed").style(.eyebrow)
-                    }
-                    SecondaryPill(title: "Open") { open(name) }
                 } else {
-                    PrimaryPill(title: error == nil ? "Install" : "Retry", height: 36, horizontalPadding: 22, isDisabled: player.isBusy) {
-                        app.installVersion(id, memoryMB: Int(settings.memoryGB) * 1024)
+                    if app.isDownloaded(id) {
+                        SecondaryPill(title: "Delete files") { confirmingDelete = id }
+                    }
+                    if hasInstance, error == nil {
+                        if app.isDownloaded(id) {
+                            Text(tr: "Installed").style(.eyebrow)
+                        }
+                        SecondaryPill(title: "Open") { open(name) }
+                    } else {
+                        PrimaryPill(title: error == nil ? "Install" : "Retry", height: 36, horizontalPadding: 22, isDisabled: player.isBusy) {
+                            app.installVersion(id, memoryMB: Int(settings.memoryGB) * 1024)
+                        }
                     }
                 }
+            }
+            if confirmingDelete == id {
+                let users = app.usersOfVersion(id)
+                VStack(alignment: .leading, spacing: 8) {
+                    if !users.isEmpty {
+                        Text(verbatim: L("Used by: %@. Delete those instances first.", users.joined(separator: ", ")))
+                            .style(.init(size: 13, weight: .regular, color: Theme.text))
+                        HStack(spacing: 10) {
+                            SecondaryPill(title: "OK") { confirmingDelete = nil }
+                        }
+                    } else {
+                        Text(verbatim: L("Delete Minecraft %@ from disk? Libraries and assets shared with other versions stay.", id))
+                            .style(.init(size: 13, weight: .regular, color: Theme.text))
+                        HStack(spacing: 10) {
+                            SecondaryPill(title: "Keep it") { confirmingDelete = nil }
+                            PrimaryPill(title: "Delete files") {
+                                do {
+                                    try app.deleteVersion(id)
+                                    app.downloadErrors[id] = nil
+                                    confirmingDelete = nil
+                                } catch {
+                                    app.downloadErrors[id] = error.localizedDescription
+                                    confirmingDelete = nil
+                                }
+                            }
+                        }
+                    }
+                }
+                .padding(.top, 4)
             }
             if Self.isOld(version, cutoff: cutoff) {
                 Text(tr: "Old version: may run slowly or not at all").style(.secondary)

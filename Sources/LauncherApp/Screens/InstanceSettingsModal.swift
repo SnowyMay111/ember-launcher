@@ -73,11 +73,12 @@ struct InstanceSettingsModal: View {
 
                 if confirmingDelete {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text(verbatim: L("Move “%@” to the Trash? Its worlds and mods go with it.", instance.name))
+                        Text(verbatim: L("Move to Trash keeps it recoverable; Delete forever removes “%@”, its worlds and its mods for good.", instance.name))
                             .style(.init(size: 14, weight: .regular, color: Theme.text))
                         HStack(spacing: 10) {
                             SecondaryPill(title: "Keep it") { confirmingDelete = false }
                             PrimaryPill(title: "Move to Trash", action: trash)
+                            PrimaryPill(title: "Delete forever", action: deleteForever)
                         }
                     }
                 } else {
@@ -195,6 +196,21 @@ struct InstanceSettingsModal: View {
         }
         do {
             try app.trashInstance(instance.name)
+            app.modal = nil
+        } catch {
+            errorText = error.localizedDescription
+            confirmingDelete = false
+        }
+    }
+
+    private func deleteForever() {
+        guard !player.isBusy else {
+            errorText = L("Close the game first.")
+            confirmingDelete = false
+            return
+        }
+        do {
+            try app.deleteInstanceForever(instance.name)
             app.modal = nil
         } catch {
             errorText = error.localizedDescription

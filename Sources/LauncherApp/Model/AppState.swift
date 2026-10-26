@@ -183,6 +183,22 @@ final class AppState: ObservableObject {
         reload()
     }
 
+    func deleteInstanceForever(_ name: String) throws {
+        try store.deleteForever(name)
+        if currentID == name { currentID = nil }
+        reload()
+    }
+
+    func usersOfVersion(_ id: String) -> [String] {
+        store.names(usingMinecraftVersion: id)
+    }
+
+    func deleteVersion(_ id: String) throws {
+        try store.deleteMinecraftVersion(id)
+        reload()
+        objectWillChange.send()
+    }
+
     func openFolder(_ name: String) {
         let folder = store.gameDirectory(for: name)
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)

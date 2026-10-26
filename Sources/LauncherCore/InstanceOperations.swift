@@ -112,6 +112,15 @@ extension InstanceStore {
         #endif
     }
 
+    public func deleteForever(_ name: String) throws {
+        try FileManager.default.removeItem(at: instanceDirectory(for: name))
+    }
+
+    public func names(usingMinecraftVersion mc: String) -> [String] {
+        let all = (try? list()) ?? []
+        return all.compactMap { $0.minecraftVersion == mc ? $0.name : nil }
+    }
+
     public func modCount(for name: String) -> Int {
         let modsDir = gameDirectory(for: name).appendingPathComponent("mods", isDirectory: true)
         let fm = FileManager.default
