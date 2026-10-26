@@ -127,6 +127,26 @@ public final class GameLauncher: Sendable {
                 }
             }
             return updated
+        } else if let kind = ForgeLoaderKind(instanceLoader: instance.loader) {
+            let needsInstall = force
+                || instance.versionId.isEmpty
+                || !fm.fileExists(atPath: paths.versionJSON(instance.versionId).path)
+                || !fm.fileExists(atPath: paths.versionJSON(instance.minecraftVersion).path)
+            if needsInstall {
+                let forgeInstaller = ForgeInstaller(paths: paths, installer: installer, runtimeManager: runtimeManager)
+                let result = try await forgeInstaller.install(
+                    loader: kind,
+                    minecraftVersion: instance.minecraftVersion,
+                    loaderVersion: instance.loaderVersion,
+                    progress: progress
+                )
+                updated.versionId = result.versionId
+                updated.loaderVersion = result.loaderVersion
+                if updated != instance {
+                    try store.save(updated)
+                }
+            }
+            return updated
         } else {
             let needsInstall = force || !fm.fileExists(atPath: paths.versionJSON(instance.versionId).path)
             if needsInstall {
@@ -278,7 +298,8 @@ public final class GameLauncher: Sendable {
             "clientid": "0",
             "user_type": "legacy",
             "user_properties": "{}",
-            "version_name": version.id,
+            // Forge's `-DignoreList` names `${version_name}.jar`; the client jar on the classpath is the parent's, so that name must match it.
+            "version_name": ForgeLoaderKind(instanceLoader: instance.loader) == nil ? version.id : version.clientJarID,
             "version_type": "release",
             "game_directory": gameDir.path,
             "game_assets": gameAssetsDirPath,

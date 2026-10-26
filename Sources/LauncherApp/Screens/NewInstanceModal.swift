@@ -10,6 +10,7 @@ struct NewInstanceModal: View {
     @Local private var loader: LoaderKind = .vanilla
     @Local private var group = GroupName.vanilla
     @Local private var fabricVersions: Set<String>?
+    @Local private var forgeVersions: [LoaderKind: Set<String>] = [:]
     @Local private var errorText = ""
     @Local private var mode = Mode.custom
     @Local private var pack: MrpackSummary?
@@ -30,11 +31,17 @@ struct NewInstanceModal: View {
     /// AI packs are always Fabric.
     private var activeLoader: LoaderKind { mode == .ai ? .fabric : loader }
 
-    /// Versions the chosen loader can run; Fabric supports only some of them.
+    /// Versions the chosen loader can run; Fabric, Forge and NeoForge support only some of them.
     private var versions: [ManifestVersion] {
         let all = app.launchableVersions(includeSnapshots: settings.showSnapshots)
-        guard activeLoader == .fabric, let fabric = fabricVersions else { return all }
-        return all.filter { fabric.contains($0.id) }
+        let supported: Set<String>?
+        switch activeLoader {
+        case .vanilla: supported = nil
+        case .fabric: supported = fabricVersions
+        case .forge, .neoforge: supported = forgeVersions[activeLoader]
+        }
+        guard let supported else { return all }
+        return all.filter { supported.contains($0.id) }
     }
 
     private var namePlaceholder: String {
@@ -82,11 +89,11 @@ struct NewInstanceModal: View {
                 }
 
                 if mode == .custom {
-                HStack(alignment: .top, spacing: 24) {
+                VStack(alignment: .leading, spacing: 20) {
                     versionMenu
                     ModalField(label: "Loader") {
                         HStack(spacing: 8) {
-                            ForEach([LoaderKind.vanilla, .fabric]) { kind in
+                            ForEach(LoaderKind.allCases) { kind in
                                 FilterChip(title: kind.rawValue, isActive: loader == kind) { loader = kind }
                             }
                         }
@@ -347,7 +354,14 @@ struct NewInstanceModal: View {
     private func prepare() async {
         if app.manifest == nil { await app.loadManifest() }
         let fabric = FabricInstaller(paths: app.paths, installer: app.versionInstaller)
-        fabricVersions = try? await fabric.supportedGameVersions()
+        let forge = ForgeInstaller(paths: app.paths, installer: app.versionInstaller, runtimeManager: JavaRuntimeManager(paths: app.paths))
+        let candidates = app.launchableVersions(includeSnapshots: true).map(\.id)
+        async let fabricSet = try? fabric.supportedGameVersions()
+        async let forgeSet = try? forge.supportedGameVersions(loader: .forge, among: candidates)
+        async let neoForgeSet = try? forge.supportedGameVersions(loader: .neoforge, among: candidates)
+        fabricVersions = await fabricSet
+        if let found = await forgeSet { forgeVersions[.forge] = found }
+        if let found = await neoForgeSet { forgeVersions[.neoforge] = found }
         chooseVersion()
     }
 

@@ -143,6 +143,28 @@ do {
         }
         print("\nFabric installed: \(profileId)")
 
+    case "install-forge":
+        guard args.count >= 3 else {
+            print("Error: Missing Minecraft version. Usage: launcher-cli install-forge <mc> [--neoforge] [--loader <version>] [--instance <name>]")
+            exit(1)
+        }
+        let mc = args[2]
+        let kind: ForgeLoaderKind = flag("--neoforge") ? .neoforge : .forge
+        print("Installing \(kind.displayName) for \(mc)...")
+        let launcher = GameLauncher(paths: paths, downloader: downloader)
+        let instanceName = option("--instance") ?? "\(mc)-\(kind.rawValue)"
+        var instance: Instance
+        if let existing = try? launcher.store.load(name: instanceName) {
+            instance = existing
+        } else {
+            instance = try launcher.store.create(name: instanceName, minecraftVersion: mc, loader: kind.rawValue, versionId: "")
+        }
+        let printer = ProgressPrinter()
+        instance = try await launcher.ensureInstalled(instance, force: flag("--force")) { phase, progress in
+            printer.update(phase: phase, progress: progress)
+        }
+        print("\n\(kind.displayName) installed: \(instance.versionId) (instance '\(instanceName)')")
+
     case "launch":
         guard args.count >= 3 else {
             print("Error: Missing Minecraft version. Usage: launcher-cli launch <mc> [--fabric] [--name <nick>] [--instance <name>] [--dry-run]")

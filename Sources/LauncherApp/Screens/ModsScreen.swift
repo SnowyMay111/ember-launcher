@@ -28,13 +28,13 @@ struct ModsScreen: View {
         guard let current = app.current else { return "Pick an instance in Library first." }
         switch activeKind {
         case .shader:
-            guard mods.canInstall else { return "Shaders need a Fabric instance." }
+            guard !mods.needsFabric else { return "Shaders need a Fabric instance." }
             return L("For %@ · %@ · Fabric + Iris", current.name, current.minecraftVersion)
         case .resourcepack:
             return L("For %@ · %@", current.name, current.minecraftVersion)
         default:
             guard mods.canInstall else { return "Mods need a Fabric instance." }
-            return L("For %@ · %@ · Fabric", current.name, current.minecraftVersion)
+            return L("For %@ · %@ · %@", current.name, current.minecraftVersion, current.loader.rawValue)
         }
     }
 
@@ -81,6 +81,18 @@ struct ModsScreen: View {
                 }
                 .padding(.horizontal, 40)
                 .padding(.top, 12)
+            }
+
+            if tab == .browse, mods.needsFabric {
+                HStack(spacing: 14) {
+                    Text(tr: mods.kind == .shader ? "Shaders need a Fabric instance." : "Mods need a Fabric instance.")
+                        .style(.secondary)
+                    if mods.canSwitchToFabric {
+                        SecondaryPill(title: "Switch to Fabric") { Task { await mods.switchToFabric() } }
+                    }
+                }
+                .padding(.horizontal, 40)
+                .padding(.top, 14)
             }
 
             if let message = mods.message {
@@ -291,7 +303,11 @@ struct ModsScreen: View {
         let isInstalled: Bool
         let note: (text: String, isWarning: Bool)?
         let canInstall: Bool
-        if kind == .mod {
+        if mods.needsFabric {
+            isInstalled = false
+            note = (L("Needs Fabric"), true)
+            canInstall = false
+        } else if kind == .mod {
             isInstalled = mods.installedProjectIDs.contains(hit.projectId)
             note = Self.compatNote(mods.compat[hit.projectId])
             canInstall = Self.canInstall(mods.compat[hit.projectId])

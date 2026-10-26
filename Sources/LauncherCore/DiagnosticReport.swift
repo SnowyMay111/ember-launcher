@@ -153,7 +153,7 @@ public struct SessionHealthReport: Codable, Sendable, Equatable {
         var issues: [DiagnosticIssue] = []
         var fixes: [AutoFixAction] = []
 
-        let rec = JVMArgumentsBuilder.memoryRecommendation(isModded: instance.loader.lowercased() == "fabric")
+        let rec = JVMArgumentsBuilder.memoryRecommendation(isModded: instance.loader.lowercased() != "vanilla")
         let resolvedGC = JVMArgumentsBuilder.resolveProfile(instance.gcProfile, javaMajor: javaMajor)
         let gcProfileName: String
         switch resolvedGC {

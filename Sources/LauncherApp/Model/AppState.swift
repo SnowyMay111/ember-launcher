@@ -130,12 +130,13 @@ final class AppState: ObservableObject {
     func createInstance(name: String, minecraftVersion: String, loader: LoaderKind, group: String?, memoryMB: Int) throws -> String {
         let base = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let finalName = store.uniqueName(base: base.isEmpty ? "\(loader.rawValue) \(minecraftVersion)" : base)
-        let isFabric = loader == .fabric
+        // Fabric, Forge and NeoForge are installed on the first Play, which fills in the version id.
+        let isVanilla = loader == .vanilla
         try store.create(Instance(
             name: finalName,
             minecraftVersion: minecraftVersion,
-            loader: isFabric ? "fabric" : "vanilla",
-            versionId: isFabric ? "" : minecraftVersion,
+            loader: loader.coreName,
+            versionId: isVanilla ? minecraftVersion : "",
             memoryMB: memoryMB,
             group: group
         ))

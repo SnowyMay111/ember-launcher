@@ -45,6 +45,11 @@ final class ModsController: ObservableObject {
     }
 
     var canInstall: Bool {
+        app.current?.loader.supportsMods ?? false
+    }
+
+    /// Shaders go through Iris, which exists for Fabric only.
+    private var canInstallShaders: Bool {
         app.current?.loader == .fabric
     }
 
@@ -52,12 +57,49 @@ final class ModsController: ObservableObject {
         Set(installed.compactMap { $0.record?.projectId })
     }
 
-    /// Whether Browse has anything to offer for the chosen kind on the current instance (modpacks need no instance).
+    /// Whether Browse has anything to offer for the chosen kind (modpacks need no instance; mods and shaders can be looked at on any instance).
     var canBrowse: Bool {
         switch kind {
-        case .mod, .shader: return canInstall
-        case .resourcepack: return app.current != nil
+        case .mod, .shader, .resourcepack: return app.current != nil
         case .modpack: return true
+        }
+    }
+
+    /// Mods and shaders are listed on a vanilla instance too, but cannot be installed until it is switched to Fabric.
+    var needsFabric: Bool {
+        guard app.current != nil else { return false }
+        switch kind {
+        case .mod: return !canInstall
+        case .shader: return !canInstallShaders
+        case .resourcepack, .modpack: return false
+        }
+    }
+
+    /// Only a vanilla instance can be turned into a Fabric one; a Forge instance keeps its loader.
+    var canSwitchToFabric: Bool {
+        app.current?.loader == .vanilla
+    }
+
+    /// Turns the current vanilla instance into a Fabric one; Fabric itself is downloaded on the next Play.
+    func switchToFabric() async {
+        guard let instance = app.current, instance.loader == .vanilla else { return }
+        do {
+            let fabric = FabricInstaller(paths: app.paths, installer: app.versionInstaller)
+            if let supported = try? await fabric.supportedGameVersions(), !supported.contains(instance.minecraftVersion) {
+                message = L("Fabric does not support Minecraft %@.", instance.minecraftVersion)
+                return
+            }
+            var updated = try app.store.load(name: instance.name)
+            updated.loader = "fabric"
+            updated.versionId = ""
+            updated.loaderVersion = nil
+            try app.store.save(updated)
+            app.reload()
+            reload()
+            message = L("Switched %@ to Fabric. It is installed on the next Play.", instance.name)
+            await search(query: "")
+        } catch {
+            message = error.localizedDescription
         }
     }
 
@@ -87,7 +129,7 @@ final class ModsController: ObservableObject {
             await searchCatalog(query: query)
             return
         }
-        guard canInstall, let instance = app.current else {
+        guard let instance = app.current else {
             results = []
             return
         }
@@ -105,12 +147,12 @@ final class ModsController: ObservableObject {
             let hits = try await manager.client.search(
                 query: query,
                 gameVersion: instance.minecraftVersion,
-                loader: "fabric"
+                loader: instance.loader.supportsMods ? instance.loader.coreName : "fabric"
             )
             guard searchCounter == searchID else { return }
             results = hits
             compat = [:]
-            Task { await checkCompatibility(of: hits, searchID: searchID) }
+            if canInstall { Task { await checkCompatibility(of: hits, searchID: searchID) } }
         } catch {
             guard searchCounter == searchID else { return }
             message = error.localizedDescription
@@ -185,7 +227,7 @@ final class ModsController: ObservableObject {
             guard searchCounter == searchID else { return }
             results = hits
             contentCompat = [:]
-            Task { await checkContentCompatibility(of: hits, kind: kind, searchID: searchID) }
+            if !needsFabric { Task { await checkContentCompatibility(of: hits, kind: kind, searchID: searchID) } }
         } catch {
             guard searchCounter == searchID else { return }
             message = error.localizedDescription

@@ -223,7 +223,6 @@ final class PlayController: ObservableObject {
 
     private func run(_ item: LibraryInstance, nickname: String, hideLauncher: Bool, app: AppState) async {
         do {
-            guard item.loader != .forge else { throw PlayError.forgeUnsupported }
             let account = try OfflineAccount(name: nickname)
             try paths.ensureDirectories()
             let command = try await prepareCommand(item.name, account: account)
@@ -319,6 +318,10 @@ final class PlayController: ObservableObject {
 
     private func showDownload(phase: String, percent: Int) {
         guard case .preparing = state else { return }
-        state = .preparing(phase == "runtime" ? L("Downloading Java %d%%", percent) : L("Downloading game files %d%%", percent))
+        switch phase {
+        case "runtime": state = .preparing(L("Downloading Java %d%%", percent))
+        case "loader": state = .preparing(L("Installing the mod loader %d%%", percent))
+        default: state = .preparing(L("Downloading game files %d%%", percent))
+        }
     }
 }

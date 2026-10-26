@@ -5,8 +5,28 @@ enum LoaderKind: String, CaseIterable, Identifiable {
     case vanilla = "Vanilla"
     case fabric = "Fabric"
     case forge = "Forge"
+    case neoforge = "NeoForge"
 
     var id: String { rawValue }
+
+    /// The loader name `LauncherCore.Instance` stores.
+    var coreName: String { rawValue.lowercased() }
+
+    init(coreName: String) {
+        self = LoaderKind.allCases.first { $0.coreName == coreName.lowercased() } ?? .vanilla
+    }
+
+    /// Forge and NeoForge are installed by `ForgeInstaller`; Fabric by `FabricInstaller`.
+    var forgeKind: ForgeLoaderKind? {
+        switch self {
+        case .forge: return .forge
+        case .neoforge: return .neoforge
+        case .vanilla, .fabric: return nil
+        }
+    }
+
+    /// Whether the Mods screen can install mods into an instance with this loader.
+    var supportsMods: Bool { self != .vanilla }
 }
 
 enum LoaderFilter: String, CaseIterable, Identifiable {
@@ -14,6 +34,7 @@ enum LoaderFilter: String, CaseIterable, Identifiable {
     case vanilla = "Vanilla"
     case fabric = "Fabric"
     case forge = "Forge"
+    case neoforge = "NeoForge"
 
     var id: String { rawValue }
 
@@ -23,6 +44,7 @@ enum LoaderFilter: String, CaseIterable, Identifiable {
         case .vanilla: return loader == .vanilla
         case .fabric: return loader == .fabric
         case .forge: return loader == .forge
+        case .neoforge: return loader == .neoforge
         }
     }
 }
@@ -65,7 +87,7 @@ struct LibraryInstance: Identifiable, Equatable {
     var id: String { name }
 
     init(_ instance: Instance, modCount: Int) {
-        let loader = LoaderKind(rawValue: instance.loader.capitalized) ?? .vanilla
+        let loader = LoaderKind(coreName: instance.loader)
         name = instance.name
         minecraftVersion = instance.minecraftVersion
         self.loader = loader

@@ -109,7 +109,7 @@ public enum ModManagerError: Error, LocalizedError, Sendable, Equatable {
     public var errorDescription: String? {
         switch self {
         case .unsupportedLoader(let loader):
-            return "Mod installation requires loader 'fabric', but instance uses '\(loader)'"
+            return "Mods can be installed for Fabric, Forge and NeoForge, but this instance uses '\(loader)'"
         case .notFound(let item):
             return "Mod not found: \(item)"
         case .incompatible(let reason):
@@ -119,6 +119,9 @@ public enum ModManagerError: Error, LocalizedError, Sendable, Equatable {
 }
 
 public final class ModManager: Sendable {
+    /// Loaders Modrinth mods can be installed for.
+    public static let supportedLoaders: Set<String> = ["fabric", "forge", "neoforge"]
+
     public let store: InstanceStore
     public let client: ModrinthClient
     public let downloader: Downloader
@@ -266,12 +269,13 @@ public final class ModManager: Sendable {
 
     public func install(project idOrSlug: String, into name: String) async throws -> ModInstallResult {
         let instance = try store.load(name: name)
-        guard instance.loader.lowercased() == "fabric" else {
+        let loader = instance.loader.lowercased()
+        guard ModManager.supportedLoaders.contains(loader) else {
             throw ModManagerError.unsupportedLoader(instance.loader)
         }
 
-        guard let version = try await client.bestVersion(project: idOrSlug, gameVersion: instance.minecraftVersion, loader: "fabric") else {
-            throw ModrinthError.noCompatibleVersion(project: idOrSlug, gameVersion: instance.minecraftVersion, loader: "fabric")
+        guard let version = try await client.bestVersion(project: idOrSlug, gameVersion: instance.minecraftVersion, loader: loader) else {
+            throw ModrinthError.noCompatibleVersion(project: idOrSlug, gameVersion: instance.minecraftVersion, loader: loader)
         }
 
         let project = try await client.project(idOrSlug: version.projectId)
@@ -344,8 +348,8 @@ public final class ModManager: Sendable {
                     if let vid = dep.versionId, !vid.isEmpty {
                         depVersion = try await client.version(id: vid)
                     } else {
-                        guard let best = try await client.bestVersion(project: depProjectId, gameVersion: instance.minecraftVersion, loader: "fabric") else {
-                            throw ModrinthError.noCompatibleVersion(project: depProjectId, gameVersion: instance.minecraftVersion, loader: "fabric")
+                        guard let best = try await client.bestVersion(project: depProjectId, gameVersion: instance.minecraftVersion, loader: loader) else {
+                            throw ModrinthError.noCompatibleVersion(project: depProjectId, gameVersion: instance.minecraftVersion, loader: loader)
                         }
                         depVersion = best
                     }
