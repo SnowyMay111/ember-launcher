@@ -17,6 +17,7 @@ enum AppModal: Equatable {
     case newInstance
     case instanceSettings(String)
     case gameLog(String)
+    case optimize(String)
 }
 
 @MainActor
@@ -148,6 +149,13 @@ final class AppState: ObservableObject {
             let renamed = try store.rename(name, to: newName)
             if currentID == name { currentID = renamed.name }
         }
+    }
+
+    func setLockFps(_ name: String, _ on: Bool) throws {
+        defer { reload() }
+        var instance = try store.load(name: name)
+        instance.lockFpsToMonitor = on
+        try store.save(instance)
     }
 
     /// Copies the whole instance folder (worlds and mods included) on a background thread.

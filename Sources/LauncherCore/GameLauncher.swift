@@ -47,6 +47,7 @@ public final class GameLauncher: Sendable {
     public let store: InstanceStore
     public let installer: VersionInstaller
     public let runtimeManager: JavaRuntimeManager
+    public var displayRefreshRateProvider: (@Sendable () -> Int?)?
 
     public init(paths: LauncherPaths, downloader: Downloader = Downloader()) {
         self.paths = paths
@@ -163,6 +164,19 @@ public final class GameLauncher: Sendable {
         let nativesDir = paths.versionDir(version.id).appendingPathComponent("natives", isDirectory: true)
         try fm.createDirectory(at: gameDir, withIntermediateDirectories: true, attributes: nil)
         try fm.createDirectory(at: nativesDir, withIntermediateDirectories: true, attributes: nil)
+
+        let modsDir = gameDir.appendingPathComponent("mods", isDirectory: true)
+        let refreshRate = instance.lockFpsToMonitor ? displayRefreshRateProvider?() : nil
+        do {
+            _ = try MinecraftOptionsPatcher.patch(
+                instanceDirectory: gameDir,
+                modsDirectory: modsDir,
+                lockFpsToMonitor: instance.lockFpsToMonitor,
+                displayRefreshRate: refreshRate
+            )
+        } catch {
+            // Options patch failure must not block game launch
+        }
 
         var classpath: [String] = []
         var seen = Set<String>()

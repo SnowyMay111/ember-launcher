@@ -41,6 +41,25 @@ private final class ProgressRelay: @unchecked Sendable {
     }
 }
 
+/// Thread-safe holder for the screen refresh rate read on the main actor.
+private final class DisplayRefreshRateBox: @unchecked Sendable {
+    private let lock = NSLock()
+    private var _value: Int?
+
+    var value: Int? {
+        get {
+            lock.lock()
+            defer { lock.unlock() }
+            return _value
+        }
+        set {
+            lock.lock()
+            defer { lock.unlock() }
+            _value = newValue
+        }
+    }
+}
+
 /// Hands out the seconds played since it was last asked, so a periodic save and the final save never count the same second twice.
 private final class PlayClock: @unchecked Sendable {
     private let lock = NSLock()
@@ -83,9 +102,12 @@ final class PlayController: ObservableObject {
 
     private let paths = LauncherPaths()
     private let launcher: GameLauncher
+    private let refreshRateBox = DisplayRefreshRateBox()
 
     init() {
         launcher = GameLauncher(paths: paths)
+        let box = refreshRateBox
+        launcher.displayRefreshRateProvider = { box.value }
     }
 
     var isBusy: Bool {
@@ -97,6 +119,7 @@ final class PlayController: ObservableObject {
 
     func play(_ item: LibraryInstance, settings: SettingsStore, app: AppState) {
         guard !isBusy else { return }
+        refreshRateBox.value = NSScreen.main?.maximumFramesPerSecond
         state = .preparing(L("Preparing…"))
         let nickname = settings.nickname
         let hideLauncher = settings.closeOnStart

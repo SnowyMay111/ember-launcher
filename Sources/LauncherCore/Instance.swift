@@ -9,6 +9,7 @@ public struct Instance: Codable, Sendable, Equatable {
     public var memoryMB: Int
     public var extraJVMArgs: [String]
     public var gcProfile: GCProfile
+    public var lockFpsToMonitor: Bool
     public var group: String?
     public var lastPlayed: Date?
     public var playtimeSeconds: Int
@@ -22,6 +23,7 @@ public struct Instance: Codable, Sendable, Equatable {
         memoryMB: Int = 4096,
         extraJVMArgs: [String] = [],
         gcProfile: GCProfile = .auto,
+        lockFpsToMonitor: Bool = false,
         group: String? = nil,
         lastPlayed: Date? = nil,
         playtimeSeconds: Int = 0
@@ -34,6 +36,7 @@ public struct Instance: Codable, Sendable, Equatable {
         self.memoryMB = memoryMB
         self.extraJVMArgs = extraJVMArgs
         self.gcProfile = gcProfile
+        self.lockFpsToMonitor = lockFpsToMonitor
         self.group = group
         self.lastPlayed = lastPlayed
         self.playtimeSeconds = playtimeSeconds
@@ -48,6 +51,7 @@ public struct Instance: Codable, Sendable, Equatable {
         case memoryMB
         case extraJVMArgs
         case gcProfile
+        case lockFpsToMonitor
         case group
         case lastPlayed
         case playtimeSeconds
@@ -63,6 +67,7 @@ public struct Instance: Codable, Sendable, Equatable {
         memoryMB = try container.decodeIfPresent(Int.self, forKey: .memoryMB) ?? 4096
         extraJVMArgs = try container.decodeIfPresent([String].self, forKey: .extraJVMArgs) ?? []
         gcProfile = try container.decodeIfPresent(GCProfile.self, forKey: .gcProfile) ?? .auto
+        lockFpsToMonitor = try container.decodeIfPresent(Bool.self, forKey: .lockFpsToMonitor) ?? false
         group = try container.decodeIfPresent(String.self, forKey: .group)
         lastPlayed = try container.decodeIfPresent(Date.self, forKey: .lastPlayed)
         playtimeSeconds = try container.decodeIfPresent(Int.self, forKey: .playtimeSeconds) ?? 0
@@ -78,6 +83,7 @@ public struct Instance: Codable, Sendable, Equatable {
         try container.encode(memoryMB, forKey: .memoryMB)
         try container.encode(extraJVMArgs, forKey: .extraJVMArgs)
         try container.encode(gcProfile, forKey: .gcProfile)
+        try container.encode(lockFpsToMonitor, forKey: .lockFpsToMonitor)
         try container.encodeIfPresent(group, forKey: .group)
         try container.encodeIfPresent(lastPlayed, forKey: .lastPlayed)
         try container.encode(playtimeSeconds, forKey: .playtimeSeconds)

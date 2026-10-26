@@ -74,6 +74,7 @@ struct InstanceSettingsModal: View {
                     }
                 } else {
                     HStack(spacing: 10) {
+                        SecondaryPill(title: "Optimize") { app.modal = .optimize(instance.name) }
                         SecondaryPill(title: "Open folder") { app.openFolder(instance.name) }
                         SecondaryPill(title: isCopying ? "Copying…" : "Duplicate", action: duplicate)
                         SecondaryPill(title: "Delete") { confirmingDelete = true }

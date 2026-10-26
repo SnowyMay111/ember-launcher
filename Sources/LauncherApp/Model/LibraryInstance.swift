@@ -58,6 +58,7 @@ struct LibraryInstance: Identifiable, Equatable {
     let memoryMB: Int
     let gcProfile: GCProfile
     let javaArgs: [String]
+    let lockFpsToMonitor: Bool
     let glow: PreviewGlow
 
     /// The name is also the folder name, so it is unique.
@@ -75,6 +76,7 @@ struct LibraryInstance: Identifiable, Equatable {
         memoryMB = instance.memoryMB
         gcProfile = instance.gcProfile
         javaArgs = instance.extraJVMArgs
+        lockFpsToMonitor = instance.lockFpsToMonitor
         glow = Self.glow(for: instance.name)
     }
 
