@@ -167,7 +167,8 @@ public final class ModpackManager: Sendable {
         }
 
         let loaderLower = instance.loader.lowercased()
-        guard loaderLower == "fabric" || loaderLower == "vanilla" else {
+        let forgeKind = ForgeLoaderKind(instanceLoader: loaderLower)
+        guard loaderLower == "fabric" || loaderLower == "vanilla" || forgeKind != nil else {
             throw ModpackError.unsupportedLoader(instance.loader)
         }
 
@@ -194,6 +195,14 @@ public final class ModpackManager: Sendable {
                     throw ModpackError.missingDependency("fabric-loader")
                 }
             }
+        }
+
+        if let forgeKind {
+            // The build number is filled in on the first Play; without it there is nothing to pin.
+            guard let loaderVersion = instance.loaderVersion, !loaderVersion.isEmpty else {
+                throw ModpackError.missingDependency(forgeKind.rawValue)
+            }
+            dependencies[forgeKind.rawValue] = loaderVersion
         }
 
         let stagingDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)

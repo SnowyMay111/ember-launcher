@@ -292,7 +292,7 @@ struct NewInstanceModal: View {
     }
 
     private func packDetails(_ pack: MrpackSummary) -> String {
-        let loaderName = pack.loader == "fabric" ? "Fabric" : "Vanilla"
+        let loaderName = LoaderKind(coreName: pack.loader).rawValue
         let size = ByteCountFormatter.string(fromByteCount: pack.downloadBytes, countStyle: .file)
         return L("Minecraft %@ · %@ · %d files · %@", pack.minecraftVersion, loaderName, pack.fileCount, size)
     }
@@ -305,7 +305,7 @@ struct NewInstanceModal: View {
                 pack = try await app.inspectPack(url)
                 packURL = url
                 if group == GroupName.automatic(for: .vanilla) {
-                    group = GroupName.automatic(for: pack?.loader == "fabric" ? .fabric : .vanilla)
+                    group = GroupName.automatic(for: LoaderKind(coreName: pack?.loader ?? "vanilla"))
                 }
             } catch {
                 pack = nil
@@ -318,7 +318,7 @@ struct NewInstanceModal: View {
     private func importPack() {
         guard let packURL, !isImporting else { return }
         let chosen = group.trimmingCharacters(in: .whitespacesAndNewlines)
-        let loaderKind: LoaderKind = pack?.loader == "fabric" ? .fabric : .vanilla
+        let loaderKind = LoaderKind(coreName: pack?.loader ?? "vanilla")
         let saved = chosen.isEmpty || chosen == GroupName.automatic(for: loaderKind) ? nil : chosen
         isImporting = true
         errorText = ""

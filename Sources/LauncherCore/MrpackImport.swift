@@ -152,11 +152,12 @@ extension ModpackManager {
         progress("Reading the pack", 1.0)
 
         let instance: Instance
-        if loader == "fabric" {
+        if loader != "vanilla" {
+            // Fabric, Forge and NeoForge are installed on the first Play, which fills in the version id.
             instance = Instance(
                 name: finalName,
                 minecraftVersion: minecraftVersion,
-                loader: "fabric",
+                loader: loader,
                 loaderVersion: loaderVersion,
                 versionId: "",
                 memoryMB: memoryMB,
@@ -445,10 +446,8 @@ extension ModpackManager {
             throw ModpackError.missingDependency("minecraft")
         }
 
-        for unsupported in ["forge", "neoforge", "quilt-loader"] {
-            if index.dependencies[unsupported] != nil {
-                throw ModpackError.unsupportedLoader(unsupported)
-            }
+        if index.dependencies["quilt-loader"] != nil {
+            throw ModpackError.unsupportedLoader("quilt-loader")
         }
 
         let loader: String
@@ -456,6 +455,12 @@ extension ModpackManager {
         if let fabricVersion = index.dependencies["fabric-loader"] {
             loader = "fabric"
             loaderVersion = fabricVersion
+        } else if let forgeVersion = index.dependencies["forge"] {
+            loader = "forge"
+            loaderVersion = forgeVersion
+        } else if let neoForgeVersion = index.dependencies["neoforge"] {
+            loader = "neoforge"
+            loaderVersion = neoForgeVersion
         } else {
             loader = "vanilla"
             loaderVersion = nil
