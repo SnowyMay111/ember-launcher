@@ -23,25 +23,31 @@ public struct OptionsPatchReport: Sendable, Equatable {
 }
 
 public enum MinecraftOptionsPatcher {
+    public static func hasEnabledVoxy(modsDirectory: URL) -> Bool {
+        let fm = FileManager.default
+        guard let entries = try? fm.contentsOfDirectory(atPath: modsDirectory.path) else {
+            return false
+        }
+        for entry in entries {
+            let lower = entry.lowercased()
+            if lower.hasPrefix("voxy") && lower.hasSuffix(".jar") && !lower.hasSuffix(".jar.disabled") {
+                return true
+            }
+        }
+        return false
+    }
+
     public static func patch(
         instanceDirectory: URL,
         modsDirectory: URL,
         lockFpsToMonitor: Bool,
-        displayRefreshRate: Int?
+        displayRefreshRate: Int?,
+        renderDistanceCap: Int? = nil
     ) throws -> OptionsPatchReport {
         let fm = FileManager.default
 
         // Detect enabled Voxy jar
-        var hasEnabledVoxy = false
-        if let entries = try? fm.contentsOfDirectory(atPath: modsDirectory.path) {
-            for entry in entries {
-                let lower = entry.lowercased()
-                if lower.hasPrefix("voxy") && lower.hasSuffix(".jar") && !lower.hasSuffix(".jar.disabled") {
-                    hasEnabledVoxy = true
-                    break
-                }
-            }
-        }
+        let hasVoxy = hasEnabledVoxy(modsDirectory: modsDirectory)
 
         // Determine options.txt location
         let directOptions = instanceDirectory.appendingPathComponent("options.txt")
@@ -67,25 +73,34 @@ public enum MinecraftOptionsPatcher {
 
         var targetValues: [String: String] = [:]
 
-        // Rule (a): Voxy render distance <= 6
-        if hasEnabledVoxy {
-            var currentRenderDistance: Int? = nil
-            for line in lines {
-                if let colon = line.firstIndex(of: ":") {
-                    let k = String(line[..<colon]).trimmingCharacters(in: .whitespaces)
-                    if k == "renderDistance" {
-                        let v = String(line[line.index(after: colon)...]).trimmingCharacters(in: .whitespaces)
-                        currentRenderDistance = Int(v)
-                        break
-                    }
+        // Rule (a): Voxy render distance <= 6 or configured cap
+        var currentRenderDistance: Int? = nil
+        for line in lines {
+            if let colon = line.firstIndex(of: ":") {
+                let k = String(line[..<colon]).trimmingCharacters(in: .whitespaces)
+                if k == "renderDistance" {
+                    let v = String(line[line.index(after: colon)...]).trimmingCharacters(in: .whitespaces)
+                    currentRenderDistance = Int(v)
+                    break
                 }
             }
+        }
+
+        if hasVoxy {
             if let current = currentRenderDistance {
                 if current > 6 {
                     targetValues["renderDistance"] = "6"
                 }
             } else {
                 targetValues["renderDistance"] = "6"
+            }
+        } else if let cap = renderDistanceCap {
+            if let current = currentRenderDistance {
+                if current > cap {
+                    targetValues["renderDistance"] = String(cap)
+                }
+            } else {
+                targetValues["renderDistance"] = String(cap)
             }
         }
 

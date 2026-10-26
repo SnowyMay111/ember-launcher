@@ -44,6 +44,14 @@ struct RootView: View {
                     if let instance = app.instances.first(where: { $0.id == name }) {
                         OptimizationModal(instance: instance).id(name)
                     }
+                case .changeVersion(let name):
+                    if let instance = app.instances.first(where: { $0.id == name }) {
+                        VersionModal(instance: instance).id(name)
+                    }
+                case .sessionHealth(let name):
+                    if let instance = app.instances.first(where: { $0.id == name }) {
+                        SessionDiagnosticsView(instance: instance).id(name)
+                    }
                 case .gameLog(let name):
                     GameLogModal(name: name).id(name)
                 }
@@ -56,7 +64,7 @@ struct RootView: View {
         case .play: PlayScreen()
         case .library: LibraryScreen()
         case .settings: SettingsScreen()
-        case .mods: ComingSoonScreen(title: "Mods")
+        case .mods: ModsScreen(app: app)
         case .skins: ComingSoonScreen(title: "Skins")
         }
     }

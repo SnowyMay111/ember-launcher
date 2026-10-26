@@ -75,6 +75,9 @@ struct PlayScreen: View {
                     VersionMenu(item: item)
                     SecondaryPill(title: "Instance settings") { app.modal = .instanceSettings(item.name) }
                     SecondaryPill(title: "Logs") { app.modal = .gameLog(item.name) }
+                    if player.hasReport(for: item.name) {
+                        SecondaryPill(title: "Health") { app.modal = .sessionHealth(item.name) }
+                    }
                 }
                 .padding(.top, 26)
 
@@ -99,6 +102,9 @@ struct PlayScreen: View {
             .padding(.bottom, 28)
             .padding(.horizontal, 40)
             .frame(maxWidth: .infinity)
+            .task(id: item.name) {
+                player.loadLastReport(for: item.name)
+            }
         } else {
             emptyState
         }

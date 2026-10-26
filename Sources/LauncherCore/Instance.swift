@@ -10,6 +10,7 @@ public struct Instance: Codable, Sendable, Equatable {
     public var extraJVMArgs: [String]
     public var gcProfile: GCProfile
     public var lockFpsToMonitor: Bool
+    public var capRenderDistance: Bool
     public var group: String?
     public var lastPlayed: Date?
     public var playtimeSeconds: Int
@@ -24,6 +25,7 @@ public struct Instance: Codable, Sendable, Equatable {
         extraJVMArgs: [String] = [],
         gcProfile: GCProfile = .auto,
         lockFpsToMonitor: Bool = false,
+        capRenderDistance: Bool = false,
         group: String? = nil,
         lastPlayed: Date? = nil,
         playtimeSeconds: Int = 0
@@ -37,6 +39,7 @@ public struct Instance: Codable, Sendable, Equatable {
         self.extraJVMArgs = extraJVMArgs
         self.gcProfile = gcProfile
         self.lockFpsToMonitor = lockFpsToMonitor
+        self.capRenderDistance = capRenderDistance
         self.group = group
         self.lastPlayed = lastPlayed
         self.playtimeSeconds = playtimeSeconds
@@ -52,6 +55,7 @@ public struct Instance: Codable, Sendable, Equatable {
         case extraJVMArgs
         case gcProfile
         case lockFpsToMonitor
+        case capRenderDistance
         case group
         case lastPlayed
         case playtimeSeconds
@@ -68,6 +72,7 @@ public struct Instance: Codable, Sendable, Equatable {
         extraJVMArgs = try container.decodeIfPresent([String].self, forKey: .extraJVMArgs) ?? []
         gcProfile = try container.decodeIfPresent(GCProfile.self, forKey: .gcProfile) ?? .auto
         lockFpsToMonitor = try container.decodeIfPresent(Bool.self, forKey: .lockFpsToMonitor) ?? false
+        capRenderDistance = try container.decodeIfPresent(Bool.self, forKey: .capRenderDistance) ?? false
         group = try container.decodeIfPresent(String.self, forKey: .group)
         lastPlayed = try container.decodeIfPresent(Date.self, forKey: .lastPlayed)
         playtimeSeconds = try container.decodeIfPresent(Int.self, forKey: .playtimeSeconds) ?? 0
@@ -84,6 +89,7 @@ public struct Instance: Codable, Sendable, Equatable {
         try container.encode(extraJVMArgs, forKey: .extraJVMArgs)
         try container.encode(gcProfile, forKey: .gcProfile)
         try container.encode(lockFpsToMonitor, forKey: .lockFpsToMonitor)
+        try container.encode(capRenderDistance, forKey: .capRenderDistance)
         try container.encodeIfPresent(group, forKey: .group)
         try container.encodeIfPresent(lastPlayed, forKey: .lastPlayed)
         try container.encode(playtimeSeconds, forKey: .playtimeSeconds)

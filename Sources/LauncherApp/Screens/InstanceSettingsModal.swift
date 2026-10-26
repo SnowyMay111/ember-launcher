@@ -35,7 +35,13 @@ struct InstanceSettingsModal: View {
     var body: some View {
         VoxelModal(title: "Instance settings") {
             VStack(alignment: .leading, spacing: 18) {
-                Text(verbatim: instance.versionLine).style(.secondary)
+                HStack(spacing: 12) {
+                    Text(verbatim: instance.versionLine).style(.secondary)
+                    Spacer(minLength: 0)
+                    if instance.loader == .fabric {
+                        SecondaryPill(title: "Change version") { app.modal = .changeVersion(instance.name) }
+                    }
+                }
 
                 ModalField(label: "Name") {
                     VoxelInput(label: "Name", text: $name)

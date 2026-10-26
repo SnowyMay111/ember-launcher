@@ -167,12 +167,14 @@ public final class GameLauncher: Sendable {
 
         let modsDir = gameDir.appendingPathComponent("mods", isDirectory: true)
         let refreshRate = instance.lockFpsToMonitor ? displayRefreshRateProvider?() : nil
+        let renderCap = instance.capRenderDistance ? 12 : nil
         do {
             _ = try MinecraftOptionsPatcher.patch(
                 instanceDirectory: gameDir,
                 modsDirectory: modsDir,
                 lockFpsToMonitor: instance.lockFpsToMonitor,
-                displayRefreshRate: refreshRate
+                displayRefreshRate: refreshRate,
+                renderDistanceCap: renderCap
             )
         } catch {
             // Options patch failure must not block game launch
@@ -224,13 +226,21 @@ public final class GameLauncher: Sendable {
         }
         let gameArguments = expand(arguments.game, variables: variables)
 
+        let instanceDir = store.instanceDirectory(for: instance.name)
+        DiagnosticJVMFlags.prepare(instanceDirectory: instanceDir)
+        let diagnosticArgs = DiagnosticJVMFlags.arguments(
+            instanceDirectory: instanceDir,
+            javaMajor: version.javaVersion?.majorVersion,
+            userArguments: instance.extraJVMArgs
+        )
+
         let memory = JVMArgumentsBuilder.arguments(
             memoryMB: instance.memoryMB,
             profile: instance.gcProfile,
             javaMajor: version.javaVersion?.majorVersion,
             userArguments: instance.extraJVMArgs
         )
-        let all = memory + instance.extraJVMArgs + jvmArguments + [mainClass] + gameArguments
+        let all = memory + diagnosticArgs + instance.extraJVMArgs + jvmArguments + [mainClass] + gameArguments
 
         return LaunchCommand(
             executable: javaExecutable,

@@ -18,6 +18,8 @@ enum AppModal: Equatable {
     case instanceSettings(String)
     case gameLog(String)
     case optimize(String)
+    case changeVersion(String)
+    case sessionHealth(String)
 }
 
 @MainActor

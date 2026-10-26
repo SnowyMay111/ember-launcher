@@ -41,6 +41,28 @@ private final class ProgressRelay: @unchecked Sendable {
     }
 }
 
+private final class AtomicBool: @unchecked Sendable {
+    private let lock = NSLock()
+    private var _value: Bool
+
+    init(_ value: Bool) {
+        _value = value
+    }
+
+    var value: Bool {
+        get {
+            lock.lock()
+            defer { lock.unlock() }
+            return _value
+        }
+        set {
+            lock.lock()
+            defer { lock.unlock() }
+            _value = newValue
+        }
+    }
+}
+
 /// Thread-safe holder for the screen refresh rate read on the main actor.
 private final class DisplayRefreshRateBox: @unchecked Sendable {
     private let lock = NSLock()
@@ -99,21 +121,90 @@ final class PlayController: ObservableObject {
     @Published private(set) var runningSince: Date?
     /// Counts game starts, so the log console knows the log file was started over.
     @Published private(set) var runCount = 0
+    @Published private(set) var health: SessionHealthReport?
+    @Published private(set) var healthInstance: String?
+    @Published private(set) var fixProgress: Double?
+    @Published private(set) var fixLabel: String = ""
+    @Published private(set) var lastFixReport: AutoFixReport?
+    @Published private(set) var fixError: String?
 
     private let paths = LauncherPaths()
     private let launcher: GameLauncher
     private let refreshRateBox = DisplayRefreshRateBox()
+    private let diagnosticsEngine: SessionDiagnosticsEngine
 
     init() {
         launcher = GameLauncher(paths: paths)
         let box = refreshRateBox
         launcher.displayRefreshRateProvider = { box.value }
+        let modManager = ModManager(store: launcher.store)
+        let installer = OptimizationInstaller(modManager: modManager)
+        diagnosticsEngine = SessionDiagnosticsEngine(store: launcher.store, installer: installer)
+        if let current = UserDefaults.standard.string(forKey: "currentInstance") {
+            loadLastReport(for: current)
+        }
     }
 
     var isBusy: Bool {
         switch state {
         case .preparing, .running: return true
         case .idle, .failed: return false
+        }
+    }
+
+    var displayRefreshRate: Int? {
+        refreshRateBox.value ?? NSScreen.main?.maximumFramesPerSecond
+    }
+
+    func hasReport(for instanceName: String) -> Bool {
+        if health != nil && healthInstance == instanceName { return true }
+        let reportFile = launcher.store.instanceDirectory(for: instanceName).appendingPathComponent("last_session_health.json")
+        return FileManager.default.fileExists(atPath: reportFile.path)
+    }
+
+    func loadLastReport(for instanceName: String) {
+        Task { [weak self] in
+            guard let self else { return }
+            let report = await self.diagnosticsEngine.loadLastReport(instanceName: instanceName)
+            if self.healthInstance != instanceName || self.health == nil {
+                self.health = report
+                self.healthInstance = instanceName
+            }
+        }
+    }
+
+    func applyHealthFixes(_ fixes: [AutoFixAction], instanceName: String, app: AppState? = nil) {
+        guard !isBusy else { return }
+        fixError = nil
+        lastFixReport = nil
+        fixProgress = 0.0
+        fixLabel = L("Starting…")
+        Task { @MainActor in
+            do {
+                let instance = try launcher.store.load(name: instanceName)
+                let report = try await diagnosticsEngine.applyFixes(fixes, for: instance) { [weak self] fraction, label in
+                    Task { @MainActor [weak self] in
+                        self?.fixProgress = fraction
+                        self?.fixLabel = label
+                    }
+                }
+                self.lastFixReport = report
+                self.fixProgress = nil
+                self.fixLabel = ""
+                app?.reload()
+                let updatedInstance = try launcher.store.load(name: instanceName)
+                let newReport = await diagnosticsEngine.analyze(
+                    instance: updatedInstance,
+                    playtime: self.health?.totalPlaytimeSeconds ?? 0,
+                    javaExecutable: nil
+                )
+                self.health = newReport
+                self.healthInstance = instanceName
+            } catch {
+                self.fixProgress = nil
+                self.fixLabel = ""
+                self.fixError = error.localizedDescription
+            }
         }
     }
 
@@ -134,10 +225,12 @@ final class PlayController: ObservableObject {
             let command = try await prepareCommand(item.name, account: account)
             let process = try launcher.launch(command)
             let started = Date()
+            let isRunningBox = AtomicBool(true)
             runCount += 1
             diagnosis = nil
             diagnosisInstance = nil
             runningSince = started
+            healthInstance = item.name
             state = .running
             if hideLauncher { NSApp.hide(nil) }
 
@@ -152,11 +245,25 @@ final class PlayController: ObservableObject {
                 }
             }
 
+            let monitorInstance = try launcher.store.load(name: item.name)
+            let monitorStream = diagnosticsEngine.monitor(
+                instance: monitorInstance,
+                javaExecutable: nil,
+                isRunning: { isRunningBox.value }
+            )
+            _ = Task { @MainActor in
+                for await report in monitorStream {
+                    guard !Task.isCancelled else { break }
+                    self.health = report
+                }
+            }
+
             let status = await Task.detached {
                 process.waitUntilExit()
                 return process.terminationStatus
             }.value
 
+            isRunningBox.value = false
             checkpoint.cancel()
             runningSince = nil
             if hideLauncher {

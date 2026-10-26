@@ -91,7 +91,12 @@ extension InstanceStore {
         var instance = try load(name: name)
         let src = instanceDirectory(for: name)
         let dst = instanceDirectory(for: sanitized)
-        try FileManager.default.copyItem(at: src, to: dst)
+        // Version-change backups belong to the original, so they stay out of the copy.
+        let fm = FileManager.default
+        try fm.createDirectory(at: dst, withIntermediateDirectories: true)
+        for item in try fm.contentsOfDirectory(at: src, includingPropertiesForKeys: nil) where item.lastPathComponent != "backups" {
+            try fm.copyItem(at: item, to: dst.appendingPathComponent(item.lastPathComponent))
+        }
         instance.name = sanitized
         instance.lastPlayed = nil
         instance.playtimeSeconds = 0
