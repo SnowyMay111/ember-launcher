@@ -1,0 +1,30 @@
+name: Feature request
+description: An idea to make Ember better
+title: "[Idea] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What do you want to do?
+      description: Describe the situation or the problem, not only the solution.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: How could Ember help?
+      description: Your idea, a sketch, or a link to a launcher that does this well.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Play and game launch
+        - Library and instances
+        - Mods, packs and the catalog
+        - AI modpack generator
+        - Skins
+        - Settings
+        - Updates and installation
+        - Something else

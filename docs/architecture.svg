@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="470" viewBox="0 0 1000 470" role="img" aria-labelledby="t d">
+  <title id="t">How Ember is built</title>
+  <desc id="d">The Ember app and launcher-cli both use the LauncherCore package, which talks to Mojang, Modrinth, an AI provider and GitHub Releases</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b0a0b"/>
+      <stop offset="1" stop-color="#151010"/>
+    </linearGradient>
+    <linearGradient id="core" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffa36a" stop-opacity="0.26"/>
+      <stop offset="1" stop-color="#c8507a" stop-opacity="0.18"/>
+    </linearGradient>
+    <clipPath id="card"><rect width="1000" height="470" rx="24"/></clipPath>
+  </defs>
+
+  <g clip-path="url(#card)">
+    <rect width="1000" height="470" fill="url(#bg)"/>
+  </g>
+  <rect x="0.5" y="0.5" width="999" height="469" rx="23.5" fill="none" stroke="#ffffff" stroke-opacity="0.09"/>
+
+  <g font-family="Manrope, -apple-system, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif">
+    <!-- top: interfaces -->
+    <rect x="70" y="40" width="540" height="84" rx="18" fill="#17120f" stroke="#ffffff" stroke-opacity="0.12"/>
+    <text x="96" y="76" font-size="22" font-weight="700" fill="#fff4ea">Ember.app</text>
+    <text x="96" y="104" font-size="15" fill="#b9aca2">SwiftUI interface: Play, Library, Mods, Skins, Settings</text>
+
+    <rect x="650" y="40" width="280" height="84" rx="18" fill="#17120f" stroke="#ffffff" stroke-opacity="0.12"/>
+    <text x="676" y="76" font-size="22" font-weight="700" fill="#fff4ea">launcher-cli</text>
+    <text x="676" y="104" font-size="15" fill="#b9aca2">the same core from the terminal</text>
+
+    <!-- arrows to core -->
+    <g stroke="#ff9a62" stroke-width="2" fill="#ff9a62">
+      <path d="M340 124V168" fill="none"/><path d="M334 166H346L340 178z" stroke="none"/>
+      <path d="M790 124V168" fill="none"/><path d="M784 166H796L790 178z" stroke="none"/>
+    </g>
+
+    <!-- core -->
+    <rect x="70" y="178" width="860" height="108" rx="20" fill="url(#core)" stroke="#ff9a62" stroke-opacity="0.55"/>
+    <text x="96" y="214" font-size="22" font-weight="800" fill="#fff4ea">LauncherCore</text>
+    <text x="904" y="213" font-size="13" text-anchor="end" fill="#ffc79b" font-family="'DM Mono', 'SF Mono', Menlo, monospace" letter-spacing="1">FOUNDATION ONLY · NO APPKIT · NO SWIFTUI</text>
+    <text x="96" y="246" font-size="15" fill="#e9dccf">install and launch · Java runtime · Fabric, Forge, NeoForge · mods and compatibility</text>
+    <text x="96" y="268" font-size="15" fill="#e9dccf">.mrpack import and export · AI modpack planner · crash analyzer · self-update</text>
+
+    <!-- arrows down -->
+    <g stroke="#ff9a62" stroke-width="2" fill="#ff9a62">
+      <path d="M170 286V332" fill="none"/><path d="M164 330H176L170 342z" stroke="none"/>
+      <path d="M390 286V332" fill="none"/><path d="M384 330H396L390 342z" stroke="none"/>
+      <path d="M610 286V332" fill="none"/><path d="M604 330H616L610 342z" stroke="none"/>
+      <path d="M830 286V332" fill="none"/><path d="M824 330H836L830 342z" stroke="none"/>
+    </g>
+
+    <!-- outside world -->
+    <g>
+      <rect x="70" y="346" width="200" height="94" rx="18" fill="#17120f" stroke="#ffffff" stroke-opacity="0.12"/>
+      <text x="90" y="378" font-size="19" font-weight="700" fill="#fff4ea">Mojang</text>
+      <text x="90" y="401" font-size="14" fill="#b9aca2">game files and ARM Java</text>
+      <text x="90" y="421" font-size="14" fill="#b9aca2">straight from the source</text>
+      <rect x="290" y="346" width="200" height="94" rx="18" fill="#17120f" stroke="#ffffff" stroke-opacity="0.12"/>
+      <text x="310" y="378" font-size="19" font-weight="700" fill="#fff4ea">Modrinth</text>
+      <text x="310" y="401" font-size="14" fill="#b9aca2">mods, modpacks,</text>
+      <text x="310" y="421" font-size="14" fill="#b9aca2">shaders, resource packs</text>
+      <rect x="510" y="346" width="200" height="94" rx="18" fill="#17120f" stroke="#ffffff" stroke-opacity="0.12"/>
+      <text x="530" y="378" font-size="19" font-weight="700" fill="#fff4ea">Claude / Gemini</text>
+      <text x="530" y="401" font-size="14" fill="#b9aca2">your own key, kept in</text>
+      <text x="530" y="421" font-size="14" fill="#b9aca2">the macOS Keychain</text>
+      <rect x="730" y="346" width="200" height="94" rx="18" fill="#17120f" stroke="#ffffff" stroke-opacity="0.12"/>
+      <text x="750" y="378" font-size="19" font-weight="700" fill="#fff4ea">GitHub Releases</text>
+      <text x="750" y="401" font-size="14" fill="#b9aca2">checks for new versions</text>
+      <text x="750" y="421" font-size="14" fill="#b9aca2">and updates itself</text>
+    </g>
+  </g>
+</svg>

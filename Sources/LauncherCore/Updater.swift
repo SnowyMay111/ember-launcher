@@ -44,11 +44,11 @@ public enum UpdateError: Error, LocalizedError, Equatable, Sendable {
         case .sizeMismatch: return "The downloaded update is incomplete. Try again."
         case .checksumMismatch: return "The downloaded update is damaged (checksum mismatch). Try again."
         case .unpackFailed: return "Couldn't unpack the update."
-        case .missingApp: return "The update does not contain Voxel.app."
+        case .missingApp: return "The update does not contain Ember.app."
         case .wrongBuild: return "The update does not match the release."
         case .badSignature: return "The update's signature is not valid."
-        case .needsApplicationsFolder: return "Move Voxel to the Applications folder first, then update."
-        case .notAnApp: return "Voxel is not running as an app, so it can't update itself."
+        case .needsApplicationsFolder: return "Move Ember to the Applications folder first, then update."
+        case .notAnApp: return "Ember is not running as an app, so it can't update itself."
         case .cannotStartInstaller: return "Couldn't start the update installer."
         }
     }
@@ -115,7 +115,11 @@ private struct GitHubRelease: Decodable {
 /// Looks for a newer launcher on GitHub Releases. No token is sent.
 public enum UpdateChecker {
     public static let repository = "SnowyMay111/mc-launcher"
-    public static let assetName = "Voxel-mac-arm64.zip"
+    public static let assetName = "Ember-mac-arm64.zip"
+    /// The project was called Voxel before 0.2.1; releases keep a zip under the old name so older launchers can still update.
+    static let assetNames = [assetName, "Voxel-mac-arm64.zip"]
+    /// Folder names the unpacked update may use, newest name first.
+    static let appNames = ["Ember.app", "Voxel.app"]
     /// Points the check at another URL that returns a GitHub-style "latest release" JSON (local tests use a static file).
     public static let overrideVariable = "VOXEL_UPDATE_URL"
 
@@ -172,7 +176,7 @@ public enum UpdateChecker {
         var version = release.tagName.trimmingCharacters(in: .whitespaces)
         if version.hasPrefix("v") || version.hasPrefix("V") { version.removeFirst() }
         guard UpdateVersion.isNewer(version, than: currentVersion) else { return nil }
-        guard let asset = release.assets.first(where: { $0.name == assetName }),
+        guard let asset = assetNames.lazy.compactMap({ name in release.assets.first(where: { $0.name == name }) }).first,
               let url = URL(string: asset.browserDownloadURL) else { return nil }
         var digest: String?
         if let raw = asset.digest?.lowercased(), raw.hasPrefix("sha256:") {
@@ -262,7 +266,7 @@ private final class FileDownload: NSObject, URLSessionDownloadDelegate, @uncheck
 public enum UpdateInstaller {
     public static let bundleIdentifier = "dev.mclauncher.voxel"
 
-    /// Downloads and unpacks the release into a fresh temp folder. Returns the URL of the unpacked Voxel.app.
+    /// Downloads and unpacks the release into a fresh temp folder. Returns the URL of the unpacked app (Ember.app, or Voxel.app in the legacy zip).
     public static func download(_ info: UpdateInfo, progress: @escaping @Sendable (Double) -> Void) async throws -> URL {
         guard info.assetURL.scheme == "https" || UpdateChecker.isOverridden else { throw UpdateError.insecureDownload }
 
@@ -276,7 +280,8 @@ public enum UpdateInstaller {
             guard await run("/usr/bin/ditto", ["-x", "-k", zipURL.path, unpackDir.path]).status == 0 else { throw UpdateError.unpackFailed }
             try? fileManager.removeItem(at: zipURL)
 
-            let app = unpackDir.appendingPathComponent("Voxel.app", isDirectory: true)
+            let candidates = UpdateChecker.appNames.map { unpackDir.appendingPathComponent($0, isDirectory: true) }
+            let app = candidates.first { fileManager.fileExists(atPath: $0.path) } ?? candidates[0]
             guard fileManager.isExecutableFile(atPath: app.appendingPathComponent("Contents/MacOS/LauncherApp").path) else {
                 throw UpdateError.missingApp
             }
@@ -341,7 +346,7 @@ public enum UpdateInstaller {
         let stamp = DateFormatter()
         stamp.locale = Locale(identifier: "en_US_POSIX")
         stamp.dateFormat = "yyyyMMdd-HHmmss"
-        let backupName = "Voxel \(currentVersion) \(stamp.string(from: Date())).app"
+        let backupName = "Ember \(currentVersion) \(stamp.string(from: Date())).app"
 
         let logDirectory = LauncherPaths().root
         let scriptURL = fileManager.temporaryDirectory.appendingPathComponent("voxel-update-\(UUID().uuidString).sh")

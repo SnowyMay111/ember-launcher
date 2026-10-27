@@ -219,7 +219,7 @@ struct SettingsScreen: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            PageHeader(eyebrow: "YOUR SPACE", title: "Settings", subtitle: "A few thoughtful choices to make Voxel feel like yours.", alignment: .leading)
+            PageHeader(eyebrow: "YOUR SPACE", title: "Settings", subtitle: "A few thoughtful choices to make Ember feel like yours.", alignment: .leading)
                 .padding(.bottom, 34)
 
             if windowWidth < 760 {

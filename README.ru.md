@@ -1,24 +1,46 @@
 <div align="center">
 
-<img src="assets/AppIcon-1024.png" alt="Иконка Voxel" width="112">
+<img src="docs/banner.svg" alt="Ember: нативный лаунчер Minecraft для Apple Silicon" width="100%">
 
-# Voxel
+<br>
 
-**Быстрый нативный лаунчер Minecraft для Mac на Apple Silicon, с ИИ-генератором сборок.**
+**Выберите версию и нажмите «Играть». Или опишите нужную сборку словами, и ИИ соберёт её за вас.**
 
 [English](README.md) · Русский · [Українська](README.uk.md)
 
-[![Latest release](https://img.shields.io/github/v/release/SnowyMay111/mc-launcher?style=for-the-badge&label=download&color=2ea043)](https://github.com/SnowyMay111/mc-launcher/releases/latest)
+[![Latest release](https://img.shields.io/github/v/release/SnowyMay111/mc-launcher?style=for-the-badge&label=download&color=ee8a56)](https://github.com/SnowyMay111/mc-launcher/releases/latest)
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-black?style=for-the-badge&logo=apple)
 ![Apple Silicon](https://img.shields.io/badge/Apple%20Silicon-native-blue?style=for-the-badge)
 ![Swift 6](https://img.shields.io/badge/Swift-6%20%C2%B7%20SwiftUI-F05138?style=for-the-badge&logo=swift&logoColor=white)
 [![MIT](https://img.shields.io/badge/license-MIT-lightgrey?style=for-the-badge)](LICENSE)
 
-[Скачать](https://github.com/SnowyMay111/mc-launcher/releases/latest) · [Возможности](#features) · [Скриншоты](#screenshots) · [Установка](#install) · [Сборка из исходников](#build-from-source) · [Планы](#roadmap)
+[Скачать](https://github.com/SnowyMay111/mc-launcher/releases/latest) · [Что нового](#whats-new) · [Возможности](#features) · [Скриншоты](#screenshots) · [Как устроен](#how-it-works) · [Установка](#install) · [Вопросы и ответы](#faq) · [Планы](#roadmap)
 
-<img src="docs/screenshots/play.png" alt="Voxel: экран запуска с главной карточкой, выбором версии и кнопкой «Играть»" width="860">
+<img src="docs/screenshots/play.png" alt="Ember: экран запуска с главной карточкой, выбором версии и кнопкой «Играть»" width="860">
 
 </div>
+
+<table>
+  <tr>
+    <td width="33%" valign="top"><b>Сделан для Mac</b><br>Нативная ARM-Java прямо из манифеста рантаймов Mojang, профили JVM, пресеты памяти под ваш Mac, профиль производительности с Sodium и Lithium одним кликом. Системная Java не нужна.</td>
+    <td width="33%" valign="top"><b>Моды без гадания</b><br>Каталог Modrinth, где каждая карточка говорит, подходит ли она вашей версии игры и загрузчику, и ставится вместе с зависимостями. Или попросите ИИ спланировать целую сборку по одной фразе.</td>
+    <td width="33%" valign="top"><b>Изменения можно отменить</b><br>Бэкап миров перед каждой сменой версии, откат одной кнопкой, анализатор вылетов, который называет виновный мод, и живой лог игры.</td>
+  </tr>
+</table>
+
+<a id="whats-new"></a>
+## Что нового
+
+**0.2.1: Voxel теперь Ember.** У лаунчера новое имя. Приложение называется `Ember.app`, скачивать нужно `Ember-mac-arm64.zip`, а ваши сборки, миры, настройки и ключ в Keychain остаются на своих местах. Если у вас уже стоит 0.1.0 или 0.2.0, встроенное обновление само переведёт вас на Ember; при первом обновлении файл останется с именем `Voxel.app`, при желании переименуйте его в Finder.
+
+**0.2.0: новый облик и много нового внутри.**
+
+- Тёплый тёмный интерфейс **Ember** с главным экраном запуска и живым фоном, который можно выключить.
+- **Forge и NeoForge** ставятся вместе с Minecraft, каталог работает в любой сборке, а импорт и экспорт `.mrpack` поддерживает обе платформы.
+- Экран **Скины**, панель с деталями сборки, группы сборок и страница мода с установкой одной кнопкой.
+- Безопасное удаление сборок и скачанных версий игры, более умный подбор версий модов и настройки на одной прокручиваемой странице.
+
+Вся история изменений в [журнале изменений](CHANGELOG.md).
 
 <a id="features"></a>
 ## Возможности
@@ -27,13 +49,13 @@
 - **Vanilla, Fabric, Forge и NeoForge.** Загрузчик ставится вместе с игрой, а в любой сборке доступен каталог модов и шейдеров.
 - **Каталог модов, сборок, шейдеров и ресурспаков** из [Modrinth](https://modrinth.com). Каждая карточка показывает, подходит ли она вашей версии игры и загрузчику, и ставится вместе с зависимостями одной кнопкой. Версии модов подбираются под то, что уже установлено; неподходящие результаты спрятаны за переключателем *Показать несовместимые*. Шейдеры сами подтягивают Iris и Sodium.
 - **ИИ-генератор сборок.** Опишите сборку обычными словами («лёгкая, быстрая, техно в стиле Create, без хорроров»): ИИ подберёт моды и объяснит выбор, вы снимете галочки с лишнего, и после проверки совместимости всё установится. Используйте свой ключ Claude или Gemini, он хранится в связке ключей macOS (Keychain).
-- **Сделан для Mac.** Нативная ARM-Java из манифеста рантаймов Mojang, профили JVM (G1 / ZGC), пресеты памяти под ваш Mac, профиль производительности одним кликом с Sodium и Lithium.
+- **Сделан для Mac.** Нативная ARM-Java, профили JVM (G1 / ZGC), пресеты памяти под ваш Mac, профиль производительности одним кликом с Sodium и Lithium.
 - **Безопасные изменения.** Бэкап миров перед каждой сменой версии, откат одной кнопкой, проверка, смогут ли ваши моды перейти на новую версию.
 - **Понятно, почему игра вылетела.** Живой лог игры, анализатор вылетов, который называет виновный мод или настройку, отчёт о состоянии сессии.
 - **Делитесь сборками.** Импорт и экспорт файлов `.mrpack`, в том числе сборок Forge и NeoForge.
 - **Аккуратная библиотека.** Группы для сборок, панель с деталями (обзор, моды, миры, логи), безопасное удаление сборок и скачанных версий игры: версию, которую ещё использует сборка, удалить нельзя.
 - **Скины.** Импорт скинов PNG 64×64, просмотр спереди и сзади, своя коллекция на вашем Mac. Выбранный скин игра применит после входа через Microsoft, которого пока нет.
-- **Красиво и спокойно.** Тёплый тёмный интерфейс *Ember* с живым фоном (один переключатель отключает анимации и экономит батарею), английский, русский и украинский языки.
+- **Красиво и спокойно.** Тёплый тёмный интерфейс Ember с живым фоном (один переключатель отключает анимации и экономит батарею), английский, русский и украинский языки.
 - **Обновляется сам.** Лаунчер проверяет GitHub Releases при запуске; когда выходит новая версия, появляется кнопка, один клик скачивает и устанавливает её.
 - По умолчанию ник работает офлайн.
 
@@ -54,43 +76,107 @@
   </tr>
 </table>
 
+<a id="how-it-works"></a>
+## Как устроен
+
+<img src="docs/architecture.svg" alt="Ember.app и launcher-cli используют пакет LauncherCore, который общается с Mojang, Modrinth, ИИ-провайдером и GitHub Releases" width="100%">
+
+Вся логика игры лежит в `LauncherCore`: это пакет на Swift, который использует только Foundation (без AppKit и SwiftUI). Приложение лишь один из интерфейсов поверх него, `launcher-cli` другой, так что ядро можно будет использовать для версии под Windows. Файлы игры и Java приходят от Mojang, моды из Modrinth, а ваш ключ ИИ уходит только выбранному провайдеру.
+
 <a id="install"></a>
 ## Установка
 
-Нужен Mac с чипом Apple (M1 или новее) и macOS 14 или новее. Устанавливать Minecraft или Java **не нужно**: Voxel сам скачает всё, что нужно игре.
+Нужен Mac с чипом Apple (M1 или новее) и macOS 14 или новее. Устанавливать Minecraft или Java **не нужно**: Ember сам скачает всё, что нужно игре.
 
-1. Скачайте **`Voxel-mac-arm64.zip`** из [последнего релиза](https://github.com/SnowyMay111/mc-launcher/releases/latest) и распакуйте.
-2. Перетащите **`Voxel.app`** в папку **Программы**.
+1. Скачайте **`Ember-mac-arm64.zip`** из [последнего релиза](https://github.com/SnowyMay111/mc-launcher/releases/latest) и распакуйте.
+2. Перетащите **`Ember.app`** в папку **Программы**.
 3. Только при первом запуске: приложение ещё не нотаризовано Apple, поэтому macOS откажется его открыть. Откройте **Терминал**, вставьте команду и нажмите Enter:
 
    ```bash
-   xattr -dr com.apple.quarantine /Applications/Voxel.app
+   xattr -dr com.apple.quarantine /Applications/Ember.app
    ```
 
    (Или: *Системные настройки → Конфиденциальность и безопасность → Всё равно открыть*.) После этого приложение открывается как обычно.
 4. Нажмите **Новая сборка**, выберите версию Minecraft, нажмите **Создать**, затем **Играть**. Ник задаётся в **Настройках**.
 
-Старые версии (до 1.18) работают через Rosetta. Если Voxel попросит, выполните один раз:
+Старые версии (до 1.18) работают через Rosetta. Если Ember попросит, выполните один раз:
 
 ```bash
 softwareupdate --install-rosetta --agree-to-license
 ```
 
-Дальше Voxel обновляется сам.
+Дальше Ember обновляется сам.
+
+<a id="faq"></a>
+## Вопросы и ответы
+
+<details>
+<summary><b>Ember бесплатный?</b></summary>
+
+Да. Исходный код открыт, лицензия [MIT](LICENSE). Сам Minecraft в комплект не входит, файлы Mojang лаунчер с собой не носит.
+</details>
+
+<details>
+<summary><b>Нужно ли покупать Minecraft?</b></summary>
+
+Офлайн-режим с ником рассчитан на одиночную игру, локальную сеть и офлайн-серверы. Чтобы играть на официальных серверах, купите игру. Вход через Microsoft есть в планах.
+</details>
+
+<details>
+<summary><b>macOS пишет, что приложение нельзя открыть. Это безопасно?</b></summary>
+
+Сборка подписана локально, но ещё не нотаризована Apple (для этого нужен платный аккаунт разработчика), поэтому Gatekeeper блокирует первый запуск. Команда `xattr` из раздела [Установка](#install) снимает метку карантина; исходный код лежит в этом репозитории, его можно проверить или собрать самому.
+</details>
+
+<details>
+<summary><b>Работает ли на Mac с процессором Intel?</b></summary>
+
+Нет, сборка только для Apple Silicon (M1 и новее).
+</details>
+
+<details>
+<summary><b>Где Ember хранит свои файлы?</b></summary>
+
+В `~/Library/Application Support/mc-launcher`: сборки, миры, бэкапы, скачанные версии и Java. Название папки при переименовании не менялось, поэтому ничего переносить не нужно. Ключ ИИ лежит в связке ключей macOS, а не в файле.
+</details>
+
+<details>
+<summary><b>Безопасен ли мой ключ ИИ?</b></summary>
+
+Он хранится в связке ключей macOS, в логи не попадает и уходит только выбранному провайдеру (Claude или Gemini). Вы платите провайдеру напрямую; у Ember нет собственных серверов.
+</details>
+
+<details>
+<summary><b>У меня уже есть сборка. Можно её использовать?</b></summary>
+
+Да. Импортируйте любой файл Modrinth `.mrpack` в окне **Новая сборка**, в том числе сборки Forge и NeoForge. Свои сборки можно экспортировать так же.
+</details>
+
+<details>
+<summary><b>Почему раньше он назывался Voxel?</b></summary>
+
+Релизы до 0.2.0 вышли под именем Voxel. С 0.2.1 проект называется Ember. Встроенное обновление само переведёт вас на новое имя, а старые названия загрузок продолжают работать для уже установленных копий.
+</details>
+
+<details>
+<summary><b>Будут ли версии для Windows и Linux?</b></summary>
+
+Windows есть в планах. Ядро переносимо, а интерфейс на SwiftUI нет, поэтому для Windows понадобится свой интерфейс поверх `LauncherCore`.
+</details>
 
 <a id="build-from-source"></a>
-## Сборка из исходников
+## Сборка из исходного кода
 
 Xcode не нужен, достаточно Command Line Tools и Swift 6.
 
 ```bash
 git clone https://github.com/SnowyMay111/mc-launcher.git
 cd mc-launcher
-scripts/build-app.sh          # builds build/Voxel.app
-scripts/package-app.sh        # release build + dist/Voxel-mac-arm64.zip
+scripts/build-app.sh          # builds build/Ember.app
+scripts/package-app.sh        # release build + dist/Ember-mac-arm64.zip
 ```
 
-Вся логика игры лежит в пакете `LauncherCore` (только Foundation, без AppKit и SwiftUI), чтобы позже её можно было использовать для версии под Windows. `launcher-cli` запускает то же ядро из терминала.
+Хотите прислать правку? Читайте [CONTRIBUTING.md](CONTRIBUTING.md).
 
 <a id="roadmap"></a>
 ## Планы
@@ -99,17 +185,18 @@ scripts/package-app.sh        # release build + dist/Voxel-mac-arm64.zip
 - [x] Forge и NeoForge
 - [x] Импорт и экспорт `.mrpack`
 - [x] Самообновление из GitHub Releases
+- [x] Интерфейс и имя Ember
 - [ ] Вход через Microsoft
 - [ ] CurseForge как второй каталог
 - [ ] Нотаризация Apple
 - [ ] Windows
 
-Нашли ошибку или есть идея? [Создайте issue](https://github.com/SnowyMay111/mc-launcher/issues).
+Нашли ошибку или есть идея? [Создайте issue](https://github.com/SnowyMay111/mc-launcher/issues/new/choose).
 
 ## Отказ от ответственности
 
-Voxel — неофициальный лаунчер. Он не одобрен Mojang или Microsoft и не связан с ними. Файлы игры Minecraft в лаунчер не входят: они скачиваются с официальных серверов Mojang. Офлайн-режим с ником предназначен для одиночной игры, локальной сети и офлайн-серверов; чтобы играть на официальных серверах, купите игру.
+Ember — неофициальный лаунчер. Он не одобрен Mojang или Microsoft и не связан с ними. Файлы игры Minecraft в лаунчер не входят: они скачиваются с официальных серверов Mojang. Офлайн-режим с ником предназначен для одиночной игры, локальной сети и офлайн-серверов; чтобы играть на официальных серверах, купите игру.
 
 ## Благодарности и лицензия
 
-Моды и сборки приходят из API [Modrinth](https://modrinth.com). Шрифты интерфейса: [Geist](https://vercel.com/font), [Manrope](https://fonts.google.com/specimen/Manrope) и [DM Mono](https://fonts.google.com/specimen/DM+Mono) (все под SIL Open Font License). Voxel распространяется по лицензии [MIT](LICENSE).
+Моды и сборки приходят из API [Modrinth](https://modrinth.com). Шрифты интерфейса: [Geist](https://vercel.com/font), [Manrope](https://fonts.google.com/specimen/Manrope) и [DM Mono](https://fonts.google.com/specimen/DM+Mono) (все под SIL Open Font License). Ember распространяется по лицензии [MIT](LICENSE).

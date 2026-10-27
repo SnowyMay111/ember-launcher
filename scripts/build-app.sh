@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Собирает build/Voxel.app из SwiftPM (Xcode не нужен). Запуск из корня проекта:
+# Собирает build/Ember.app из SwiftPM (Xcode не нужен). Запуск из корня проекта:
 #   scripts/build-app.sh [debug|release]
-# Папка build/ целиком генерируется, внутри неё скрипт обновляет Voxel.app на месте.
+# Папка build/ целиком генерируется, внутри неё скрипт обновляет Ember.app на месте.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -12,7 +12,7 @@ VERSION="$(sed -n 's/.*version = "\([^"]*\)".*/\1/p' Sources/LauncherCore/Launch
 swift build -c "$CONFIG" --product LauncherApp
 BIN_DIR="$(swift build -c "$CONFIG" --show-bin-path)"
 
-APP="build/Voxel.app"
+APP="build/Ember.app"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN_DIR/LauncherApp" "$APP/Contents/MacOS/LauncherApp"
 # --delete: убранный языковой файл исчезает и из готового приложения.
@@ -27,8 +27,8 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>CFBundleExecutable</key><string>LauncherApp</string>
     <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>CFBundleIdentifier</key><string>dev.mclauncher.voxel</string>
-    <key>CFBundleName</key><string>Voxel</string>
-    <key>CFBundleDisplayName</key><string>Voxel</string>
+    <key>CFBundleName</key><string>Ember</string>
+    <key>CFBundleDisplayName</key><string>Ember</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleShortVersionString</key><string>$VERSION</string>
     <key>CFBundleVersion</key><string>$VERSION</string>

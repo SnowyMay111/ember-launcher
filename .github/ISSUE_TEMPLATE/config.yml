@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Read the FAQ first
+    url: https://github.com/SnowyMay111/mc-launcher#faq
+    about: Answers about installing, the first-launch warning, where files are stored and AI keys.

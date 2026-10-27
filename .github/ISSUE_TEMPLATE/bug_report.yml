@@ -1,0 +1,55 @@
+name: Bug report
+description: Something in Ember does not work as it should
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time. The more detail you give, the faster it can be fixed. You can write in English, Russian or Ukrainian.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open Library
+        2. Press ...
+        3. See ...
+  - type: input
+    id: ember-version
+    attributes:
+      label: Ember version
+      description: Shown at the bottom of the Home screen, for example 0.2.1. Releases before 0.2.1 were called Voxel.
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version and chip
+      placeholder: macOS 15.1, Apple M2
+    validations:
+      required: true
+  - type: input
+    id: minecraft
+    attributes:
+      label: Minecraft version and loader
+      description: Leave empty if the problem is not about a game instance.
+      placeholder: 1.21.1 Fabric
+  - type: textarea
+    id: logs
+    attributes:
+      label: Game log or crash report
+      description: Paste the relevant part of the log or the crash report. Remove anything private; never paste your AI key.
+      render: text
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: Drag images here if they help.
