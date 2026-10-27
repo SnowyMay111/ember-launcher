@@ -2,35 +2,51 @@ import SwiftUI
 
 private let fieldFont = Font.custom("Geist-Regular", size: 14)
 
-/// Search pill: height 42, magnifier in muted.
+/// Search field: elevated fill, border, radius 12, magnifier icon, placeholder in textMuted.
 struct SearchField: View {
     let placeholder: String
     @Binding var text: String
+    /// Toolbar look of the prototype's `.search-field`: 220×38, 10 pt text.
+    var compact = false
     @FocusState private var focused: Bool
+    @Local private var isHovered = false
 
     var body: some View {
-        HStack(spacing: 10) {
+        let radius: CGFloat = compact ? 11 : Theme.radiusInput
+        HStack(spacing: compact ? 8 : 10) {
             SearchIcon()
-                .stroke(Theme.muted, style: StrokeStyle(lineWidth: 1.6, lineCap: .round, lineJoin: .round))
-                .frame(width: 16, height: 16)
+                .stroke(focused ? Theme.ember : (compact ? Color(hex: 0x77716b) : Theme.textMuted), style: StrokeStyle(lineWidth: 1.6, lineCap: .round, lineJoin: .round))
+                .frame(width: compact ? 12 : 16, height: compact ? 12 : 16)
                 .accessibilityHidden(true)
-            TextField("", text: $text, prompt: Text(verbatim: L(placeholder)).foregroundColor(Theme.muted))
+            TextField("", text: $text, prompt: Text(verbatim: L(placeholder)).foregroundColor(compact ? Color(hex: 0x56524e) : Theme.textMuted))
                 .textFieldStyle(.plain)
-                .font(fieldFont)
-                .foregroundColor(.white)
+                .font(compact ? Theme.font(size: 10, weight: .regular, mono: false) : fieldFont)
+                .foregroundColor(compact ? Color(hex: 0xddd7d0) : Theme.text)
                 .focused($focused)
                 .accessibilityLabel(L(placeholder))
         }
-        .padding(.horizontal, 16)
-        .frame(width: 260, height: 42)
-        .background(Capsule().fill(Theme.black40))
-        .overlay(Capsule().strokeBorder(Theme.lineStrong, lineWidth: 1))
-        .contentShape(Capsule())
+        .padding(.horizontal, compact ? 13 : 14)
+        .frame(width: compact ? 220 : 260, height: compact ? 38 : 40)
+        .background(
+            RoundedRectangle(cornerRadius: radius, style: .continuous)
+                .fill(compact ? Color(hex: 0x10100f) : Theme.elevated)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: radius, style: .continuous)
+                .strokeBorder(
+                    focused ? Theme.ember.opacity(0.6) : (isHovered ? Theme.lineStrong : (compact ? Color(hex: 0x272522) : Theme.border)),
+                    lineWidth: focused ? 1.5 : 1
+                )
+        )
+        .contentShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
+        .onHover { isHovered = $0 }
         .onTapGesture { focused = true }
+        .animation(.easeInOut(duration: 0.18), value: isHovered)
+        .animation(.easeInOut(duration: 0.18), value: focused)
     }
 }
 
-/// Text input: height 40, radius 12.
+/// Text input: elevated fill, border, ember focus ring.
 struct VoxelInput: View {
     let label: String
     @Binding var text: String
@@ -38,126 +54,192 @@ struct VoxelInput: View {
     var alignment: TextAlignment = .leading
     var placeholder = ""
     @FocusState private var focused: Bool
+    @Local private var isHovered = false
+    @Environment(\.isEnabled) private var isEnabled
 
     var body: some View {
-        TextField("", text: $text, prompt: Text(verbatim: placeholder).foregroundColor(Theme.muted))
+        TextField("", text: $text, prompt: Text(verbatim: placeholder).foregroundColor(Theme.textMuted))
             .textFieldStyle(.plain)
             .font(fieldFont)
-            .foregroundColor(.white)
+            .foregroundColor(Theme.text)
             .multilineTextAlignment(alignment)
             .focused($focused)
             .padding(.horizontal, 14)
             .frame(width: width, height: 40)
-            .background(RoundedRectangle(cornerRadius: Theme.radiusInput, style: .continuous).fill(Theme.black45))
-            .overlay(RoundedRectangle(cornerRadius: Theme.radiusInput, style: .continuous).strokeBorder(Theme.lineStrong, lineWidth: 1))
-            .contentShape(Rectangle())
+            .background(
+                RoundedRectangle(cornerRadius: Theme.radiusInput, style: .continuous)
+                    .fill(Theme.elevated)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.radiusInput, style: .continuous)
+                    .strokeBorder(
+                        focused ? Theme.ember.opacity(0.6) : (isHovered ? Theme.lineStrong : Theme.border),
+                        lineWidth: focused ? 1.5 : 1
+                    )
+            )
+            .contentShape(RoundedRectangle(cornerRadius: Theme.radiusInput, style: .continuous))
+            .onHover { isHovered = $0 }
             .onTapGesture { focused = true }
+            .opacity(isEnabled ? 1.0 : 0.45)
+            .animation(.easeInOut(duration: 0.18), value: isHovered)
+            .animation(.easeInOut(duration: 0.18), value: focused)
             .accessibilityLabel(L(label))
     }
 }
 
-/// Switch 52×30 with a 22pt knob.
+/// Switch with ember gradient track when on, elevated fill when off, and smooth motion.
 struct VoxelToggle: View {
     let label: String
     @Binding var isOn: Bool
 
+    @Local private var isHovered = false
+    @FocusState private var isFocused: Bool
+    @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     var body: some View {
-        Button { isOn.toggle() } label: {
+        Button {
+            isOn.toggle()
+        } label: {
             ZStack(alignment: isOn ? .trailing : .leading) {
-                Capsule().fill(isOn ? Color.white : Theme.black45)
-                if !isOn {
-                    Capsule().strokeBorder(Theme.lineStrong, lineWidth: 1)
-                }
+                // background
+                Capsule()
+                    .fill(isOn ? Color(hex: 0x5e3d2c) : Color(hex: 0x292624))
+                // knob
                 Circle()
-                    .fill(isOn ? Color.black : Theme.muted)
-                    .frame(width: 22, height: 22)
-                    .padding(4)
+                    .fill(isOn ? Color(hex: 0xff4500) : Color(hex: 0x77716b))
+                    .frame(width: 16, height: 16)
+                    .padding(3)
             }
-            .frame(width: 52, height: 30)
-            .frame(minHeight: 36)
+            .frame(width: 38, height: 22)
+            .overlay(
+                Capsule()
+                    .strokeBorder(isOn ? Color(hex: 0xff4500) : Theme.ember.opacity(0.6), lineWidth: isOn ? 0 : 1.5)
+                    .padding(-2)
+                    .opacity(isFocused ? 1 : 0)
+            )
             .contentShape(Capsule())
-            .animation(.easeOut(duration: 0.15), value: isOn)
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.18), value: isOn)
         }
         .buttonStyle(.plain)
+        .focused($isFocused)
+        .onHover { isHovered = $0 }
+        .disabled(!isEnabled)
+        .opacity(isEnabled ? 1.0 : 0.45)
         .accessibilityLabel(L(label))
         .accessibilityAddTraits(.isToggle)
         .accessibilityValue(isOn ? L("On") : L("Off"))
     }
 }
 
-/// Native slider, white tint, width 200, value in mono on the right.
+/// Native slider with ember tint and mono value readout.
 struct VoxelSlider: View {
     let label: String
     @Binding var value: Double
     let range: ClosedRange<Double>
     let valueText: String
 
+    @FocusState private var isFocused: Bool
+    @Environment(\.isEnabled) private var isEnabled
+
     var body: some View {
         HStack(spacing: 14) {
             Slider(value: Binding(get: { value }, set: { value = $0.rounded() }), in: range)
-                .tint(.white)
+                .tint(Theme.ember)
+                .focused($isFocused)
                 .frame(width: 200)
                 .accessibilityLabel(L(label))
             Text(verbatim: valueText)
                 .style(.init(size: 13, weight: .regular, mono: true, color: Theme.text))
                 .frame(minWidth: 44, alignment: .trailing)
         }
+        .opacity(isEnabled ? 1.0 : 0.45)
     }
 }
 
-/// Same look as `VoxelInput`, but the text is hidden (API keys).
+/// Secure input with elevated fill, border, and ember focus ring.
 struct VoxelSecureInput: View {
     let label: String
     @Binding var text: String
     var width: CGFloat? = nil
     var placeholder = ""
     @FocusState private var focused: Bool
+    @Local private var isHovered = false
+    @Environment(\.isEnabled) private var isEnabled
 
     var body: some View {
-        SecureField("", text: $text, prompt: Text(verbatim: placeholder).foregroundColor(Theme.muted))
+        SecureField("", text: $text, prompt: Text(verbatim: placeholder).foregroundColor(Theme.textMuted))
             .textFieldStyle(.plain)
             .font(fieldFont)
-            .foregroundColor(.white)
+            .foregroundColor(Theme.text)
             .focused($focused)
             .padding(.horizontal, 14)
             .frame(width: width, height: 40)
-            .background(RoundedRectangle(cornerRadius: Theme.radiusInput, style: .continuous).fill(Theme.black45))
-            .overlay(RoundedRectangle(cornerRadius: Theme.radiusInput, style: .continuous).strokeBorder(Theme.lineStrong, lineWidth: 1))
-            .contentShape(Rectangle())
+            .background(
+                RoundedRectangle(cornerRadius: Theme.radiusInput, style: .continuous)
+                    .fill(Theme.elevated)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.radiusInput, style: .continuous)
+                    .strokeBorder(
+                        focused ? Theme.ember.opacity(0.6) : (isHovered ? Theme.lineStrong : Theme.border),
+                        lineWidth: focused ? 1.5 : 1
+                    )
+            )
+            .contentShape(RoundedRectangle(cornerRadius: Theme.radiusInput, style: .continuous))
+            .onHover { isHovered = $0 }
             .onTapGesture { focused = true }
+            .opacity(isEnabled ? 1.0 : 0.45)
+            .animation(.easeInOut(duration: 0.18), value: isHovered)
+            .animation(.easeInOut(duration: 0.18), value: focused)
             .accessibilityLabel(L(label))
     }
 }
 
-/// Several lines of text in the input look (the AI pack description).
+/// Multi-line text editor with elevated fill, border, and ember focus ring.
 struct VoxelTextArea: View {
     let label: String
     @Binding var text: String
     var placeholder = ""
     var height: CGFloat = 96
     @FocusState private var focused: Bool
+    @Local private var isHovered = false
+    @Environment(\.isEnabled) private var isEnabled
 
     var body: some View {
         ZStack(alignment: .topLeading) {
             TextEditor(text: $text)
                 .scrollContentBackground(.hidden)
                 .font(fieldFont)
-                .foregroundColor(.white)
+                .foregroundColor(Theme.text)
                 .focused($focused)
                 .padding(.horizontal, 9)
                 .padding(.vertical, 8)
             if text.isEmpty {
                 Text(verbatim: placeholder)
                     .font(fieldFont)
-                    .foregroundColor(Theme.muted)
+                    .foregroundColor(Theme.textMuted)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 8)
                     .allowsHitTesting(false)
             }
         }
         .frame(height: height)
-        .background(RoundedRectangle(cornerRadius: Theme.radiusInput, style: .continuous).fill(Theme.black45))
-        .overlay(RoundedRectangle(cornerRadius: Theme.radiusInput, style: .continuous).strokeBorder(Theme.lineStrong, lineWidth: 1))
+        .background(
+            RoundedRectangle(cornerRadius: Theme.radiusInput, style: .continuous)
+                .fill(Theme.elevated)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.radiusInput, style: .continuous)
+                .strokeBorder(
+                    focused ? Theme.ember.opacity(0.6) : (isHovered ? Theme.lineStrong : Theme.border),
+                    lineWidth: focused ? 1.5 : 1
+                )
+        )
+        .onHover { isHovered = $0 }
+        .opacity(isEnabled ? 1.0 : 0.45)
+        .animation(.easeInOut(duration: 0.18), value: isHovered)
+        .animation(.easeInOut(duration: 0.18), value: focused)
         .accessibilityLabel(L(label))
     }
 }
@@ -172,27 +254,50 @@ private struct CheckMark: Shape {
     }
 }
 
-/// Square check box: white when on, outline when off.
+/// Square check box: ember fill when on, elevated outline when off, min 40x40 hit target.
 struct VoxelCheckbox: View {
     let label: String
     @Binding var isOn: Bool
 
+    @Local private var isHovered = false
+    @FocusState private var isFocused: Bool
+    @Environment(\.isEnabled) private var isEnabled
+
+    private let darkWarmText = Color(red: 27 / 255.0, green: 17 / 255.0, blue: 10 / 255.0)
+
     var body: some View {
-        Button { isOn.toggle() } label: {
+        Button {
+            isOn.toggle()
+        } label: {
             ZStack {
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(isOn ? Color.white : Theme.black45)
+                    .fill(isOn ? Theme.ember : Theme.elevated)
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .strokeBorder(isOn ? Color.white : Theme.lineStrong, lineWidth: 1)
+                    .strokeBorder(
+                        isOn ? Theme.ember : (isHovered ? Theme.lineStrong : Theme.border),
+                        lineWidth: 1
+                    )
                 if isOn {
                     CheckMark()
-                        .stroke(Color.black, style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+                        .stroke(darkWarmText, style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
                 }
             }
             .frame(width: 20, height: 20)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .strokeBorder(Theme.ember.opacity(0.6), lineWidth: 1.5)
+                    .padding(-3)
+                    .opacity(isFocused ? 1 : 0)
+            )
+            .frame(width: 40, height: 40)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressDimStyle())
+        .focused($isFocused)
+        .onHover { isHovered = $0 }
+        .disabled(!isEnabled)
+        .opacity(isEnabled ? 1.0 : 0.45)
+        .animation(.easeInOut(duration: 0.18), value: isHovered)
         .accessibilityLabel(L(label))
         .accessibilityValue(isOn ? "on" : "off")
     }

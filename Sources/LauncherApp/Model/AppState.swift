@@ -21,6 +21,9 @@ enum AppModal: Equatable {
     case changeVersion(String)
     case sessionHealth(String)
     case allVersions
+    case profile
+    case modProject(ModrinthHit)
+    case instanceDetails(String)
 }
 
 @MainActor
@@ -35,6 +38,10 @@ final class AppState: ObservableObject {
     @Published var filter: LoaderFilter = .all
     @Published var search: String = ""
     @Published var modal: AppModal?
+    /// Set by the instance panel; Library then asks whether to delete it.
+    @Published var deleteRequest: String?
+    /// The Mods screen's controller while it is on screen, for the Modrinth project panel.
+    weak var activeMods: ModsController?
     /// Mojang's version list; nil until it has been fetched, or while offline.
     @Published private(set) var manifest: VersionManifest?
     /// Versions being downloaded from All versions: Minecraft version → percent done.

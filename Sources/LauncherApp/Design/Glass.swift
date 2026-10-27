@@ -40,36 +40,25 @@ public struct VisualEffectBlur: NSViewRepresentable {
 
 public struct GlassModifier: ViewModifier {
     public var radius: CGFloat
+    public var elevated: Bool
 
-    public init(radius: CGFloat = Theme.radiusCard) {
+    public init(radius: CGFloat = Theme.radiusCard, elevated: Bool = false) {
         self.radius = radius
+        self.elevated = elevated
     }
 
     public func body(content: Content) -> some View {
         content
             .background(
-                ZStack {
-                    // The material tints grey; keep only a hint of it so the fill reads as in the spec.
-                    VisualEffectBlur(material: .underWindowBackground, blendingMode: .withinWindow, state: .active)
-                        .opacity(0.3)
-
-                    Theme.glassFill
-
-                    // Inset 1px top highlight
-                    VStack(spacing: 0) {
-                        Color.white.opacity(0.16)
-                            .frame(height: 1)
-                        Spacer()
-                    }
-
-                    // 1px outer glass border
-                    RoundedRectangle(cornerRadius: radius, style: .continuous)
-                        .strokeBorder(Theme.glassBorder, lineWidth: 1)
-                }
-                .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .fill(elevated ? Theme.elevated : Theme.surface)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .strokeBorder(Theme.border, lineWidth: 1)
             )
             .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
-            .shadow(color: Color.black.opacity(0.5), radius: 25, x: 0, y: 20)
+            .shadow(color: Color.black.opacity(0.42), radius: 25, x: 0, y: 16)
     }
 }
 
@@ -78,9 +67,8 @@ public struct TopBarBackgroundModifier: ViewModifier {
         content
             .background(
                 ZStack(alignment: .bottom) {
-                    VisualEffectBlur(material: .underWindowBackground, blendingMode: .withinWindow, state: .active)
-                    Color.black.opacity(0.55)
-                    Theme.line
+                    Theme.surface
+                    Theme.border
                         .frame(height: 1)
                 }
             )
@@ -88,8 +76,12 @@ public struct TopBarBackgroundModifier: ViewModifier {
 }
 
 extension View {
-    public func glass(radius: CGFloat = Theme.radiusCard) -> some View {
-        modifier(GlassModifier(radius: radius))
+    public func glass(radius: CGFloat = Theme.radiusCard, elevated: Bool = false) -> some View {
+        modifier(GlassModifier(radius: radius, elevated: elevated))
+    }
+
+    public func elevatedGlass(radius: CGFloat = Theme.radiusCard) -> some View {
+        modifier(GlassModifier(radius: radius, elevated: true))
     }
 
     public func topBarBackground() -> some View {

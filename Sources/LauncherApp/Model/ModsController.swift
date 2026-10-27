@@ -2,6 +2,24 @@ import Foundation
 import LauncherCore
 import SwiftUI
 
+enum BrowseSort: String, CaseIterable, Sendable {
+    case relevance = "relevance"
+    case downloads = "downloads"
+    case newest = "newest"
+    case updated = "updated"
+    case follows = "follows"
+
+    var title: String {
+        switch self {
+        case .relevance: return "Relevance"
+        case .downloads: return "Popular"
+        case .newest: return "Newest"
+        case .updated: return "Recently updated"
+        case .follows: return "Most followed"
+        }
+    }
+}
+
 /// State holder for the Mods screen.
 @MainActor
 final class ModsController: ObservableObject {
@@ -13,13 +31,20 @@ final class ModsController: ObservableObject {
     @Published var isCheckingUpdates: Bool = false
     @Published var busy: Set<String> = []
     @Published var message: String?
+    @Published var sort: BrowseSort?
+    @Published var categories: Set<String> = []
+    @Published var totalHits: Int = 0
+    @Published var isLoadingMore: Bool = false
     /// What Browse searches for. Mods are handled above; shaders, resource packs and modpacks go through `ContentInstaller`.
     @Published var kind: ContentKind = .mod {
         didSet {
             guard kind != oldValue else { return }
             searchCounter += 1
             isSearching = false
+            isLoadingMore = false
             results = []
+            categories = []
+            totalHits = 0
             compat = [:]
             contentCompat = [:]
             isChecking = false
@@ -71,6 +96,10 @@ final class ModsController: ObservableObject {
         case .mod, .shader, .resourcepack: return app.current != nil
         case .modpack: return true
         }
+    }
+
+    var canLoadMore: Bool {
+        canBrowse && results.count < totalHits
     }
 
     /// The Minecraft version modpacks are searched for; nil lists them all.
@@ -175,12 +204,14 @@ final class ModsController: ObservableObject {
         }
         guard let instance = app.current else {
             results = []
+            totalHits = 0
             return
         }
 
         searchCounter += 1
         let searchID = searchCounter
         isSearching = true
+        isLoadingMore = false
         defer {
             if searchCounter == searchID {
                 isSearching = false
@@ -188,18 +219,21 @@ final class ModsController: ObservableObject {
         }
 
         do {
-            let hits = try await manager.client.search(
+            let page = try await manager.client.searchPage(
                 query: query,
                 gameVersion: instance.minecraftVersion,
-                loader: instance.loader.supportsMods ? instance.loader.coreName : "fabric"
+                loader: instance.loader.supportsMods ? instance.loader.coreName : "fabric",
+                categories: Array(categories),
+                sortBy: sort?.rawValue
             )
             guard searchCounter == searchID else { return }
-            results = hits
+            results = page.hits
+            totalHits = page.totalHits
             compat = [:]
             isChecking = canInstall
             if canInstall {
                 Task {
-                    await checkCompatibility(of: hits, searchID: searchID)
+                    await checkCompatibility(of: page.hits, searchID: searchID)
                     if searchCounter == searchID { isChecking = false }
                 }
             }
@@ -255,12 +289,14 @@ final class ModsController: ObservableObject {
         let kind = self.kind
         guard canBrowse else {
             results = []
+            totalHits = 0
             return
         }
 
         searchCounter += 1
         let searchID = searchCounter
         isSearching = true
+        isLoadingMore = false
         defer {
             if searchCounter == searchID {
                 isSearching = false
@@ -268,20 +304,90 @@ final class ModsController: ObservableObject {
         }
 
         do {
-            let hits = try await manager.client.search(
+            let page = try await manager.client.searchPage(
                 query: query,
                 projectType: kind.projectType,
                 gameVersion: kind == .modpack ? modpackGameVersion : app.current?.minecraftVersion,
                 loaders: kind == .modpack ? ContentInstaller.packLoaders : [],
-                sortBy: query.isEmpty ? "downloads" : nil
+                categories: Array(categories),
+                sortBy: sort?.rawValue
             )
             guard searchCounter == searchID else { return }
-            results = hits
+            results = page.hits
+            totalHits = page.totalHits
             contentCompat = [:]
             isChecking = !needsFabric
             if !needsFabric {
                 Task {
-                    await checkContentCompatibility(of: hits, kind: kind, searchID: searchID)
+                    await checkContentCompatibility(of: page.hits, kind: kind, searchID: searchID)
+                    if searchCounter == searchID { isChecking = false }
+                }
+            }
+        } catch {
+            guard searchCounter == searchID else { return }
+            message = error.localizedDescription
+        }
+    }
+
+    func loadMore(query: String) async {
+        guard !isSearching, !isLoadingMore, canLoadMore else { return }
+
+        let searchID = searchCounter
+        isLoadingMore = true
+        defer {
+            if searchCounter == searchID {
+                isLoadingMore = false
+            }
+        }
+
+        let offset = results.count
+        let limit = 20
+        let currentKind = self.kind
+
+        do {
+            let page: ModrinthSearchResult
+            if currentKind == .mod {
+                guard let instance = app.current else { return }
+                page = try await manager.client.searchPage(
+                    query: query,
+                    gameVersion: instance.minecraftVersion,
+                    loader: instance.loader.supportsMods ? instance.loader.coreName : "fabric",
+                    categories: Array(categories),
+                    sortBy: sort?.rawValue,
+                    limit: limit,
+                    offset: offset
+                )
+            } else {
+                guard canBrowse else { return }
+                page = try await manager.client.searchPage(
+                    query: query,
+                    projectType: currentKind.projectType,
+                    gameVersion: currentKind == .modpack ? modpackGameVersion : app.current?.minecraftVersion,
+                    loaders: currentKind == .modpack ? ContentInstaller.packLoaders : [],
+                    categories: Array(categories),
+                    sortBy: sort?.rawValue,
+                    limit: limit,
+                    offset: offset
+                )
+            }
+
+            guard searchCounter == searchID else { return }
+            totalHits = page.totalHits
+
+            let existingIDs = Set(results.map(\.projectId))
+            let newHits = page.hits.filter { !existingIDs.contains($0.projectId) }
+            results.append(contentsOf: newHits)
+
+            if currentKind == .mod {
+                if canInstall, !newHits.isEmpty {
+                    isChecking = true
+                    await checkCompatibility(of: newHits, searchID: searchID)
+                    if searchCounter == searchID { isChecking = false }
+                }
+            } else {
+                if !needsFabric, !newHits.isEmpty {
+                    isChecking = true
+                    await checkContentCompatibility(of: newHits, kind: currentKind, searchID: searchID)
                     if searchCounter == searchID { isChecking = false }
                 }
             }

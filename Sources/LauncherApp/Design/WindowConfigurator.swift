@@ -8,6 +8,18 @@ final class WindowConfiguratorView: NSView {
         super.viewDidMoveToWindow()
         configureWindow()
         setupObservers()
+        applyDebugSize()
+    }
+
+    /// Только для сверки с макетом: `VOXEL_WINDOW_SIZE=900x600 open --env ... build/Voxel.app`.
+    private func applyDebugSize() {
+        guard let window,
+              let raw = ProcessInfo.processInfo.environment["VOXEL_WINDOW_SIZE"] else { return }
+        let parts = raw.split(separator: "x").compactMap { Double($0) }
+        guard parts.count == 2 else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak window] in
+            window?.setContentSize(NSSize(width: parts[0], height: parts[1]))
+        }
     }
 
     private func setupObservers() {
@@ -46,7 +58,7 @@ final class WindowConfiguratorView: NSView {
         window.backgroundColor = .black
         window.isOpaque = true
         window.appearance = NSAppearance(named: .darkAqua)
-        window.isMovableByWindowBackground = true
+        window.isMovableByWindowBackground = false
 
         adjustTrafficLights(in: window)
         DispatchQueue.main.async { [weak self, weak window] in

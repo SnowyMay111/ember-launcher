@@ -41,6 +41,35 @@ public enum ContentKind: String, Codable, Sendable, CaseIterable {
         case .resourcepack: return "resourcepacks"
         }
     }
+
+    public var browseCategories: [String] {
+        switch self {
+        case .mod:
+            return [
+                "adventure", "cursed", "decoration", "economy", "equipment", "food",
+                "game-mechanics", "library", "magic", "management", "minigame", "mobs",
+                "optimization", "social", "storage", "technology", "transportation",
+                "utility", "worldgen"
+            ]
+        case .modpack:
+            return [
+                "adventure", "challenging", "combat", "kitchen-sink", "lightweight",
+                "magic", "multiplayer", "optimization", "quests", "technology"
+            ]
+        case .shader:
+            return [
+                "cartoon", "cursed", "fantasy", "realistic", "semi-realistic", "vanilla-like"
+            ]
+        case .resourcepack:
+            return [
+                "8x-", "16x", "32x", "48x", "64x", "128x", "256x", "512x+", "audio",
+                "blocks", "combat", "core-shaders", "cursed", "decoration", "entities",
+                "environment", "equipment", "fonts", "gui", "items", "locale", "modded",
+                "models", "realistic", "simplistic", "themed", "tweaks", "utility",
+                "vanilla-like"
+            ]
+        }
+    }
 }
 
 /// Metadata record persisted in content.json for installed shaders and resourcepacks.

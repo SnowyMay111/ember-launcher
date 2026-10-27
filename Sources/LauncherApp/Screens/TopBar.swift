@@ -1,41 +1,68 @@
 import SwiftUI
 
-/// Top bar on every screen: native window buttons on the left, brand, navigation, Java badge and account.
+/// Top bar on every screen: greeting eyebrow and title on the left, Java runtime badge and account on the right.
 struct TopBar: View {
     @EnvironmentObject var app: AppState
     @EnvironmentObject var settings: SettingsStore
 
+    private var pageTitle: String {
+        switch app.screen {
+        case .play:
+            return L("Welcome home.")
+        case .library:
+            return L("Instances")
+        case .mods:
+            return L("Mods")
+        case .skins:
+            return L("Skins")
+        case .settings:
+            return L("Settings")
+        }
+    }
+
     var body: some View {
         HStack(spacing: 0) {
-            // Room for the native traffic lights.
-            Color.clear.frame(width: 86, height: 1)
+            VStack(alignment: .leading, spacing: 7) {
+                Text(verbatim: L("Welcome back").uppercased())
+                    .font(Theme.font(size: 10, weight: .medium, mono: true))
+                    .tracking(2)
+                    .foregroundColor(Color(red: 0x7b/255, green: 0x77/255, blue: 0x71/255))
 
-            HStack(spacing: 10) {
-                CubeIcon()
-                    .stroke(Color.white, style: StrokeStyle(lineWidth: 1.6, lineCap: .round, lineJoin: .round))
-                    .frame(width: 20, height: 20)
-                    .accessibilityHidden(true)
-                Text(tr: "Voxel").style(.init(size: 15, weight: .semibold, color: Theme.ink))
+                Text(pageTitle)
+                    .font(Theme.font(size: 23, weight: .semibold))
+                    .tracking(-0.69)
+                    .foregroundColor(Theme.text)
             }
-
-            HStack(spacing: 22) {
-                ForEach(Screen.allCases) { screen in
-                    NavItem(screen: screen, isActive: app.screen == screen) { app.screen = screen }
-                }
-            }
-            .padding(.leading, 36)
 
             Spacer(minLength: 16)
 
-            HStack(spacing: 12) {
+            HStack(spacing: 24) {
                 UpdatePill()
-                MonoBadge(text: "Java 21")
-                AccountPill(name: settings.nickname)
+                AccountPill(name: settings.nickname) { app.modal = .profile }
             }
-            .padding(.trailing, 20)
         }
-        .frame(height: 56)
-        .topBarBackground()
+        .padding(.horizontal, 71)
+        .frame(height: 116)
+        .background(WindowDragArea())
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(Theme.border)
+                .frame(height: 1)
+        }
+    }
+}
+
+/// Java runtime chip next to the account (64x28 in the design: 9 pt mono, dark fill, thin border).
+private struct RuntimeChip: View {
+    let text: String
+
+    var body: some View {
+        Text(verbatim: text)
+            .style(.init(size: 9, weight: .medium, mono: true, color: Color(red: 0x94/255, green: 0x8c/255, blue: 0x99/255)))
+            .padding(.horizontal, 12)
+            .frame(height: 28)
+            .background(Capsule().fill(Color(red: 0x12/255, green: 0x10/255, blue: 0x14/255)))
+            .overlay(Capsule().strokeBorder(Color(red: 0x2d/255, green: 0x29/255, blue: 0x2f/255), lineWidth: 1))
     }
 }
 
@@ -88,19 +115,4 @@ struct UpdateNotice: View {
     }
 }
 
-private struct NavItem: View {
-    let screen: Screen
-    let isActive: Bool
-    var action: () -> Void
 
-    var body: some View {
-        Button(action: action) {
-            Text(tr: screen.rawValue)
-                .style(.init(size: 14, weight: .regular, color: isActive ? Theme.ink : Theme.muted))
-                .frame(minHeight: 36)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(isActive ? .isSelected : [])
-    }
-}

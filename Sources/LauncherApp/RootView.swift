@@ -1,10 +1,13 @@
 import SwiftUI
 
 struct RootView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @StateObject private var app = AppState()
     @StateObject private var settings: SettingsStore
     @StateObject private var player = PlayController()
     @StateObject private var updates: UpdateController
+    @StateObject private var toasts = ToastCenter()
+    @StateObject private var dropdowns = DropdownHost()
 
     init() {
         let settings = SettingsStore()
@@ -14,24 +17,40 @@ struct RootView: View {
 
     var body: some View {
         ZStack {
-            Theme.bg
+            AmbientBackdrop()
 
-            VStack(spacing: 0) {
-                TopBar()
+            GeometryReader { proxy in
+                HStack(spacing: 0) {
+                    SidebarNavigation(compact: proxy.size.width < 760)
 
-                ZStack {
-                    Glow(app.screen == .play ? .play : .page)
-                    screen
+                    VStack(spacing: 0) {
+                        TopBar()
+
+                        ZStack {
+                            screen
+                                .frame(maxWidth: app.screen == .play || app.screen == .library ? .infinity : 1120)
+                                .frame(maxWidth: .infinity)
+                        }
+                        .overlay(alignment: .top) { UpdateNotice() }
+                        .overlay(alignment: .bottom) { ToastHost() }
+                    }
                 }
-                .overlay(alignment: .top) { UpdateNotice() }
+                .environment(\.windowWidth, proxy.size.width)
             }
         }
         .ignoresSafeArea()
-        .overlay { modalLayer }
+        .overlay {
+            modalLayer
+                .animation(reduceMotion ? nil : .easeInOut(duration: 0.28), value: app.modal != nil)
+        }
+        .overlay { EmberDropdownLayer() }
         .environmentObject(app)
         .environmentObject(settings)
         .environmentObject(player)
         .environmentObject(updates)
+        .environmentObject(toasts)
+        .environmentObject(dropdowns)
+        .environment(\.backgroundAnimations, settings.backgroundAnimations)
         .onAppear { updates.start() }
         .onChange(of: player.isBusy) { _, busy in updates.gameIsBusy = busy }
         .onChange(of: settings.autoUpdate) { _, isOn in
@@ -46,7 +65,11 @@ struct RootView: View {
     @ViewBuilder private var modalLayer: some View {
         if let modal = app.modal {
             ZStack {
-                Color.black.opacity(0.6).ignoresSafeArea()
+                Color.black.opacity(0.62)
+                    .background(.ultraThinMaterial)
+                    .ignoresSafeArea()
+                    .contentShape(Rectangle())
+                    .onTapGesture {}
                 switch modal {
                 case .newInstance:
                     NewInstanceModal()
@@ -70,18 +93,29 @@ struct RootView: View {
                     GameLogModal(name: name).id(name)
                 case .allVersions:
                     AllVersionsModal()
+                case .profile:
+                    ProfilePanel()
+                case .modProject(let hit):
+                    if let mods = app.activeMods {
+                        ModDetailPanel(hit: hit, mods: mods).id(hit.projectId)
+                    }
+                case .instanceDetails(let name):
+                    if let instance = app.instances.first(where: { $0.id == name }) {
+                        InstanceDetailPanel(instance: instance).id(name)
+                    }
                 }
             }
+            .transition(.opacity)
         }
     }
 
     @ViewBuilder private var screen: some View {
         switch app.screen {
-        case .play: PlayScreen()
+        case .play: HomeScreen()
         case .library: LibraryScreen()
         case .settings: SettingsScreen()
         case .mods: ModsScreen(app: app)
-        case .skins: ComingSoonScreen(title: "Skins")
+        case .skins: SkinsScreen()
         }
     }
 }

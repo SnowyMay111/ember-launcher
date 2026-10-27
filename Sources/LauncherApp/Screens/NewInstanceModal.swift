@@ -25,6 +25,8 @@ struct NewInstanceModal: View {
     @Local private var isBuilding = false
     @Local private var buildProgress = ""
     @Local private var buildReport: ModpackBuildReport?
+    @Local private var step = 1
+    @Local private var installFraction: Double?
 
     private enum Mode { case custom, mrpack, ai }
 
@@ -48,6 +50,34 @@ struct NewInstanceModal: View {
         "\(activeLoader.rawValue) \(version)"
     }
 
+    /// True when the wizard flow (Custom mode) is active.
+    private var isWizard: Bool { mode == .custom }
+
+    /// True while an mrpack import or AI pack build is in progress.
+    private var isWorking: Bool { isImporting || isBuilding }
+
+    /// A non-empty name suitable for display in previews and summaries.
+    private var displayName: String { name.trimmingCharacters(in: .whitespaces).isEmpty ? namePlaceholder : name }
+
+    /// The title shown at the top of the modal, varying by flow and state.
+    private var wizardTitle: String {
+        if isWorking { return "Preparing your world" }
+        if isWizard { return ["Name your adventure", "Choose a foundation", "Ready to create"][step - 1] }
+        return "New instance"
+    }
+
+    /// The title used on the install progress screen.
+    private var installTitle: String {
+        isImporting ? (pack?.name ?? L("Importing…")) : (plan?.name ?? displayName)
+    }
+
+    private static let loaderNotes: [LoaderKind: String] = [
+        .vanilla: "The original experience",
+        .fabric: "Lightweight and mod-friendly",
+        .forge: "Built for expansive modpacks",
+        .neoforge: "Modern community loader"
+    ]
+
     private var versionMenu: some View {
         ModalField(label: "Minecraft version") {
             VoxelMenu(label: "Minecraft version", value: version.isEmpty ? "…" : version, minWidth: 170) {
@@ -67,77 +97,120 @@ struct NewInstanceModal: View {
     }
 
     var body: some View {
-        VoxelModal(title: "New instance") {
-            VStack(alignment: .leading, spacing: 18) {
-                HStack(spacing: 8) {
-                    FilterChip(title: "Custom", isActive: mode == .custom) { mode = .custom }
-                    FilterChip(title: "Import .mrpack", isActive: mode == .mrpack) { mode = .mrpack }
-                    FilterChip(title: "Describe with AI", isActive: mode == .ai) { mode = .ai }
-                }
-
-                if mode == .mrpack {
-                    packPicker
-                }
-                if mode == .ai {
-                    aiPicker
-                }
-
-                if showsNameAndGroup {
-                    ModalField(label: "Name") {
-                        VoxelInput(label: "Name", text: $name, placeholder: mode == .mrpack ? (pack?.name ?? "") : (mode == .ai ? (plan?.name ?? "") : namePlaceholder))
+        VoxelModal(title: wizardTitle, eyebrow: "NEW INSTANCE") {
+            if isWorking {
+                FlowInstallState(title: installTitle, detail: isImporting ? importProgress : buildProgress, fraction: installFraction)
+            } else {
+                VStack(alignment: .leading, spacing: 18) {
+                    if isWizard {
+                        FlowStepper(step: step).frame(maxWidth: .infinity)
                     }
-                }
 
-                if mode == .custom {
-                VStack(alignment: .leading, spacing: 20) {
-                    versionMenu
-                    ModalField(label: "Loader") {
+                    if !isWizard || step == 1 {
                         HStack(spacing: 8) {
-                            ForEach(LoaderKind.allCases) { kind in
-                                FilterChip(title: kind.rawValue, isActive: loader == kind) { loader = kind }
+                            FilterChip(title: "Custom", isActive: mode == .custom) { mode = .custom }
+                            FilterChip(title: "Import .mrpack", isActive: mode == .mrpack) { mode = .mrpack }
+                            FilterChip(title: "Describe with AI", isActive: mode == .ai) { mode = .ai }
+                        }
+                    }
+
+                    if mode == .mrpack {
+                        packPicker
+                    }
+                    if mode == .ai {
+                        aiPicker
+                    }
+
+                    if mode == .custom && step == 1 {
+                        ModalField(label: "Instance name") {
+                            VoxelInput(label: "Name", text: $name, placeholder: namePlaceholder)
+                        }
+                        NamePreviewCard(name: displayName)
+                    }
+
+                    if mode == .custom && step == 2 {
+                        LazyVGrid(columns: [GridItem(.flexible(), spacing: 9), GridItem(.flexible(), spacing: 9)], spacing: 9) {
+                            ForEach(LoaderKind.allCases, id: \.self) { kind in
+                                ChoiceCard(title: kind.rawValue, subtitle: Self.loaderNotes[kind] ?? "", isSelected: loader == kind) {
+                                    loader = kind
+                                }
                             }
                         }
-                        .frame(height: 40)
+                        versionMenu
                     }
-                }
-                }
 
-                if showsNameAndGroup {
-                    ModalField(label: "Group") {
-                        GroupPicker(group: $group)
+                    if mode == .custom && step == 3 {
+                        SummaryCard(rows: [
+                            ("NAME", displayName),
+                            ("VERSION", "Minecraft " + version),
+                            ("LOADER", loader.rawValue),
+                            ("MEMORY", "\(Int(settings.memoryGB)) GB")
+                        ])
+                        ModalField(label: "Group") {
+                            GroupPicker(group: $group)
+                        }
                     }
-                }
 
-                if app.manifest == nil {
-                    Text(tr: "Couldn't load the version list. Check your connection.").style(.secondary)
-                }
-                if !errorText.isEmpty {
-                    Text(verbatim: errorText).style(.secondary)
+                    if !isWizard && showsNameAndGroup {
+                        ModalField(label: "Name") {
+                            VoxelInput(label: "Name", text: $name, placeholder: mode == .mrpack ? (pack?.name ?? "") : (mode == .ai ? (plan?.name ?? "") : namePlaceholder))
+                        }
+                    }
+
+                    if !isWizard && showsNameAndGroup {
+                        ModalField(label: "Group") {
+                            GroupPicker(group: $group)
+                        }
+                    }
+
+                    if app.manifest == nil {
+                        Text(tr: "Couldn't load the version list. Check your connection.").style(.secondary)
+                    }
+                    if !errorText.isEmpty {
+                        Text(verbatim: errorText).style(.secondary)
+                    }
                 }
             }
         } footer: {
-            if (importReport.map { !$0.failed.isEmpty } ?? false) || buildReport != nil {
-                PrimaryPill(title: "Done") { app.modal = nil }
+            if isWorking {
+                EmptyView()
+            } else if (importReport.map { !$0.failed.isEmpty } ?? false) || buildReport != nil {
+                FlowPrimaryButton(title: "Done") { app.modal = nil }
+            } else if isWizard {
+                if step == 1 {
+                    ModalCancel()
+                } else {
+                    FlowTextButton(title: "Back") { step -= 1 }
+                }
+                Spacer()
+                FlowPrimaryButton(title: step == 3 ? "Create instance →" : "Continue →", isDisabled: step >= 2 && version.isEmpty) {
+                    if step < 3 {
+                        step += 1
+                    } else {
+                        create()
+                    }
+                }
             } else {
                 ModalCancel()
+                Spacer()
                 if mode == .mrpack {
-                    PrimaryPill(title: isImporting ? "Importing…" : "Import", isDisabled: pack == nil || isImporting, action: importPack)
+                    FlowPrimaryButton(title: isImporting ? "Importing…" : "Import", isDisabled: pack == nil || isImporting, action: importPack)
                 } else if mode == .ai {
                     if plan == nil {
-                        PrimaryPill(
+                        FlowPrimaryButton(
                             title: isPlanning ? "Thinking…" : "Suggest mods",
                             isDisabled: isPlanning || version.isEmpty || !settings.hasAIKey || aiText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                             action: generate
                         )
                     } else {
-                        PrimaryPill(
+                        FlowPrimaryButton(
                             title: isBuilding ? "Installing…" : L("Create with %d mods", picked.count),
                             isDisabled: isBuilding || picked.isEmpty,
                             action: buildAIPack
                         )
                     }
                 } else {
-                    PrimaryPill(title: "Create", isDisabled: version.isEmpty, action: create)
+                    FlowPrimaryButton(title: "Create", isDisabled: version.isEmpty, action: create)
                 }
             }
         }
@@ -151,6 +224,7 @@ struct NewInstanceModal: View {
             if new == .ai { group = GroupName.automatic(for: .fabric) }
             if new == .custom { group = GroupName.automatic(for: loader) }
             errorText = ""
+            step = 1
             chooseVersion()
         }
     }
@@ -238,6 +312,7 @@ struct NewInstanceModal: View {
         let trimmed = group.trimmingCharacters(in: .whitespacesAndNewlines)
         let saved = trimmed.isEmpty || trimmed == GroupName.automatic(for: .fabric) ? nil : trimmed
         isBuilding = true
+        installFraction = nil
         errorText = ""
         Task {
             do {
@@ -249,7 +324,11 @@ struct NewInstanceModal: View {
                     mods: chosen
                 ) { title, done, total in
                     let text = L("Installing %@ (%d of %d)", title, done + 1, total)
-                    Task { @MainActor in buildProgress = text }
+                    Task {
+                        @MainActor in
+                        buildProgress = text
+                        installFraction = total > 0 ? Double(done) / Double(total) : nil
+                    }
                 }
                 isBuilding = false
                 if report.skipped.isEmpty {
@@ -321,6 +400,7 @@ struct NewInstanceModal: View {
         let loaderKind = LoaderKind(coreName: pack?.loader ?? "vanilla")
         let saved = chosen.isEmpty || chosen == GroupName.automatic(for: loaderKind) ? nil : chosen
         isImporting = true
+        installFraction = nil
         errorText = ""
         importProgress = L("Reading the pack")
         Task {
@@ -329,7 +409,10 @@ struct NewInstanceModal: View {
                     packURL, name: name, group: saved, memoryMB: Int(settings.memoryGB) * 1024
                 ) { phase, fraction in
                     let text = L(phase) + (fraction > 0 && fraction < 1 ? " · \(Int(fraction * 100))%" : "")
-                    Task { @MainActor in importProgress = text }
+                    Task { @MainActor in
+                        importProgress = text
+                        installFraction = (fraction > 0 && fraction < 1) ? fraction : nil
+                    }
                 }
                 isImporting = false
                 if report.failed.isEmpty {

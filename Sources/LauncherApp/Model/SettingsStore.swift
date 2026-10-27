@@ -14,6 +14,7 @@ final class SettingsStore: ObservableObject {
     @Published var closeOnStart: Bool { didSet { defaults.set(closeOnStart, forKey: "closeOnStart") } }
     @Published var showSnapshots: Bool { didSet { defaults.set(showSnapshots, forKey: "showSnapshots") } }
     @Published var autoUpdate: Bool { didSet { defaults.set(autoUpdate, forKey: "autoUpdate") } }
+    @Published var backgroundAnimations: Bool { didSet { defaults.set(backgroundAnimations, forKey: "backgroundAnimations") } }
     @Published var aiProvider: AIProviderKind {
         didSet {
             defaults.set(aiProvider.rawValue, forKey: "aiProvider")
@@ -36,6 +37,7 @@ final class SettingsStore: ObservableObject {
         closeOnStart = defaults.object(forKey: "closeOnStart") as? Bool ?? true
         showSnapshots = defaults.object(forKey: "showSnapshots") as? Bool ?? false
         autoUpdate = defaults.object(forKey: "autoUpdate") as? Bool ?? true
+        backgroundAnimations = defaults.object(forKey: "backgroundAnimations") as? Bool ?? true
         let provider = AIProviderKind(rawValue: defaults.string(forKey: "aiProvider") ?? "") ?? .claude
         aiProvider = provider
         aiModel = defaults.string(forKey: "aiModel") ?? ""

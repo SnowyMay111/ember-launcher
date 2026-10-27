@@ -275,7 +275,7 @@ private struct MetricCard: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
                 Image(systemName: icon)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(Theme.font(size: 13, weight: .medium))
                     .foregroundColor(Theme.muted)
                 Text(tr: title)
                     .style(.eyebrow)

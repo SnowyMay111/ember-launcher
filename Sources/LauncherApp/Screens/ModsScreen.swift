@@ -58,88 +58,149 @@ struct ModsScreen: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            PageHeader(eyebrow: "Mods", title: "Mods", subtitle: subtitle, alignment: .leading)
-                .padding(.horizontal, 40)
+            GeometryReader { geo in
+                VStack(alignment: .leading, spacing: 0) {
+                    PageHeader(eyebrow: "Discover", title: "Mods", subtitle: subtitle, alignment: .leading)
 
-            HStack(spacing: 8) {
-                ForEach([ModsTab.installed, .browse], id: \.rawValue) { item in
-                    FilterChip(title: item.rawValue, isActive: tab == item) { tab = item }
-                }
-                Spacer(minLength: 16)
-                if tab == .browse {
-                    SearchField(placeholder: searchPlaceholder, text: $query)
-                }
-            }
-            .padding(.horizontal, 40)
-            .padding(.top, 22)
+                    HStack(spacing: 8) {
+                        ForEach([ModsTab.installed, .browse], id: \.rawValue) { item in
+                            FilterChip(title: item.rawValue, isActive: tab == item, compact: true) { tab = item }
+                        }
+                        Spacer(minLength: 16)
+                        if tab == .browse {
+                            SearchField(placeholder: searchPlaceholder, text: $query, compact: true)
+                        }
+                    }
+                    .padding(.top, 14)
 
-            if tab == .browse {
-                HStack(spacing: 8) {
-                    ForEach(ContentKind.allCases, id: \.rawValue) { item in
-                        FilterChip(title: Self.title(of: item), isActive: mods.kind == item) { mods.kind = item }
-                    }
-                    Spacer(minLength: 16)
-                    if mods.hiddenCount > 0 {
-                        Text(verbatim: L("%d hidden", mods.hiddenCount)).style(.secondary)
-                    }
-                    if mods.kind == .modpack { modpackVersionMenu }
-                    FilterChip(title: "Show incompatible", isActive: mods.showIncompatible) { mods.showIncompatible.toggle() }
-                }
-                .padding(.horizontal, 40)
-                .padding(.top, 12)
-            }
+                    if tab == .browse {
+                        HStack(spacing: 10) {
+                            ForEach(ContentKind.allCases, id: \.rawValue) { item in
+                                FilterChip(title: Self.title(of: item), isActive: mods.kind == item, compact: true) { mods.kind = item }
+                            }
+                            Spacer(minLength: 16)
+                            if mods.totalHits > 0 {
+                                Text(verbatim: L("%d results", mods.totalHits))
+                                    .style(.init(size: 10, color: Color(hex: 0x68645e)))
+                            }
+                            if mods.hiddenCount > 0 {
+                                Text(verbatim: L("%d hidden", mods.hiddenCount))
+                                    .style(.init(size: 10, color: Color(hex: 0x68645e)))
+                            }
+                            if mods.kind == .modpack { modpackVersionMenu }
+                            sortMenu
+                            FilterChip(title: "Show incompatible", isActive: mods.showIncompatible, compact: true) { mods.showIncompatible.toggle() }
+                        }
+                        .padding(.top, 2)
 
-            if tab == .browse, mods.needsFabric {
-                HStack(spacing: 14) {
-                    Text(tr: mods.kind == .shader ? "Shaders need a Fabric instance." : "Mods need a Fabric instance.")
-                        .style(.secondary)
-                    if mods.canSwitchToFabric {
-                        SecondaryPill(title: "Switch to Fabric") { Task { await mods.switchToFabric() } }
+                        if !mods.needsFabric, !mods.kind.browseCategories.isEmpty {
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 8) {
+                                    if !mods.categories.isEmpty {
+                                        FilterChip(title: "Clear", isActive: false, compact: true) {
+                                            mods.categories.removeAll()
+                                        }
+                                    }
+                                    ForEach(mods.kind.browseCategories, id: \.self) { cat in
+                                        FilterChip(
+                                            title: Self.prettifyCategory(cat),
+                                            isActive: mods.categories.contains(cat),
+                                            compact: true
+                                        ) {
+                                            if mods.categories.contains(cat) {
+                                                mods.categories.remove(cat)
+                                            } else {
+                                                mods.categories.insert(cat)
+                                            }
+                                        }
+                                    }
+                                }
+                                .padding(.vertical, 3)
+                            }
+                            .padding(.bottom, 4)
+                        }
                     }
-                }
-                .padding(.horizontal, 40)
-                .padding(.top, 14)
-            }
 
-            if let message = mods.message {
-                HStack(spacing: 10) {
-                    Text(verbatim: message).style(.secondary).lineLimit(2)
-                    Button { mods.message = nil } label: {
-                        Text(verbatim: "×").style(.init(size: 16, weight: .medium, color: Theme.muted))
+                    if tab == .browse, mods.needsFabric {
+                        HStack(spacing: 14) {
+                            Text(tr: mods.kind == .shader ? "Shaders need a Fabric instance." : "Mods need a Fabric instance.")
+                                .style(.secondary)
+                            if mods.canSwitchToFabric {
+                                SecondaryPill(title: "Switch to Fabric") { Task { await mods.switchToFabric() } }
+                            }
+                        }
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(L("Dismiss"))
-                }
-                .padding(.horizontal, 40)
-                .padding(.top, 14)
-            }
 
-            ScrollView {
-                if tab == .installed {
-                    if app.current == nil {
-                        Color.clear.frame(height: 1)
-                    } else {
-                        installedList
+                    if let message = mods.message {
+                        HStack(spacing: 10) {
+                            Text(verbatim: message).style(.secondary).lineLimit(2)
+                            Button { mods.message = nil } label: {
+                                Text(verbatim: "×").style(.init(size: 16, weight: .medium, color: Theme.muted))
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(L("Dismiss"))
+                        }
                     }
-                } else if mods.canBrowse {
-                    browseList
-                } else {
-                    Color.clear.frame(height: 1)
+
+                    ScrollView {
+                        VStack(spacing: 0) {
+                            if tab == .installed {
+                                if app.current == nil {
+                                    Color.clear.frame(height: 1)
+                                } else {
+                                    installedList
+                                }
+                            } else if mods.canBrowse {
+                                browseList
+                            } else {
+                                Color.clear.frame(height: 1)
+                            }
+                        }
+                        .padding(.top, 14)
+                        .padding(.bottom, 24)
+                    }
+                    .mask(
+                        VStack(spacing: 0) {
+                            LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom)
+                                .frame(height: 18)
+                            Rectangle().fill(Color.black)
+                        }
+                    )
                 }
+                .frame(width: min(1120, geo.size.width - 56), alignment: .leading)
+                .frame(maxWidth: .infinity)
             }
         }
         .padding(.top, 28)
-        .onAppear { mods.reload() }
+        .onAppear {
+            app.activeMods = mods
+            mods.reload()
+        }
         .onChange(of: app.currentID) { _, _ in
             mods.reload()
             runSearch(delay: 0)
         }
         .onChange(of: query) { _, _ in runSearch(delay: 350) }
         .onChange(of: mods.kind) { _, _ in runSearch(delay: 0) }
+        .onChange(of: mods.sort) { _, _ in runSearch(delay: 0) }
+        .onChange(of: mods.categories) { _, _ in runSearch(delay: 0) }
         .onChange(of: mods.modpackVersionChoice) { _, _ in runSearch(delay: 0) }
         .onChange(of: tab) { _, value in
             if value == .browse, mods.results.isEmpty { runSearch(delay: 0) }
         }
+    }
+
+    @Environment(\.openURL) private var openURL
+
+    static func projectURL(_ hit: ModrinthHit, kind: ContentKind) -> URL {
+        let segment: String
+        switch kind {
+        case .mod: segment = "mod"
+        case .modpack: segment = "modpack"
+        case .shader: segment = "shader"
+        case .resourcepack: segment = "resourcepack"
+        }
+        return URL(string: "https://modrinth.com/\(segment)/\(hit.slug)")!
     }
 
     private func runSearch(delay: Int) {
@@ -164,12 +225,11 @@ struct ModsScreen: View {
                 contentSection
             }
         }
-        .padding(.horizontal, 40)
         .padding(.vertical, 24)
     }
 
     private var modsSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 12) {
                 Text(verbatim: L("%d mods", mods.installed.count)).style(.eyebrow)
                 Spacer(minLength: 16)
@@ -190,106 +250,119 @@ struct ModsScreen: View {
                     .frame(maxWidth: .infinity)
                     .padding(.top, 50)
             }
-            ForEach(mods.installed) { mod in
-                installedRow(mod)
-            }
+            cardGrid(mods.installed) { installedCard($0) }
         }
     }
 
     private var contentSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             Text(tr: "Shaders & resource packs").style(.eyebrow).padding(.bottom, 4)
-            ForEach(mods.contentRecords, id: \.fileName) { record in
-                contentRow(record)
+            cardGrid(mods.contentRecords) { contentCard($0) }
+        }
+    }
+
+    /// Two cards per row so both stretch to the taller one, like the prototype's CSS grid.
+    private func cardGrid<Item, Card: View>(_ items: [Item], @ViewBuilder card: @escaping (Item) -> Card) -> some View {
+        ForEach(Array(stride(from: 0, to: items.count, by: 2)), id: \.self) { start in
+            HStack(alignment: .top, spacing: 12) {
+                card(items[start])
+                if start + 1 < items.count {
+                    card(items[start + 1])
+                } else {
+                    Color.clear.frame(maxWidth: .infinity)
+                }
             }
         }
     }
 
-    private func contentRow(_ record: ContentRecord) -> some View {
+    static func paletteIndex(_ seed: String) -> Int {
+        Int(seed.utf8.reduce(0) { ($0 &* 31 &+ UInt32($1)) % 1000 })
+    }
+
+    private func contentCard(_ record: ContentRecord) -> some View {
         let isBusy = mods.busy.contains(record.fileName)
-        return HStack(spacing: 14) {
-            ModIcon(url: record.iconURL)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(verbatim: record.title).style(.row).lineLimit(1)
-                Text(verbatim: record.kind == .shader ? L("Shader") + " · " + record.versionNumber : L("Resource pack") + " · " + record.versionNumber)
-                    .style(.secondary)
-                    .lineLimit(1)
-            }
-            Spacer(minLength: 12)
-            if confirmingRemoveContent == record.fileName {
-                Text(verbatim: L("Move %@ to the Trash?", record.title)).style(.secondary).lineLimit(1)
-                SecondaryPill(title: "Keep it") { confirmingRemoveContent = nil }
-                PrimaryPill(title: "Move to Trash", height: 36, horizontalPadding: 22) {
+        let isConfirming = confirmingRemoveContent == record.fileName
+        return ModCard(
+            iconURL: record.iconURL,
+            paletteIndex: Self.paletteIndex(record.projectId),
+            category: L(record.kind == .shader ? "Shader" : "Resource pack").uppercased(),
+            title: record.title,
+            summary: record.fileName,
+            footnote: record.versionNumber,
+            note: isConfirming ? (L("Move %@ to the Trash?", record.title), true) : nil,
+            isDimmed: isBusy
+        ) {
+            if isConfirming {
+                ModActionButton(title: "Move to Trash") {
                     confirmingRemoveContent = nil
                     mods.remove(record)
                 }
+                ModActionButton(title: "Keep it", kind: .text) { confirmingRemoveContent = nil }
             } else {
-                Button { confirmingRemoveContent = record.fileName } label: {
-                    Text(verbatim: "×").style(.init(size: 20, weight: .regular, color: Theme.muted))
-                        .frame(width: 36, height: 36)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(L("Remove"))
+                ModActionButton(title: "Remove", kind: .text) { confirmingRemoveContent = record.fileName }
             }
         }
-        .padding(14)
-        .background(RoundedRectangle(cornerRadius: Theme.radiusInput).fill(Theme.white04))
-        .overlay(RoundedRectangle(cornerRadius: Theme.radiusInput).strokeBorder(Theme.line, lineWidth: 1))
-        .opacity(isBusy ? 0.5 : 1)
     }
 
-    private func installedRow(_ mod: InstalledMod) -> some View {
+    private func installedCard(_ mod: InstalledMod) -> some View {
         let update = mods.updates.first { $0.record.fileName == mod.fileName }
         let isBusy = mods.busy.contains(mod.fileName)
-        return HStack(spacing: 14) {
-            ModIcon(url: mod.record?.iconURL)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(verbatim: mod.displayTitle).style(.row).lineLimit(1)
-                Text(verbatim: detail(of: mod)).style(.secondary).lineLimit(1)
-            }
-            Spacer(minLength: 12)
-            if confirmingRemove == mod.fileName {
-                Text(verbatim: L("Move %@ to the Trash?", mod.displayTitle)).style(.secondary).lineLimit(1)
-                SecondaryPill(title: "Keep it") { confirmingRemove = nil }
-                PrimaryPill(title: "Move to Trash", height: 36, horizontalPadding: 22) {
+        let isConfirming = confirmingRemove == mod.fileName
+        let isDependency = mod.record?.isDependency == true
+        let category = !mod.isEnabled ? L("Off") : (isDependency ? L("Dependency") : L("Mod"))
+        var summary = mod.fileName == mod.displayTitle + ".jar" ? "" : mod.fileName
+        if isDependency, let owner = mod.record?.installedFor { summary = L("Dependency of %@", owner) }
+        let version = mod.record?.versionNumber ?? ""
+        return ModCard(
+            iconURL: mod.record?.iconURL,
+            paletteIndex: Self.paletteIndex(mod.record?.projectId ?? mod.fileName),
+            category: category.uppercased(),
+            title: mod.displayTitle,
+            summary: summary,
+            footnote: version == mod.displayTitle ? "" : version,
+            note: isConfirming ? (L("Move %@ to the Trash?", mod.displayTitle), true) : nil,
+            isDimmed: isBusy || !mod.isEnabled
+        ) {
+            if isConfirming {
+                ModActionButton(title: "Move to Trash") {
                     confirmingRemove = nil
                     mods.remove(mod)
                 }
+                ModActionButton(title: "Keep it", kind: .text) { confirmingRemove = nil }
             } else {
                 if let update {
-                    SecondaryPill(title: "Update") { Task { await mods.apply(update) } }
+                    ModActionButton(title: "Update") { Task { await mods.apply(update) } }
                 }
-                VoxelToggle(label: mod.displayTitle, isOn: Binding(
-                    get: { mod.isEnabled },
-                    set: { mods.setEnabled(mod, $0) }
-                ))
-                Button { confirmingRemove = mod.fileName } label: {
-                    Text(verbatim: "×").style(.init(size: 20, weight: .regular, color: Theme.muted))
-                        .frame(width: 36, height: 36)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(L("Remove"))
+                ModActionButton(title: mod.isEnabled ? "Disable" : "Enable") { mods.setEnabled(mod, !mod.isEnabled) }
+                ModActionButton(title: "Remove", kind: .text) { confirmingRemove = mod.fileName }
             }
         }
-        .padding(14)
-        .background(RoundedRectangle(cornerRadius: Theme.radiusInput).fill(Theme.white04))
-        .overlay(RoundedRectangle(cornerRadius: Theme.radiusInput).strokeBorder(Theme.line, lineWidth: 1))
-        .opacity(isBusy ? 0.5 : 1)
-    }
-
-    private func detail(of mod: InstalledMod) -> String {
-        var parts: [String] = []
-        if let version = mod.record?.versionNumber, !version.isEmpty { parts.append(version) }
-        if let owner = mod.record?.installedFor, mod.record?.isDependency == true {
-            parts.append(L("Dependency of %@", owner))
-        }
-        if !mod.isEnabled { parts.append(L("Off")) }
-        return parts.joined(separator: " · ")
     }
 
     // MARK: - Browse
+
+    private var sortMenu: some View {
+        let value = mods.sort?.title ?? "Best match"
+        return VoxelMenu(label: "Sort", value: L(value), compact: true) {
+            Button(L("Best match")) { mods.sort = nil }
+            ForEach(BrowseSort.allCases, id: \.rawValue) { sort in
+                Button(L(sort.title)) { mods.sort = sort }
+            }
+        }
+    }
+
+    /// Modrinth lists loaders among a project's categories; they say nothing about what the mod does.
+    static let loaderSlugs: Set<String> = [
+        "fabric", "forge", "neoforge", "quilt", "liteloader", "modloader", "rift",
+        "bukkit", "spigot", "paper", "purpur", "sponge", "folia", "bungeecord", "waterfall", "velocity",
+    ]
+
+    static func prettifyCategory(_ slug: String) -> String {
+        if slug.hasSuffix("-") { return slug }
+        let spaced = slug.replacingOccurrences(of: "-", with: " ")
+        guard let first = spaced.first else { return slug }
+        return first.uppercased() + String(spaced.dropFirst())
+    }
 
     private var modpackVersionMenu: some View {
         let choice = mods.modpackVersionChoice
@@ -305,18 +378,40 @@ struct ModsScreen: View {
 
     private var browseList: some View {
         let shown = mods.visibleResults
-        return VStack(alignment: .leading, spacing: 10) {
+        return LazyVStack(alignment: .leading, spacing: 12) {
             if shown.isEmpty, mods.isChecking {
                 Text(tr: "Checking compatibility…").style(.body16).frame(maxWidth: .infinity).padding(.top, 50)
             } else if shown.isEmpty, !mods.isSearching {
                 Text(tr: mods.hiddenCount > 0 ? "Nothing fits this instance. Turn on Show incompatible to see the rest." : "Nothing found.")
                     .style(.body16).frame(maxWidth: .infinity).padding(.top, 50)
             }
-            ForEach(shown, id: \.projectId) { hit in
-                browseRow(hit)
+            cardGrid(shown) { browseRow($0) }
+            if mods.isLoadingMore || (!mods.isSearching && mods.canLoadMore) {
+                HStack {
+                    Spacer()
+                    if mods.isLoadingMore {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else if mods.canLoadMore {
+                        SecondaryPill(title: "Load more") {
+                            Task { await mods.loadMore(query: query) }
+                        }
+                    }
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+
+                Color.clear
+                    .frame(height: 1)
+                    .id(mods.results.count)
+                    .onAppear {
+                        if !mods.isSearching {
+                            Task { await mods.loadMore(query: query) }
+                        }
+                    }
             }
         }
-        .padding(.horizontal, 40)
         .padding(.vertical, 24)
         .opacity(mods.isSearching ? 0.6 : 1)
     }
@@ -340,46 +435,36 @@ struct ModsScreen: View {
             canInstall = Self.canInstall(content: mods.contentCompat[hit.projectId])
         }
         let isBusy = mods.busy.contains(hit.projectId)
-        return HStack(spacing: 14) {
-            ModIcon(url: hit.iconURL)
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 8) {
-                    Text(verbatim: hit.title).style(.row).lineLimit(1)
-                    Text(verbatim: hit.author).style(.secondary).lineLimit(1)
-                }
-                Text(verbatim: hit.description).style(.secondary).lineLimit(2)
-            }
-            Spacer(minLength: 12)
-            VStack(alignment: .trailing, spacing: 3) {
-                Text(verbatim: L("%@ downloads", Self.short(hit.downloads))).style(.eyebrow)
-                if !isInstalled, let note {
-                    Text(verbatim: note.text).style(note.isWarning ? .secondary : .eyebrow).lineLimit(1)
-                }
-            }
+        let category: String
+        if let first = hit.categories.first(where: { !Self.loaderSlugs.contains($0) }) {
+            category = Self.prettifyCategory(first).uppercased()
+        } else {
+            category = Self.title(of: kind).uppercased()
+        }
+        return ModCard(
+            iconURL: hit.iconURL,
+            paletteIndex: Self.paletteIndex(hit.projectId),
+            category: category,
+            title: hit.title,
+            summary: hit.description,
+            footnote: "↓ " + L("%@ downloads", Self.short(hit.downloads)),
+            note: isInstalled ? nil : note,
+            isDimmed: !(canInstall || isInstalled || mods.needsFabric),
+            onOpen: nil
+        ) {
+            ModActionButton(title: "Details", kind: .text) { app.modal = .modProject(hit) }
             if isInstalled {
-                SecondaryPill(title: "Installed")
-                    .allowsHitTesting(false)
-                    .opacity(0.6)
+                ModActionButton(title: "Installed", kind: .installed)
             } else {
-                PrimaryPill(title: isBusy ? "Installing…" : "Install", height: 36, horizontalPadding: 22, isDisabled: isBusy || !canInstall) {
-                    Task {
-                        if kind == .mod {
-                            await mods.install(hit)
-                        } else {
-                            await mods.installContent(hit)
-                        }
-                    }
+                ModActionButton(title: isBusy ? "Installing…" : "Install", isDisabled: isBusy || !canInstall) {
+                    Task { if kind == .mod { await mods.install(hit) } else { await mods.installContent(hit) } }
                 }
             }
         }
-        .padding(14)
-        .background(RoundedRectangle(cornerRadius: Theme.radiusInput).fill(Theme.white04))
-        .overlay(RoundedRectangle(cornerRadius: Theme.radiusInput).strokeBorder(Theme.line, lineWidth: 1))
-        .opacity(canInstall || isInstalled || mods.needsFabric ? 1 : 0.55)
     }
 
     /// The line under the download count; nothing while the check is still running or failed.
-    private static func compatNote(_ value: ModCompatibility?) -> (text: String, isWarning: Bool)? {
+    static func compatNote(_ value: ModCompatibility?) -> (text: String, isWarning: Bool)? {
         switch value {
         case .ready: return (L("Compatible"), false)
         case .needs(let count): return (L("Compatible · +%@ required", String(count)), false)
@@ -389,7 +474,7 @@ struct ModsScreen: View {
         }
     }
 
-    private static func canInstall(_ value: ModCompatibility?) -> Bool {
+    static func canInstall(_ value: ModCompatibility?) -> Bool {
         switch value {
         case .conflict, .unavailable: return false
         default: return true
@@ -399,7 +484,7 @@ struct ModsScreen: View {
     /// What `ContentInstaller.compatibility` answers for a shader when Iris is not installed yet; Install then adds Iris first.
     private static let needsShaderLoader = "needsShaderLoader"
 
-    private static func contentNote(_ value: ContentCompatibility?) -> (text: String, isWarning: Bool)? {
+    static func contentNote(_ value: ContentCompatibility?) -> (text: String, isWarning: Bool)? {
         switch value {
         case .ready: return (L("Compatible"), false)
         case .needsOther(let text) where text == needsShaderLoader: return (L("Compatible · Iris is added"), false)
@@ -409,7 +494,7 @@ struct ModsScreen: View {
         }
     }
 
-    private static func canInstall(content value: ContentCompatibility?) -> Bool {
+    static func canInstall(content value: ContentCompatibility?) -> Bool {
         switch value {
         case .needsOther(let text): return text == needsShaderLoader
         case .noRelease: return false
@@ -418,7 +503,7 @@ struct ModsScreen: View {
     }
 
     /// 1234 → "1.2K", 1_500_000 → "1.5M".
-    private static func short(_ n: Int) -> String {
+    static func short(_ n: Int) -> String {
         switch n {
         case 1_000_000...: return String(format: "%.1fM", Double(n) / 1_000_000)
         case 1_000...: return String(format: "%.0fK", Double(n) / 1_000)

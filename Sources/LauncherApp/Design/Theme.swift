@@ -2,13 +2,30 @@ import SwiftUI
 
 public enum Theme {
     // Spec color tokens
-    public static let bg = Color(red: 0, green: 0, blue: 0)
-    public static let surface = Color(red: 10/255, green: 10/255, blue: 10/255)
-    public static let ink = Color(red: 1, green: 1, blue: 1)
-    public static let text = Color(red: 237/255, green: 237/255, blue: 237/255)
-    public static let muted = Color(red: 139/255, green: 139/255, blue: 139/255)
-    public static let line = Color(red: 38/255, green: 38/255, blue: 38/255)
-    public static let lineStrong = Color(red: 58/255, green: 58/255, blue: 58/255)
+    public static let bg = Color(red: 8/255, green: 8/255, blue: 8/255)
+    public static let surface = Color(red: 17/255, green: 17/255, blue: 16/255)
+    public static let elevated = Color(red: 23/255, green: 21/255, blue: 23/255)
+    public static let border = Color(red: 36/255, green: 35/255, blue: 33/255)
+    public static let line = Color(red: 36/255, green: 35/255, blue: 33/255)
+    public static let lineStrong = Color(red: 52/255, green: 49/255, blue: 46/255)
+    public static let ink = Color(red: 238/255, green: 234/255, blue: 227/255)
+    public static let text = Color(red: 238/255, green: 234/255, blue: 227/255)
+    public static let textSecondary = Color(red: 129/255, green: 122/255, blue: 115/255)
+    public static let muted = Color(red: 129/255, green: 122/255, blue: 115/255)
+    public static let textMuted = Color(red: 95/255, green: 90/255, blue: 85/255)
+    public static let ember = Color(red: 240/255, green: 160/255, blue: 98/255)
+    public static let emberDeep = Color(red: 217/255, green: 123/255, blue: 72/255)
+    public static let violet = Color(red: 168/255, green: 117/255, blue: 184/255)
+    public static let success = Color(red: 148/255, green: 169/255, blue: 120/255)
+    public static let danger = Color(red: 169/255, green: 107/255, blue: 104/255)
+
+    // Accents and Gradients
+    public static let emberSoft = ember.opacity(0.28)
+    public static let emberGradient = LinearGradient(
+        colors: [ember, emberDeep],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
 
     // White opacities
     public static let white02 = Color.white.opacity(0.02)
@@ -25,21 +42,30 @@ public enum Theme {
     public static let black45 = Color.black.opacity(0.45)
 
     // Radii
-    public static let radiusCard: CGFloat = 18
+    public static let radiusHero: CGFloat = 20
+    public static let radiusCard: CGFloat = 16
     public static let radiusInput: CGFloat = 12
+    public static let radiusCompact: CGFloat = 9
     public static let radiusPill: CGFloat = 999
+
+    // Spacing
+    public enum Space {
+        public static let xs: CGFloat = 4
+        public static let s: CGFloat = 8
+        public static let m: CGFloat = 12
+        public static let l: CGFloat = 16
+        public static let xl: CGFloat = 24
+        public static let xxl: CGFloat = 32
+        public static let page: CGFloat = 48
+    }
 
     // Glass tokens
     public static let glassFill = LinearGradient(
-        stops: [
-            .init(color: Color.white.opacity(0.09), location: 0.0),
-            .init(color: Color.white.opacity(0.02), location: 0.45),
-            .init(color: Color.white.opacity(0.04), location: 1.0)
-        ],
-        startPoint: UnitPoint(x: 0.33, y: 0.0),
-        endPoint: UnitPoint(x: 0.67, y: 1.0)
+        colors: [surface, surface],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
     )
-    public static let glassBorder = Color.white.opacity(0.11)
+    public static let glassBorder = border
 
     // Typography
     public struct TextStyle {
@@ -126,25 +152,11 @@ public enum Theme {
 extension Text {
     @ViewBuilder
     public func style(_ style: Theme.TextStyle) -> some View {
-        let fontName: String = {
-            let isBoldOrSemibold = style.weight == .semibold || style.weight == .bold || style.weight == .heavy || style.weight == .black
-            let isMedium = style.weight == .medium
-            if style.mono {
-                return (isBoldOrSemibold || isMedium) ? "GeistMono-Medium" : "GeistMono-Regular"
-            } else {
-                if isBoldOrSemibold {
-                    return "Geist-SemiBold"
-                } else if isMedium {
-                    return "Geist-Medium"
-                } else {
-                    return "Geist-Regular"
-                }
-            }
-        }()
+        let font = Theme.font(size: style.size, weight: style.weight, mono: style.mono)
         let trackingPt = style.tracking * style.size
 
         let styledText = self
-            .font(.custom(fontName, size: style.size))
+            .font(font)
             .tracking(trackingPt)
             .foregroundColor(style.color)
 

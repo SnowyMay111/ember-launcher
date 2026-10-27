@@ -14,68 +14,38 @@ public struct Glow: View {
 
     public var body: some View {
         GeometryReader { proxy in
+            let violetOpacity = style == .play ? 0.14 : 0.10
+            let emberOpacity = style == .play ? 0.08 : 0.05
+            let width = proxy.size.width
+            let height = proxy.size.height
+
             ZStack {
-                switch style {
-                case .play:
-                    // 680pt circle centered, fades to transparent at 60% radius
-                    Circle()
-                        .fill(
-                            RadialGradient(
-                                stops: [
-                                    .init(color: Color.white.opacity(0.16), location: 0.0),
-                                    .init(color: Color.clear, location: 0.60),
-                                    .init(color: Color.clear, location: 1.0)
-                                ],
-                                center: .center,
-                                startRadius: 0,
-                                endRadius: 340
-                            )
-                        )
-                        .frame(width: 680, height: 680)
-                        .position(x: proxy.size.width / 2, y: proxy.size.height / 2)
+                Theme.bg
 
-                    // Wide faint ellipse at bottom edge
-                    SoftEllipse(width: 920, height: 420, opacity: 0.10)
-                        .position(x: proxy.size.width / 2, y: proxy.size.height)
+                // Subtle violet radial glow at upper-left
+                RadialGradient(
+                    stops: [
+                        .init(color: Theme.violet.opacity(violetOpacity), location: 0.0),
+                        .init(color: Color.clear, location: 0.70)
+                    ],
+                    center: UnitPoint(x: 0.15, y: 0.15),
+                    startRadius: 0,
+                    endRadius: max(width, height) * 0.70
+                )
 
-                case .page:
-                    // Ellipse 840x600 centered on top edge
-                    SoftEllipse(width: 840, height: 600, opacity: 0.14)
-                        .position(x: proxy.size.width / 2, y: 0)
-
-                    // Faint bottom ellipse
-                    SoftEllipse(width: 920, height: 420, opacity: 0.09)
-                        .position(x: proxy.size.width / 2, y: proxy.size.height)
-                }
+                // Warm orange radial glow near the bottom
+                RadialGradient(
+                    stops: [
+                        .init(color: Theme.ember.opacity(emberOpacity), location: 0.0),
+                        .init(color: Color.clear, location: 0.65)
+                    ],
+                    center: UnitPoint(x: 0.50, y: 0.95),
+                    startRadius: 0,
+                    endRadius: max(width, height) * 0.75
+                )
             }
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
-    }
-}
-
-/// Radial glow squeezed into an ellipse; fades to clear at 60% of the half-width.
-private struct SoftEllipse: View {
-    var width: CGFloat
-    var height: CGFloat
-    var opacity: Double
-
-    var body: some View {
-        Circle()
-            .fill(
-                RadialGradient(
-                    stops: [
-                        .init(color: Color.white.opacity(opacity), location: 0.0),
-                        .init(color: Color.clear, location: 0.60),
-                        .init(color: Color.clear, location: 1.0)
-                    ],
-                    center: .center,
-                    startRadius: 0,
-                    endRadius: width / 2
-                )
-            )
-            .frame(width: width, height: width)
-            .scaleEffect(x: 1, y: height / width)
-            .frame(width: width, height: height)
     }
 }

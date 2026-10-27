@@ -23,6 +23,8 @@ public struct ModrinthHit: Codable, Sendable, Equatable {
     public let iconURL: URL?
     public let downloads: Int
     public let categories: [String]
+    /// Followers on Modrinth; nil when the response (or an older cache) lacks it.
+    public let follows: Int?
 
     public init(
         projectId: String,
@@ -32,7 +34,8 @@ public struct ModrinthHit: Codable, Sendable, Equatable {
         author: String,
         iconURL: URL? = nil,
         downloads: Int,
-        categories: [String] = []
+        categories: [String] = [],
+        follows: Int? = nil
     ) {
         self.projectId = projectId
         self.slug = slug
@@ -42,6 +45,7 @@ public struct ModrinthHit: Codable, Sendable, Equatable {
         self.iconURL = iconURL
         self.downloads = downloads
         self.categories = categories
+        self.follows = follows
     }
 
     enum CodingKeys: String, CodingKey {
@@ -53,6 +57,7 @@ public struct ModrinthHit: Codable, Sendable, Equatable {
         case iconURL = "icon_url"
         case downloads
         case categories
+        case follows
     }
 }
 
@@ -277,16 +282,17 @@ public final class ModrinthClient: Sendable {
         self.downloader = downloader
     }
 
-    public func search(
+    public func searchPage(
         query: String,
         projectType: String = "mod",
         gameVersion: String? = nil,
         loader: String? = nil,
         loaders: [String] = [],
+        categories: [String] = [],
         sortBy: String? = nil,
         limit: Int = 20,
         offset: Int = 0
-    ) async throws -> [ModrinthHit] {
+    ) async throws -> ModrinthSearchResult {
         var components = URLComponents(string: "https://api.modrinth.com/v2/search")
         var facets: [[String]] = []
         if !projectType.isEmpty {
@@ -300,6 +306,9 @@ public final class ModrinthClient: Sendable {
         }
         if !loaders.isEmpty {
             facets.append(loaders.map { "categories:\($0)" })
+        }
+        for category in categories where !category.isEmpty {
+            facets.append(["categories:\(category)"])
         }
         let facetsData = try JSONSerialization.data(withJSONObject: facets)
         let facetsString = String(data: facetsData, encoding: .utf8) ?? "[]"
@@ -317,8 +326,30 @@ public final class ModrinthClient: Sendable {
             throw ModrinthError.badURL
         }
 
-        let response = try await downloader.fetchJSON(ModrinthSearchResult.self, from: url)
-        return response.hits
+        return try await downloader.fetchJSON(ModrinthSearchResult.self, from: url)
+    }
+
+    public func search(
+        query: String,
+        projectType: String = "mod",
+        gameVersion: String? = nil,
+        loader: String? = nil,
+        loaders: [String] = [],
+        sortBy: String? = nil,
+        limit: Int = 20,
+        offset: Int = 0
+    ) async throws -> [ModrinthHit] {
+        let result = try await searchPage(
+            query: query,
+            projectType: projectType,
+            gameVersion: gameVersion,
+            loader: loader,
+            loaders: loaders,
+            sortBy: sortBy,
+            limit: limit,
+            offset: offset
+        )
+        return result.hits
     }
 
     public func project(idOrSlug: String) async throws -> ModrinthProject {

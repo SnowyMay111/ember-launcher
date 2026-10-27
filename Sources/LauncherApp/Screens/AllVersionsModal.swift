@@ -10,6 +10,7 @@ struct AllVersionsModal: View {
     @Local private var query = ""
     @Local private var kinds: Set<VersionKind> = [.release]
     @Local private var confirmingDelete: String?
+    @Local private var noteOpen = false
 
     private static let kindChips: [(kind: VersionKind, title: String)] = [
         (.release, "Releases"), (.snapshot, "Snapshots"), (.beta, "Beta"), (.alpha, "Alpha"),
@@ -66,11 +67,40 @@ struct AllVersionsModal: View {
                     }
                 }
                 .frame(height: 360)
+
+                if list.contains(where: { Self.isOld($0, cutoff: cutoff) }) {
+                    oldVersionsNote
+                }
             }
         } footer: {
             ModalCancel(title: "Close")
         }
         .task { if app.manifest == nil { await app.loadManifest() } }
+    }
+
+    /// One folded note under the list instead of a warning on every old row.
+    private var oldVersionsNote: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button {
+                withAnimation(.easeOut(duration: 0.18)) { noteOpen.toggle() }
+            } label: {
+                HStack(spacing: 6) {
+                    Text(tr: "Old versions").style(.eyebrow)
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(Theme.muted)
+                        .rotationEffect(.degrees(noteOpen ? 180 : 0))
+                    Spacer(minLength: 0)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if noteOpen {
+                Text(tr: "Old versions may run slowly or not at all.").style(.secondary)
+                    .transition(.opacity)
+            }
+        }
     }
 
     private func toggle(_ kind: VersionKind) {
@@ -139,9 +169,6 @@ struct AllVersionsModal: View {
                     }
                 }
                 .padding(.top, 4)
-            }
-            if Self.isOld(version, cutoff: cutoff) {
-                Text(tr: "Old version: may run slowly or not at all").style(.secondary)
             }
             if let error {
                 Text(verbatim: error).style(.secondary).lineLimit(3)
