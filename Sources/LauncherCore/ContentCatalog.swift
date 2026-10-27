@@ -212,7 +212,11 @@ public final class ContentInstaller: Sendable {
                 throw ModrinthError.noCompatibleVersion(project: idOrSlug, gameVersion: instance.minecraftVersion, loader: "iris")
             }
 
-            return try await installDirectFile(project: idOrSlug, version: version, kind: .shader, into: instanceName)
+            let result = try await installDirectFile(project: idOrSlug, version: version, kind: .shader, into: instanceName)
+            if case .installed(_, let fileName) = result {
+                try? PackActivation.enableShaderPack(fileName: fileName, gameDirectory: store.gameDirectory(for: instanceName))
+            }
+            return result
 
         case .resourcepack:
             let versions = try await client.versions(project: idOrSlug, gameVersion: instance.minecraftVersion)
@@ -220,7 +224,11 @@ public final class ContentInstaller: Sendable {
                 throw ModrinthError.noCompatibleVersion(project: idOrSlug, gameVersion: instance.minecraftVersion, loader: "any")
             }
 
-            return try await installDirectFile(project: idOrSlug, version: version, kind: .resourcepack, into: instanceName)
+            let result = try await installDirectFile(project: idOrSlug, version: version, kind: .resourcepack, into: instanceName)
+            if case .installed(_, let fileName) = result {
+                try? PackActivation.enableResourcePack(fileName: fileName, gameDirectory: store.gameDirectory(for: instanceName))
+            }
+            return result
 
         case .modpack:
             return .unsupported("Modpacks create new instances; use createInstance(fromModpack:)")

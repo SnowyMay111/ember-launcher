@@ -5,6 +5,9 @@ struct LibraryScreen: View {
     @EnvironmentObject var settings: SettingsStore
     @EnvironmentObject var player: PlayController
 
+    @Local private var pendingDelete: String? = nil
+    @Local private var deleteError = ""
+
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 16), count: 3)
 
     var body: some View {
@@ -51,10 +54,13 @@ struct LibraryScreen: View {
                                         InstanceCard(instance: item, onOpen: { app.open(item) }, onPlay: {
                                             app.open(item)
                                             player.play(item, settings: settings, app: app)
+                                        }, onDelete: {
+                                            pendingDelete = item.name
                                         })
                                         .contextMenu {
                                             Button(L("Instance settings")) { app.modal = .instanceSettings(item.name) }
                                             Button(L("Open folder")) { app.openFolder(item.name) }
+                                            Button(L("Delete…")) { pendingDelete = item.name }
                                         }
                                     }
                                 }
@@ -67,5 +73,52 @@ struct LibraryScreen: View {
             }
         }
         .padding(.top, 28)
+        .confirmationDialog(
+            L("Delete “%@”?", pendingDelete ?? ""),
+            isPresented: Binding(
+                get: { pendingDelete != nil },
+                set: { if !$0 { pendingDelete = nil } }
+            ),
+            presenting: pendingDelete
+        ) { name in
+            Button(L("Move to Trash")) {
+                if player.isBusy {
+                    deleteError = L("Close the game first.")
+                    return
+                }
+                do {
+                    try app.trashInstance(name)
+                } catch {
+                    deleteError = error.localizedDescription
+                }
+            }
+            Button(L("Delete forever"), role: .destructive) {
+                if player.isBusy {
+                    deleteError = L("Close the game first.")
+                    return
+                }
+                do {
+                    try app.deleteInstanceForever(name)
+                } catch {
+                    deleteError = error.localizedDescription
+                }
+            }
+            Button(L("Keep it"), role: .cancel) {}
+        } message: { name in
+            Text(L("Move to Trash keeps it recoverable; Delete forever removes “%@”, its worlds and its mods for good.", name))
+        }
+        .alert(
+            L("Could not delete"),
+            isPresented: Binding(
+                get: { !deleteError.isEmpty },
+                set: { if !$0 { deleteError = "" } }
+            )
+        ) {
+            Button(L("OK")) {
+                deleteError = ""
+            }
+        } message: {
+            Text(deleteError)
+        }
     }
 }

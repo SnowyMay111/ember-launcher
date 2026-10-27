@@ -37,6 +37,9 @@ struct InstanceCard: View {
     let instance: LibraryInstance
     var onOpen: () -> Void
     var onPlay: () -> Void = {}
+    var onDelete: (() -> Void)? = nil
+
+    @Local private var isHovered = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -64,6 +67,25 @@ struct InstanceCard: View {
         .glass()
         .contentShape(RoundedRectangle(cornerRadius: Theme.radiusCard, style: .continuous))
         .onTapGesture(perform: onOpen)
+        .overlay(alignment: .topTrailing) {
+            if let onDelete {
+                Button(action: onDelete) {
+                    Image(systemName: "trash")
+                        .font(.system(size: 12))
+                        .foregroundColor(Theme.muted)
+                        .frame(width: 28, height: 28)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .padding(8)
+                .opacity(isHovered ? 1 : 0)
+                .animation(.easeInOut(duration: 0.15), value: isHovered)
+                .allowsHitTesting(isHovered)
+                .accessibilityLabel(L("Delete"))
+                .accessibilityAction(named: L("Delete"), onDelete)
+            }
+        }
+        .onHover { isHovered = $0 }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(instance.name)
         .accessibilityAction(named: L("Open"), onOpen)
