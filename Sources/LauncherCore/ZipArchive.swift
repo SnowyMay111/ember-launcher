@@ -60,6 +60,21 @@ public enum ZipArchive: Sendable {
         #if os(macOS)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: nil)
         _ = try run(executable: "/usr/bin/unzip", arguments: ["-q", "-o", archive.path, "-d", directory.path])
+        // Ensure extracted items are owner-readable and owner-writable (e.g. Windows archives with 0000 mode).
+        if let enumerator = FileManager.default.enumerator(
+            at: directory,
+            includingPropertiesForKeys: [.isDirectoryKey, .isSymbolicLinkKey],
+            options: []
+        ) {
+            for case let url as URL in enumerator {
+                guard let values = try? url.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey]) else { continue }
+                if values.isSymbolicLink == true { continue }
+                let minMode = values.isDirectory == true ? 0o700 : 0o600
+                let attrs = try? FileManager.default.attributesOfItem(atPath: url.path)
+                let currentMode = (attrs?[.posixPermissions] as? NSNumber)?.intValue ?? 0
+                try? FileManager.default.setAttributes([.posixPermissions: currentMode | minMode], ofItemAtPath: url.path)
+            }
+        }
         #else
         throw ZipArchiveError.unsupportedPlatform
         #endif
