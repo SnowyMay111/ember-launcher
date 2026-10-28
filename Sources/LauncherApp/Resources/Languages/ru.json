@@ -431,5 +431,12 @@
   "Show on Home": "Показать на главной",
   "Delete instance": "Удалить сборку",
   "All systems operational": "Все системы работают штатно",
-  "%@ RAM": "%@ ОЗУ"
+  "%@ RAM": "%@ ОЗУ",
+  "Skin Catalog": "Каталог скинов",
+  "Catalog": "Каталог",
+  "Wardrobe": "Гардероб",
+  "Browse Catalog": "Открыть каталог",
+  "3D Boba": "3D Боба",
+  "2D Flat": "2D Текстура",
+  "Add to wardrobe": "Добавить в гардероб"
 }

@@ -166,6 +166,8 @@ struct SkinsScreen: View {
 
     @Local private var selectedSkinID: UUID?
     @Local private var viewAngle: SkinPreviewAngle = .front
+    @Local private var is3DMode: Bool = true
+    @Local private var isCatalogOpen: Bool = false
     @Local private var isRenaming = false
     @Local private var renameText = ""
     @Local private var showDeleteConfirm = false
@@ -181,20 +183,55 @@ struct SkinsScreen: View {
     }
 
     var body: some View {
-        ScrollView(.vertical, showsIndicators: false) { content }
+        if isCatalogOpen {
+            SkinCatalogScreen(store: store, onBack: { isCatalogOpen = false })
+        } else {
+            ScrollView(.vertical, showsIndicators: false) { content }
+        }
     }
 
     private var content: some View {
         VStack(alignment: .leading, spacing: Theme.Space.m) {
-            // Header matches prototype: left-aligned eyebrow "WARDROBE", title "Skins", with subtitle info.
-            PageHeader(
-                eyebrow: "WARDROBE",
-                title: "Skins",
-                subtitle: "Choose how you arrive in every world.",
-                alignment: .leading,
-                actionTitle: "Import skin",
-                action: { store.pickAndImport() }
-            )
+            // Header with Wardrobe title + Skin Catalog and Import actions
+            HStack(alignment: .bottom) {
+                PageHeader(
+                    eyebrow: "WARDROBE",
+                    title: "Skins",
+                    subtitle: "Choose how you arrive in every world.",
+                    alignment: .leading
+                )
+                Spacer()
+                HStack(spacing: 10) {
+                    Button(action: { isCatalogOpen = true }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "sparkles.rectangle.stack.fill")
+                            Text(tr: "Skin Catalog")
+                                .font(Theme.font(size: 13, weight: .semibold))
+                        }
+                        .foregroundColor(Theme.text)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 9)
+                        .background(Theme.surface)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Theme.lineStrong, lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+
+                    Button(action: { store.pickAndImport() }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "plus")
+                            Text(tr: "Import skin")
+                                .font(Theme.font(size: 13, weight: .semibold))
+                        }
+                        .foregroundColor(Theme.ink)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 9)
+                        .background(Theme.ember)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
             .frame(maxWidth: 1120, alignment: .leading)
             .frame(maxWidth: .infinity, alignment: .center)
 
@@ -234,26 +271,57 @@ struct SkinsScreen: View {
         VStack(spacing: Theme.Space.m) {
             HStack {
                 HStack(spacing: Theme.Space.xs) {
-                    FilterChip(title: "Front", isActive: viewAngle == .front) {
-                        switchAngle(to: .front)
+                    FilterChip(title: "3D Boba", isActive: is3DMode) {
+                        is3DMode = true
                     }
-                    FilterChip(title: "Back", isActive: viewAngle == .back) {
-                        switchAngle(to: .back)
+                    FilterChip(title: "2D Flat", isActive: !is3DMode) {
+                        is3DMode = false
                     }
                 }
+
+                if !is3DMode {
+                    HStack(spacing: Theme.Space.xs) {
+                        FilterChip(title: "Front", isActive: viewAngle == .front) {
+                            switchAngle(to: .front)
+                        }
+                        FilterChip(title: "Back", isActive: viewAngle == .back) {
+                            switchAngle(to: .back)
+                        }
+                    }
+                }
+
                 Spacer()
+
+                Button(action: { isCatalogOpen = true }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "sparkles")
+                        Text(tr: "Catalog")
+                            .font(Theme.font(size: 11, weight: .medium))
+                    }
+                    .foregroundColor(Theme.ember)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Theme.elevated)
+                    .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
             }
 
             Spacer()
 
             if let skin = activeSkin, let cgImage = store.image(for: skin.id) {
-                SkinCharacterCanvas(cgImage: cgImage, isSlim: skin.slim, isBack: viewAngle == .back)
-                    .frame(width: 170, height: 300)
-                    .rotation3DEffect(
-                        .degrees(viewAngle == .front ? 0 : 360),
-                        axis: (x: 0, y: 1, z: 0)
-                    )
-                    .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: viewAngle)
+                if is3DMode {
+                    Skin3DView(image: cgImage, isSlim: skin.slim, autoRotate: true)
+                        .frame(width: 240, height: 310)
+                } else {
+                    SkinCharacterCanvas(cgImage: cgImage, isSlim: skin.slim, isBack: viewAngle == .back)
+                        .frame(width: 170, height: 300)
+                        .rotation3DEffect(
+                            .degrees(viewAngle == .front ? 0 : 360),
+                            axis: (x: 0, y: 1, z: 0)
+                        )
+                        .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: viewAngle)
+                }
             } else {
                 VStack(spacing: 8) {
                     Image(systemName: "person.crop.artframe")
@@ -263,7 +331,7 @@ struct SkinsScreen: View {
                         .foregroundColor(Theme.textSecondary)
                     Text("No skins yet")
                         .style(.init(size: 13, weight: .semibold, color: Theme.text))
-                    Text("Import a 64×64 PNG skin to preview it here.")
+                    Text("Import a 64×64 PNG skin or pick one from the catalog.")
                         .style(.init(size: 11, weight: .regular, color: Theme.textSecondary))
                         .multilineTextAlignment(.center)
                 }
@@ -273,8 +341,14 @@ struct SkinsScreen: View {
             Spacer()
 
             if let skin = activeSkin {
-                Text(verbatim: "\(skin.name) · \(skin.slim ? "Slim" : "Classic")")
-                    .style(.init(size: 12, weight: .medium, mono: true, color: Theme.textSecondary))
+                VStack(spacing: 4) {
+                    Text(verbatim: "\(skin.name) · \(skin.slim ? "Slim" : "Classic")")
+                        .style(.init(size: 12, weight: .medium, mono: true, color: Theme.textSecondary))
+                    if is3DMode {
+                        Text("Drag with mouse to rotate Boba 360° · Double-click to reset")
+                            .style(.init(size: 10, weight: .regular, mono: true, color: Theme.textMuted))
+                    }
+                }
             }
 
             Text(tr: "Skins are stored on this Mac. In offline mode the game shows its default skin; your selection is applied after Microsoft sign-in.")

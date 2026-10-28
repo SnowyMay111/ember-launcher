@@ -98,6 +98,37 @@ final class SkinStore: ObservableObject {
         }
     }
 
+    /// Imports skin data directly (e.g. from the skin catalog or an online URL).
+    @discardableResult
+    func importSkinData(_ data: Data, name: String, isSlim: Bool = false) -> SavedSkin? {
+        guard let rep = NSBitmapImageRep(data: data) else {
+            message = "Invalid image data."
+            return nil
+        }
+        let w = rep.pixelsWide
+        let h = rep.pixelsHigh
+        guard w == 64 && (h == 64 || h == 32) else {
+            message = "That file is not a Minecraft skin (64×64 or 64×32 PNG)."
+            return nil
+        }
+        let id = UUID()
+        let destURL = skinsDirectory.appendingPathComponent("\(id.uuidString).png")
+        do {
+            try data.write(to: destURL, options: .atomic)
+            let skin = SavedSkin(id: id, name: name, slim: isSlim, addedAt: Date())
+            if let cg = rep.cgImage {
+                imageCache[id] = cg
+            }
+            skins.append(skin)
+            saveIndex()
+            message = nil
+            return skin
+        } catch {
+            message = error.localizedDescription
+            return nil
+        }
+    }
+
     /// Opens an NSOpenPanel to let the user select a single PNG skin to import.
     func pickAndImport() {
         let panel = NSOpenPanel()
