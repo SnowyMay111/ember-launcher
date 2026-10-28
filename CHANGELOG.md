@@ -3,7 +3,7 @@
 All notable changes to Ember. Releases up to 0.2.0 were published under the name Voxel.
 Versions follow [Semantic Versioning](https://semver.org); downloads are on the [Releases](https://github.com/SnowyMay111/ember-launcher/releases) page.
 
-## [Unreleased]
+## [0.2.2] - 2026-10-28
 
 ### Added
 - **Social & Friends preview**: Added Social screen, quick-access Friends drawer in top bar, and multiplayer lobby creation flow.
@@ -75,6 +75,7 @@ First public build.
 - Self-update from GitHub Releases.
 - English, Russian and Ukrainian interface.
 
+[0.2.2]: https://github.com/SnowyMay111/ember-launcher/releases/tag/v0.2.2
 [0.2.1]: https://github.com/SnowyMay111/ember-launcher/releases/tag/v0.2.1
 [0.2.0]: https://github.com/SnowyMay111/ember-launcher/releases/tag/v0.2.0
 [0.1.0]: https://github.com/SnowyMay111/ember-launcher/releases/tag/v0.1.0
