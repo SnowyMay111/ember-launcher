@@ -198,7 +198,7 @@ struct HomeLaunchPanel<MenuContent: View>: View {
         .onHover { playHovering = $0 }
         .animation(.easeOut(duration: 0.2), value: playHovering)
         .onAppear(perform: syncPulse)
-        .onChange(of: playState) { _ in syncPulse() }
+        .onChange(of: playState) { syncPulse() }
         .accessibilityLabel(Text(verbatim: playTitle))
     }
 

@@ -5,6 +5,24 @@ Versions follow [Semantic Versioning](https://semver.org); downloads are on the 
 
 ## [Unreleased]
 
+### Added
+- **Social & Friends preview**: Added Social screen, quick-access Friends drawer in top bar, and multiplayer lobby creation flow.
+- **Settings Screen redesign**: Clean split-view layout with categorized navigation (General, Java & memory, Downloads, Appearance, AI, About Ember).
+
+### Performance
+- **Faster game launch**: Cached native libraries extraction via `.extracted` marker in `GameLauncher`, avoiding repeated `/usr/bin/unzip` process invocations and recursive permission updates on every start (saving 0.5–1.5 seconds per launch).
+- **Asset verification fast path**: Added instant size check before running SHA-1 hash calculation on existing assets in `Downloader`, significantly reducing disk I/O when verifying Minecraft assets.
+- **Zero-allocation hex encoding**: Replaced intermediate String array allocations in `sha1Hex`, `sha256Hex`, and `sha512Hex` with a fast in-place byte lookup table.
+- **Network concurrency**: Increased `URLSession` maximum connections per host from 8 to 16 to utilize all parallel download worker tasks.
+- **Reduced background GPU/CPU usage**: Lowered particle & dust animation rate in `AmbientBackdrop` from 30 FPS to 15 FPS without visible difference.
+
+### Fixed
+- **Preset skin loading on standalone Macs**: Fixed skin resource bundle path lookup (`Skins` subdirectory instead of `Resources/Skins`), removing broken hardcoded developer paths and ensuring default skins load reliably on all machines.
+- **Dual sun visual glitch**: Eliminated duplicate sky gradient and second sun overlay in `HomeHeroCard`, delegating landscape rendering cleanly to `HeroScene`.
+- **Download cancellation**: Handled `CancellationError` immediately in `Downloader` without retrying 3 times with backoff sleep.
+- **Download size validation**: Validated received file size when SHA-1 is omitted, preventing corrupted partial downloads.
+- **Swift 6 & SwiftUI warnings**: Fixed mutable state on `Sendable` `GameLauncher`, thread-safe progress reporting in `launcher-cli`, and deprecated `onChange` / open panel handlers.
+
 ### Changed
 - The GitHub repository is now `SnowyMay111/ember-launcher` (was `mc-launcher`). Old links and the updater of earlier versions keep working through GitHub's redirect; the updater now points to the new address.
 

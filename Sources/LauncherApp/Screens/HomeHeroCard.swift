@@ -10,7 +10,6 @@ struct HomeHeroCard: View {
     let instance: String
     let loader: String
     let playtime: String
-    /// Window width: the prototype's clamp() sizes follow the viewport, not the card.
     var viewport: CGFloat = 1426
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -18,68 +17,115 @@ struct HomeHeroCard: View {
     var body: some View {
         GeometryReader { geo in
             let w = geo.size.width
-            let p = min(max(34, 0.06 * viewport), 76)
-            let titleSize = min(max(35, 0.05 * viewport), 67)
-            let statGap = min(max(22, 0.03 * viewport), 46)
+            let h = geo.size.height
 
-            ZStack(alignment: .leading) {
-                // Background gradient
-                LinearGradient(
-                    stops: [
-                        .init(color: Color(red: 0x17/255, green: 0x13/255, blue: 0x12/255), location: 0.0),
-                        .init(color: Color(red: 0x13/255, green: 0x11/255, blue: 0x12/255), location: 0.53),
-                        .init(color: Color(red: 0x20/255, green: 0x16/255, blue: 0x24/255), location: 1.0)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
+            ZStack(alignment: .bottomLeading) {
+                // Full bleed landscape background
+                ZStack {
+                    // Hero Scene elements (sky, mountains, trees, sun, animated elements)
+                    HeroScene(kind: kind, memoryIndex: memoryIndex, skin: skin)
+                        .frame(width: w, height: h)
+                        .accessibilityHidden(true)
 
-                // Grid
-                gridLayer
-                    .mask(
-                        LinearGradient(
-                            stops: [
-                                .init(color: .white, location: 0.0),
-                                .init(color: .white, location: 0.6),
-                                .init(color: .clear, location: 1.0)
-                            ],
-                            startPoint: .leading,
-                            endPoint: .trailing
+                    // Subtle technical grid overlay
+                    gridLayer
+                        .mask(
+                            LinearGradient(
+                                stops: [
+                                    .init(color: .white, location: 0.0),
+                                    .init(color: .white, location: 0.5),
+                                    .init(color: .clear, location: 0.9)
+                                ],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
                         )
-                    )
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .clipped()
 
-                // Hero Scene (Right side)
-                HeroScene(kind: kind, memoryIndex: memoryIndex, skin: skin)
-                    .frame(width: w * 0.55, height: geo.size.height)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
-                    .accessibilityHidden(true)
-
-                // Text Content (Left side)
-                textColumn(
-                    padding: p,
-                    titleSize: titleSize,
-                    statGap: statGap
+                // Subtle gradient overlay on bottom-left for text legibility
+                LinearGradient(
+                    colors: [Color.black.opacity(0.65), Color.black.opacity(0.15), Color.clear],
+                    startPoint: .bottomLeading,
+                    endPoint: .topTrailing
                 )
-                .frame(maxHeight: .infinity, alignment: .center)
-                .frame(width: w * 0.52, alignment: .leading)
+
+                // Frosted hero card container in bottom-left
+                VStack(alignment: .leading, spacing: 14) {
+                    // World Title in elegant Serif
+                    Text(instance.isEmpty ? title : instance)
+                        .font(.system(size: min(max(38, w * 0.05), 58), weight: .regular, design: .serif))
+                        .tracking(-1.2)
+                        .foregroundColor(Color(red: 238/255, green: 229/255, blue: 217/255))
+                        .lineLimit(1)
+                        .shadow(color: Color.black.opacity(0.5), radius: 8, y: 3)
+
+                    // Editorial Metadata Strip
+                    HStack(spacing: 12) {
+                        // Glowing ember dot
+                        Circle()
+                            .fill(Theme.ember)
+                            .frame(width: 6, height: 6)
+                            .shadow(color: Theme.ember, radius: 6)
+
+                        // Last played
+                        HStack(alignment: .firstTextBaseline, spacing: 6) {
+                            Text(verbatim: "LAST PLAYED")
+                                .font(Theme.font(size: 8, weight: .medium, mono: true))
+                                .tracking(1.2)
+                                .foregroundColor(Color(red: 118/255, green: 111/255, blue: 104/255))
+
+                            Text(eyebrow.replacingOccurrences(of: "Last played · ", with: ""))
+                                .font(Theme.font(size: 11, weight: .medium, mono: true))
+                                .foregroundColor(Color(red: 178/255, green: 170/255, blue: 161/255))
+                        }
+
+                        // Divider
+                        Rectangle()
+                            .fill(Color(red: 58/255, green: 52/255, blue: 46/255))
+                            .frame(width: 1, height: 16)
+
+                        // Loader
+                        Text(loader)
+                            .font(Theme.font(size: 11, weight: .regular, mono: true))
+                            .foregroundColor(Color(red: 165/255, green: 158/255, blue: 149/255))
+
+                        if !playtime.isEmpty && playtime != "0 h 0 min" {
+                            Rectangle()
+                                .fill(Color(red: 58/255, green: 52/255, blue: 46/255))
+                                .frame(width: 1, height: 16)
+
+                            Text(playtime)
+                                .font(Theme.font(size: 11, weight: .regular, mono: true))
+                                .foregroundColor(Color(red: 165/255, green: 158/255, blue: 149/255))
+                        }
+                    }
+                }
+                .padding(.horizontal, 28)
+                .padding(.vertical, 24)
+                .background(
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(Color(red: 17/255, green: 15/255, blue: 13/255).opacity(0.88))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(Color(red: 58/255, green: 51/255, blue: 45/255), lineWidth: 1)
+                        )
+                )
+                .padding(28)
             }
-            .frame(minHeight: 430)
-            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .frame(minHeight: 460)
+            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(Color(red: 0x27/255, green: 0x25/255, blue: 0x22/255), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .stroke(Color(red: 39/255, green: 37/255, blue: 34/255), lineWidth: 1)
             )
-            .shadow(color: .black.opacity(0.42), radius: 45, y: 30)
-            .accessibilityElement(children: .combine)
+            .shadow(color: .black.opacity(0.48), radius: 50, y: 28)
         }
-        .frame(minHeight: 430)
+        .frame(minHeight: 460)
     }
-}
 
-// MARK: - Parts
-
-private extension HomeHeroCard {
-    var gridLayer: some View {
+    private var gridLayer: some View {
         Canvas { context, size in
             var path = Path()
             for x in stride(from: 0, through: size.width, by: 32) {
@@ -93,58 +139,5 @@ private extension HomeHeroCard {
             context.stroke(path, with: .color(Color.white.opacity(0.018)), lineWidth: 1)
         }
         .allowsHitTesting(false)
-    }
-
-    func textColumn(padding: CGFloat, titleSize: CGFloat, statGap: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 8) {
-                Circle()
-                    .fill(Theme.ember)
-                    .frame(width: 5, height: 5)
-                    .shadow(color: Theme.ember, radius: 5)
-                Text(verbatim: eyebrow)
-                    .font(Theme.font(size: 12, weight: .medium))
-                    .foregroundColor(Color(red: 0x93/255, green: 0x8d/255, blue: 0x84/255))
-            }
-            .padding(.bottom, 24)
-
-            VStack(alignment: .leading, spacing: 0) {
-                ForEach(Array(title.components(separatedBy: "\n").enumerated()), id: \.offset) { _, line in
-                    Text(verbatim: line)
-                        .font(Theme.font(size: titleSize, weight: .semibold, mono: false))
-                        .tracking(-0.03 * titleSize)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.6)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(height: 0.92 * titleSize, alignment: .leading)
-                }
-            }
-            .foregroundColor(Color(red: 0xf1/255, green: 0xed/255, blue: 0xe6/255))
-
-            Text(verbatim: copy)
-                .font(Theme.font(size: 13, weight: .regular, mono: false))
-                .foregroundColor(Color(red: 0x92/255, green: 0x8d/255, blue: 0x85/255))
-                .padding(.top, 22)
-                .padding(.bottom, 40)
-
-            HStack(alignment: .top, spacing: statGap) {
-                statRow(label: L("Instance"), value: instance)
-                statRow(label: L("Loader"), value: loader)
-                statRow(label: L("Playtime"), value: playtime)
-            }
-        }
-        .padding(padding)
-    }
-
-    func statRow(label: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(verbatim: label)
-                .font(Theme.font(size: 12, weight: .medium))
-                .foregroundColor(Color(red: 0x65/255, green: 0x61/255, blue: 0x5c/255))
-            Text(verbatim: value)
-                .font(Theme.font(size: 12, weight: .semibold, mono: false))
-                .foregroundColor(Color(red: 0xb6/255, green: 0xb0/255, blue: 0xa8/255))
-        }
-        .accessibilityElement(children: .combine)
     }
 }

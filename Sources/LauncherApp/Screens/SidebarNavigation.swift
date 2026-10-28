@@ -25,30 +25,37 @@ public struct SidebarNavigation: View {
             VStack(spacing: 10) {
                 navButton(
                     screen: .play,
-                    title: L("Home"),
+                    title: L("Play"),
                     systemName: "house",
                     shortcutKey: "1"
                 )
 
                 navButton(
                     screen: .library,
-                    title: L("Instances"),
+                    title: L("Library"),
                     systemName: "square.grid.2x2",
                     shortcutKey: "2"
                 )
 
                 navButton(
-                    screen: .mods,
-                    title: L("Mods"),
-                    systemName: "arrow.down.to.line",
+                    screen: .social,
+                    title: L("Social"),
+                    systemName: "person.2",
                     shortcutKey: "3"
+                )
+
+                navButton(
+                    screen: .mods,
+                    title: L("Explore"),
+                    systemName: "arrow.down.to.line",
+                    shortcutKey: "4"
                 )
 
                 navButton(
                     screen: .skins,
                     title: L("Skins"),
                     systemName: "tshirt",
-                    shortcutKey: "4"
+                    shortcutKey: "5"
                 )
             }
 
@@ -67,7 +74,7 @@ public struct SidebarNavigation: View {
                 screen: .settings,
                 title: L("Settings"),
                 systemName: "gearshape",
-                shortcutKey: "5"
+                shortcutKey: "6"
             )
             .padding(.bottom, 18)
         }

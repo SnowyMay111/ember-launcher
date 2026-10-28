@@ -5,7 +5,8 @@ import SwiftUI
 enum Screen: String, CaseIterable, Identifiable {
     case play = "Play"
     case library = "Library"
-    case mods = "Mods"
+    case social = "Social"
+    case mods = "Explore"
     case skins = "Skins"
     case settings = "Settings"
 
@@ -24,6 +25,7 @@ enum AppModal: Equatable {
     case profile
     case modProject(ModrinthHit)
     case instanceDetails(String)
+    case lobby
 }
 
 @MainActor
@@ -48,6 +50,7 @@ final class AppState: ObservableObject {
     @Published var downloads: [String: Int] = [:]
     /// Why the last download of a version failed; cleared when it is started again.
     @Published var downloadErrors: [String: String] = [:]
+    @Published var friendsDrawerOpen: Bool = false
 
     let paths: LauncherPaths
     let store: InstanceStore

@@ -210,7 +210,7 @@ private struct ParticleField: View {
     ]
 
     var body: some View {
-        TickView(paused: reduceMotion) { date in
+        TickView(every: 2, paused: reduceMotion) { date in
             let t = reduceMotion ? 0 : date.timeIntervalSinceReferenceDate
 
             Canvas { context, size in

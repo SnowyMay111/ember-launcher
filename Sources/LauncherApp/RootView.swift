@@ -26,11 +26,12 @@ struct RootView: View {
                     VStack(spacing: 0) {
                         TopBar()
 
-                        ZStack {
+                        ZStack(alignment: .top) {
                             screen
                                 .frame(maxWidth: app.screen == .play || app.screen == .library ? .infinity : 1120)
-                                .frame(maxWidth: .infinity)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                         }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                         .overlay(alignment: .top) { UpdateNotice() }
                         .overlay(alignment: .bottom) { ToastHost() }
                     }
@@ -42,6 +43,11 @@ struct RootView: View {
         .overlay {
             modalLayer
                 .animation(reduceMotion ? nil : .easeInOut(duration: 0.28), value: app.modal != nil)
+        }
+        .overlay {
+            if app.friendsDrawerOpen {
+                FriendsDrawer()
+            }
         }
         .overlay { EmberDropdownLayer() }
         .environmentObject(app)
@@ -103,6 +109,8 @@ struct RootView: View {
                     if let instance = app.instances.first(where: { $0.id == name }) {
                         InstanceDetailPanel(instance: instance).id(name)
                     }
+                case .lobby:
+                    LobbyFlowModal()
                 }
             }
             .transition(.opacity)
@@ -113,6 +121,7 @@ struct RootView: View {
         switch app.screen {
         case .play: HomeScreen()
         case .library: LibraryScreen()
+        case .social: SocialScreen()
         case .settings: SettingsScreen()
         case .mods: ModsScreen(app: app)
         case .skins: SkinsScreen()

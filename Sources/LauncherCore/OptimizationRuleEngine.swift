@@ -168,9 +168,9 @@ public enum OptimizationRuleEngine {
         }
 
         switch (parsedA.suffix, parsedB.suffix) {
-        case (.some(let sA), .none):
+        case (.some, .none):
             return .orderedAscending
-        case (.none, .some(let sB)):
+        case (.none, .some):
             return .orderedDescending
         case (.some(let sA), .some(let sB)):
             return sA.localizedStandardCompare(sB)

@@ -42,12 +42,34 @@ public struct LaunchCommand: Sendable {
     }
 }
 
+private final class RefreshRateProviderBox: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value: (@Sendable () -> Int?)?
+
+    func get() -> (@Sendable () -> Int?)? {
+        lock.lock()
+        defer { lock.unlock() }
+        return value
+    }
+
+    func set(_ newValue: (@Sendable () -> Int?)?) {
+        lock.lock()
+        defer { lock.unlock() }
+        value = newValue
+    }
+}
+
 public final class GameLauncher: Sendable {
     public let paths: LauncherPaths
     public let store: InstanceStore
     public let installer: VersionInstaller
     public let runtimeManager: JavaRuntimeManager
-    public var displayRefreshRateProvider: (@Sendable () -> Int?)?
+    private let refreshRateBox = RefreshRateProviderBox()
+
+    public var displayRefreshRateProvider: (@Sendable () -> Int?)? {
+        get { refreshRateBox.get() }
+        set { refreshRateBox.set(newValue) }
+    }
 
     public init(paths: LauncherPaths, downloader: Downloader = Downloader()) {
         self.paths = paths
@@ -220,12 +242,15 @@ public final class GameLauncher: Sendable {
 
         var classpath: [String] = []
         var seen = Set<String>()
+        let nativesMarker = nativesDir.appendingPathComponent(".extracted")
+        let needsNativesExtract = !fm.fileExists(atPath: nativesMarker.path)
+
         for library in version.libraries {
             guard RuleEvaluator.isAllowed(rules: library.rules),
                   let artifact = library.resolvedArtifact else { continue }
             let file = paths.libraries.appendingPathComponent(artifact.path)
 
-            if library.nativeClassifier != nil || library.extract != nil {
+            if needsNativesExtract, library.nativeClassifier != nil || library.extract != nil {
                 if fm.fileExists(atPath: file.path) {
                     try? ZipArchive.extract(file, to: nativesDir)
                     if let excludes = library.extract?.exclude {
@@ -243,6 +268,9 @@ public final class GameLauncher: Sendable {
                 throw GameLauncherError.missingLibrary(artifact.path)
             }
             classpath.append(file.path)
+        }
+        if needsNativesExtract {
+            fm.createFile(atPath: nativesMarker.path, contents: nil)
         }
         let clientJar = paths.versionJAR(version.clientJarID)
         guard fm.fileExists(atPath: clientJar.path) else {

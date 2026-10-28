@@ -63,7 +63,7 @@ public final class Downloader: Sendable {
             self.session = session
         } else {
             let config = URLSessionConfiguration.default
-            config.httpMaximumConnectionsPerHost = 8
+            config.httpMaximumConnectionsPerHost = 16
             config.httpAdditionalHeaders = [
                 "User-Agent": "mc-launcher/0.1"
             ]
@@ -90,8 +90,17 @@ public final class Downloader: Sendable {
 
         if fileManager.fileExists(atPath: dest.path) {
             if let expectedSha1 = sha1, !expectedSha1.isEmpty {
-                if let actualSha1 = try? sha1Hex(of: dest),
-                   actualSha1.caseInsensitiveCompare(expectedSha1) == .orderedSame {
+                // If size is also known, check size as a fast filter before expensive hashing
+                if let expectedSize = size {
+                    let actualSize = (try? fileManager.attributesOfItem(atPath: dest.path))?[.size] as? Int
+                    if actualSize == expectedSize {
+                        if let actualSha1 = try? sha1Hex(of: dest),
+                           actualSha1.caseInsensitiveCompare(expectedSha1) == .orderedSame {
+                            return
+                        }
+                    }
+                } else if let actualSha1 = try? sha1Hex(of: dest),
+                          actualSha1.caseInsensitiveCompare(expectedSha1) == .orderedSame {
                     return
                 }
             } else if let expectedSize = size {
@@ -100,6 +109,8 @@ public final class Downloader: Sendable {
                    fileSize == expectedSize {
                     return
                 }
+            } else {
+                return
             }
         }
 
@@ -111,6 +122,7 @@ public final class Downloader: Sendable {
 
         for attempt in 1...maxAttempts {
             do {
+                try Task.checkCancellation()
                 let (tempLocalURL, response) = try await session.download(from: url)
                 if let httpResponse = response as? HTTPURLResponse, !(200...299).contains(httpResponse.statusCode) {
                     try? fileManager.removeItem(at: tempLocalURL)
@@ -122,6 +134,12 @@ public final class Downloader: Sendable {
                     if actualSha1.caseInsensitiveCompare(expectedSha1) != .orderedSame {
                         try? fileManager.removeItem(at: tempLocalURL)
                         throw DownloaderError.checksumMismatch(expected: expectedSha1, actual: actualSha1, url: url)
+                    }
+                } else if let expectedSize = size {
+                    let actualSize = (try? fileManager.attributesOfItem(atPath: tempLocalURL.path))?[.size] as? Int
+                    if let actualSize, actualSize != expectedSize {
+                        try? fileManager.removeItem(at: tempLocalURL)
+                        throw DownloaderError.downloadFailed(underlying: "File size mismatch: expected \(expectedSize), got \(actualSize)")
                     }
                 }
 
@@ -137,6 +155,9 @@ public final class Downloader: Sendable {
                 try fileManager.moveItem(at: targetTempURL, to: dest)
                 return
             } catch {
+                if error is CancellationError {
+                    throw error
+                }
                 lastError = error
                 if attempt < maxAttempts {
                     let backoffNanos = UInt64(attempt * 150_000_000)

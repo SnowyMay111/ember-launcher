@@ -1,5 +1,6 @@
 import Foundation
 import AppKit
+import UniformTypeIdentifiers
 import LauncherCore
 
 /// Model representing a saved Minecraft player skin.
@@ -78,14 +79,15 @@ final class SkinStore: ObservableObject {
     }
 
     private func loadPresetData(named name: String) -> Data? {
-        if let url = Bundle.module.url(forResource: name, withExtension: "png", subdirectory: "Resources/Skins") ??
+        if let url = Bundle.module.url(forResource: name, withExtension: "png", subdirectory: "Skins") ??
+                     Bundle.module.url(forResource: name, withExtension: "png", subdirectory: "Resources/Skins") ??
                      Bundle.module.url(forResource: name, withExtension: "png") {
             if let data = try? Data(contentsOf: url) {
                 return data
             }
         }
         let fallbackPaths = [
-            "/Users/may/Projects/mc-launcher/Sources/LauncherApp/Resources/Skins/\(name).png",
+            skinsDirectory.appendingPathComponent("\(name).png").path,
             "/tmp/\(name).png"
         ]
         for path in fallbackPaths {
@@ -177,7 +179,7 @@ final class SkinStore: ObservableObject {
         panel.canChooseFiles = true
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
-        panel.allowedFileTypes = ["png"]
+        panel.allowedContentTypes = [.png]
 
         if panel.runModal() == .OK, let selectedURL = panel.url {
             importSkin(from: selectedURL)

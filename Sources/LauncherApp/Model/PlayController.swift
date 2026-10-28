@@ -179,10 +179,11 @@ final class PlayController: ObservableObject {
         lastFixReport = nil
         fixProgress = 0.0
         fixLabel = L("Starting…")
-        Task { @MainActor in
+        Task { @MainActor [weak self] in
+            guard let self = self else { return }
             do {
-                let instance = try launcher.store.load(name: instanceName)
-                let report = try await diagnosticsEngine.applyFixes(fixes, for: instance) { [weak self] fraction, label in
+                let instance = try self.launcher.store.load(name: instanceName)
+                let report = try await self.diagnosticsEngine.applyFixes(fixes, for: instance) { [weak self] fraction, label in
                     Task { @MainActor [weak self] in
                         self?.fixProgress = fraction
                         self?.fixLabel = label

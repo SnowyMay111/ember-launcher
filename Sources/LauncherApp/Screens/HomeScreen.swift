@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 import LauncherCore
 
 struct HomeScreen: View {
@@ -217,10 +218,6 @@ struct HomeScreen: View {
                                 .frame(maxWidth: width)
                             }
                             
-                            footer
-                                .frame(maxWidth: width)
-                                .padding(.vertical, 20)
-                                .padding(.horizontal, 4)
                         }
                         .padding(.top, topPad)
                         .frame(maxWidth: .infinity)
@@ -233,7 +230,7 @@ struct HomeScreen: View {
                     guard heroKind == .carousel, !reduceMotion else { return }
                     memoryIndex = (memoryIndex + 1) % 3
                 }
-                .onChange(of: item.id) { _ in
+                .onChange(of: item.id) {
                     memoryIndex = 0
                 }
             } else {

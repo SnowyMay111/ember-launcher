@@ -4,6 +4,54 @@ import LauncherCore
 struct SettingsScreen: View {
     @EnvironmentObject var settings: SettingsStore
     @EnvironmentObject var updates: UpdateController
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.windowWidth) private var windowWidth
+
+    enum Section: String, CaseIterable, Identifiable {
+        case general = "General"
+        case java = "Java & memory"
+        case downloads = "Downloads"
+        case appearance = "Appearance"
+        case ai = "AI"
+        case about = "About Ember"
+
+        var id: String { rawValue }
+
+        var tag: String {
+            switch self {
+            case .general: "GENERAL"
+            case .java: "JAVA & MEMORY"
+            case .downloads: "DOWNLOADS"
+            case .appearance: "APPEARANCE"
+            case .ai: "AI ASSISTANT"
+            case .about: "ABOUT EMBER"
+            }
+        }
+
+        var headline: String {
+            switch self {
+            case .general: "Everything feels good."
+            case .java: "Runtime is balanced."
+            case .downloads: "Ready when you are."
+            case .appearance: "Make it feel like home."
+            case .ai: "Ready to create."
+            case .about: "Ember \(LauncherInfo.version)"
+            }
+        }
+
+        var description: String {
+            switch self {
+            case .general: "Your profile, worlds, and launcher behavior in one calm place."
+            case .java: "Java 21 is healthy and memory is balanced for this Mac."
+            case .downloads: "Choose where game files live and how quietly they arrive."
+            case .appearance: "Tune motion and atmosphere without changing how Ember works."
+            case .ai: "Build pack suggestions and mod setups tailored to your play."
+            case .about: "A warm, native home for every Minecraft world."
+            }
+        }
+    }
+
+    @Local private var selectedSection: Section = .general
 
     private var updateDetail: String {
         switch updates.checkStatus {
@@ -21,66 +69,192 @@ struct SettingsScreen: View {
         return L("Recommended: %d-%d GB", range.lowerBound / 1024, range.upperBound / 1024)
     }
 
-    // MARK: - Layout state
-    private enum SettingsSection: String, CaseIterable {
-        case general = "General"
-        case java = "Java & memory"
-        case downloads = "Downloads"
-        case ai = "AI"
-        case about = "About"
-    }
+    var body: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 0) {
+                // Header
+                PageHeader(
+                    eyebrow: "YOUR SPACE",
+                    title: "Settings",
+                    subtitle: "A few thoughtful choices to make Ember feel like yours.",
+                    alignment: .leading
+                )
+                .padding(.bottom, 28)
 
-    @Local private var activeSection: SettingsSection = .general
-    @Local private var offsets: [SettingsSection: CGFloat] = [:]
-    @Local private var jump: SettingsSection?
-    @Local private var isJumping = false
+                // Split layout
+                HStack(alignment: .top, spacing: 28) {
+                    // Navigation sidebar
+                    VStack(spacing: 6) {
+                        ForEach(Section.allCases) { sec in
+                            Button {
+                                withAnimation(.easeInOut(duration: 0.18)) {
+                                    selectedSection = sec
+                                }
+                            } label: {
+                                HStack {
+                                    Text(tr: sec.rawValue)
+                                        .font(Theme.font(size: 13, weight: .medium))
+                                        .foregroundColor(selectedSection == sec ? Theme.ember : Theme.textSecondary)
+                                    Spacer()
+                                }
+                                .padding(.horizontal, 14)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 42)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(selectedSection == sec ? Color(red: 24/255, green: 21/255, blue: 20/255) : Color.clear)
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(selectedSection == sec ? Color(red: 60/255, green: 48/255, blue: 40/255) : Color.clear, lineWidth: 1)
+                                )
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .frame(width: 190)
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+                    // Main content
+                    VStack(alignment: .leading, spacing: 18) {
+                        // Comfort card (only for sections other than about, which has its own unified card)
+                        if selectedSection != .about {
+                            comfortCard(for: selectedSection)
+                        }
 
-    private static let scrollSpace = "settings-scroll"
-
-    private struct SectionOffsetKey: PreferenceKey {
-        static var defaultValue: [SettingsSection: CGFloat] = [:]
-        static func reduce(value: inout [SettingsSection: CGFloat], nextValue: () -> [SettingsSection: CGFloat]) {
-            value.merge(nextValue()) { $1 }
+                        // Section body
+                        sectionBody(for: selectedSection)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+                }
+            }
+            .frame(maxWidth: 1120, alignment: .topLeading)
+            .padding(.top, 36)
+            .padding(.horizontal, 40)
+            .padding(.bottom, 48)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
-    private var animates: Bool { !reduceMotion && settings.backgroundAnimations }
+    // MARK: - Comfort Card
 
-    @Environment(\.windowWidth) private var windowWidth
+    private func comfortCard(for sec: Section) -> some View {
+        HStack(spacing: 18) {
+            // Orb
+            ZStack {
+                RoundedRectangle(cornerRadius: 15)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color(red: 170/255, green: 103/255, blue: 191/255).opacity(0.22),
+                                Color(red: 229/255, green: 139/255, blue: 78/255).opacity(0.16)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 54, height: 54)
+
+                Rectangle()
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color(red: 171/255, green: 115/255, blue: 195/255),
+                                Color(red: 233/255, green: 154/255, blue: 97/255)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 20, height: 20)
+                    .rotationEffect(.degrees(45))
+                    .shadow(color: Theme.ember.opacity(0.3), radius: 10)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(sec.tag)
+                    .font(Theme.font(size: 9, weight: .medium, mono: true))
+                    .tracking(1.4)
+                    .foregroundColor(Color(red: 142/255, green: 105/255, blue: 126/255))
+
+                Text(sec.headline)
+                    .font(Theme.font(size: 15, weight: .semibold))
+                    .foregroundColor(Theme.text)
+
+                Text(sec.description)
+                    .font(Theme.font(size: 11, weight: .regular))
+                    .foregroundColor(Theme.textSecondary)
+                    .lineLimit(2)
+            }
+
+            Spacer()
+
+            Circle()
+                .fill(Color(red: 32/255, green: 39/255, blue: 25/255))
+                .frame(width: 26, height: 26)
+                .overlay(
+                    Image(systemName: "checkmark")
+                        .font(Theme.font(size: 11, weight: .bold))
+                        .foregroundColor(Theme.success)
+                )
+        }
+        .padding(18)
+        .background(
+            RoundedRectangle(cornerRadius: 15)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color(red: 24/255, green: 20/255, blue: 23/255),
+                            Color(red: 23/255, green: 18/255, blue: 25/255),
+                            Color(red: 28/255, green: 20/255, blue: 32/255)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 15)
+                .stroke(Color(red: 58/255, green: 45/255, blue: 55/255), lineWidth: 1)
+        )
+    }
+
+    // MARK: - Section Body
 
     @ViewBuilder
-    private func sectionContent(_ section: SettingsSection) -> some View {
-        switch section {
+    private func sectionBody(for sec: Section) -> some View {
+        switch sec {
         case .general:
-            EmberHealthCard(settings: settings)
-
-            SettingsGroup(title: "General") {
-                SettingsRow(title: "Nickname", detail: "Name you play under. Offline mode.") {
+            SettingsGroup(title: "PLAYER") {
+                SettingsRow(title: "Display name", detail: "Used for offline and local worlds.") {
                     VoxelInput(label: "Nickname", text: $settings.nickname, width: 220)
                 }
-                SettingsRow(title: "Close launcher on start", detail: "Hide the launcher while you play.") {
-                    VoxelToggle(label: "Close launcher on start", isOn: $settings.closeOnStart)
+            }
+
+            SettingsGroup(title: "BEHAVIOR") {
+                SettingsRow(title: "Automatic updates", detail: "Keep Ember and game metadata current.") {
+                    VoxelToggle(label: "Automatic updates", isOn: $settings.autoUpdate)
                 }
-                SettingsRow(title: "Background animations", detail: "Glows, particles and the moving scene. Turn off to save battery.", isLast: true) {
-                    VoxelToggle(label: "Background animations", isOn: $settings.backgroundAnimations)
+                SettingsRow(title: "Close launcher after start", detail: "Save resources while Minecraft is running.", isLast: true) {
+                    VoxelToggle(label: "Close launcher on start", isOn: $settings.closeOnStart)
                 }
             }
 
         case .java:
-            SettingsGroup(title: "Java & memory") {
-                SettingsRow(title: "Java", detail: "Runtime used to start the game.") {
-                    MonoBadge(text: "Java 21")
+            SettingsGroup(title: "PERFORMANCE") {
+                SettingsRow(title: "Java runtime", detail: "Mojang Java 21 · Apple Silicon") {
+                    MonoBadge(text: "Managed")
                 }
+
                 VStack(spacing: 0) {
-                    SettingsRow(title: "Memory", detail: "Ember keeps some memory free for the rest of your system.", isLast: true) {
+                    SettingsRow(title: "Memory allocation", detail: "Ember keeps enough memory free for the rest of your Mac.", isLast: true) {
                         MemoryStepper(memoryGB: $settings.memoryGB)
                     }
+
                     VStack(alignment: .leading, spacing: Theme.Space.s) {
                         MemoryPresetsGrid(memoryGB: $settings.memoryGB)
                         Text(recommendedMemoryText)
-                            .style(.init(size: 12.5, weight: .regular, color: Theme.textSecondary))
+                            .style(.init(size: 11.5, weight: .regular, color: Theme.textSecondary))
                     }
                     .padding(.horizontal, 24)
                     .padding(.bottom, 16)
@@ -89,6 +263,7 @@ struct SettingsScreen: View {
                 .overlay(alignment: .bottom) {
                     Theme.border.frame(height: 1)
                 }
+
                 SettingsRow(title: "Window size", detail: "Game window size at launch.", isLast: true) {
                     HStack(spacing: 10) {
                         VoxelInput(label: "Window width", text: $settings.windowWidth, width: 90, alignment: .center)
@@ -99,14 +274,21 @@ struct SettingsScreen: View {
             }
 
         case .downloads:
-            SettingsGroup(title: "Downloads") {
+            SettingsGroup(title: "FILES & NETWORK") {
                 SettingsRow(title: "Show snapshots", detail: "Include snapshot versions in the list.", isLast: true) {
                     VoxelToggle(label: "Show snapshots", isOn: $settings.showSnapshots)
                 }
             }
 
+        case .appearance:
+            SettingsGroup(title: "ATMOSPHERE") {
+                SettingsRow(title: "Living background", detail: "Glows, particles and world ambience.", isLast: true) {
+                    VoxelToggle(label: "Background animations", isOn: $settings.backgroundAnimations)
+                }
+            }
+
         case .ai:
-            SettingsGroup(title: "AI") {
+            SettingsGroup(title: "AI ASSISTANT") {
                 SettingsRow(title: "AI provider", detail: "Builds pack suggestions from your description.") {
                     VoxelMenu(label: "AI provider", value: settings.aiProvider.displayName, minWidth: 150) {
                         ForEach(AIProviderKind.allCases, id: \.self) { kind in
@@ -114,7 +296,7 @@ struct SettingsScreen: View {
                         }
                     }
                 }
-                SettingsRow(title: "API key", detail: "Your own key. Kept in the macOS Keychain.") {
+                SettingsRow(title: "API key", detail: "Your own key. Kept safely in the macOS Keychain.") {
                     AIKeyField()
                 }
                 SettingsRow(title: "AI model", detail: "Leave empty to use the default.", isLast: true) {
@@ -123,129 +305,50 @@ struct SettingsScreen: View {
             }
 
         case .about:
-            SettingsGroup(title: "About") {
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(spacing: 18) {
+                    EmberLogo(size: 54)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(verbatim: "ABOUT EMBER")
+                            .font(Theme.font(size: 9, weight: .medium, mono: true))
+                            .tracking(1.4)
+                            .foregroundColor(Color(red: 142/255, green: 105/255, blue: 126/255))
+
+                        Text(verbatim: "Ember \(LauncherInfo.version)")
+                            .font(Theme.font(size: 16, weight: .bold))
+                            .foregroundColor(Theme.text)
+
+                        Text(verbatim: "A warm, native home for every Minecraft world.")
+                            .font(Theme.font(size: 12, weight: .regular))
+                            .foregroundColor(Theme.textSecondary)
+                    }
+
+                    Spacer()
+
+                    Circle()
+                        .fill(Color(red: 32/255, green: 39/255, blue: 25/255))
+                        .frame(width: 26, height: 26)
+                        .overlay(
+                            Image(systemName: "checkmark")
+                                .font(Theme.font(size: 11, weight: .bold))
+                                .foregroundColor(Theme.success)
+                        )
+                }
+                .padding(22)
+
+                Divider().background(Theme.border)
+
                 SettingsRow(title: L("Version %@", LauncherInfo.version), detail: updateDetail) {
                     SecondaryPill(title: updates.checkStatus == .checking ? "Checking…" : "Check for updates", action: updates.checkNow)
                 }
-                SettingsRow(title: "Update automatically", detail: "Keep the launcher up to date.", isLast: true) {
+
+                SettingsRow(title: "Automatic updates", detail: "Keep the launcher up to date.", isLast: true) {
                     VoxelToggle(label: "Update automatically", isOn: $settings.autoUpdate)
                 }
             }
+            .clipShape(RoundedRectangle(cornerRadius: Theme.radiusCard, style: .continuous))
+            .glass()
         }
-    }
-
-    private func navButton(_ sec: SettingsSection, fillsWidth: Bool) -> some View {
-        Button(action: { goTo(sec) }) {
-            Text(tr: sec.rawValue)
-                .style(.init(size: 13.5, weight: .medium, tracking: -0.01, color: activeSection == sec ? Theme.ember : Theme.textSecondary))
-                .lineLimit(1)
-                .padding(.vertical, 11)
-                .padding(.horizontal, 13)
-                .frame(maxWidth: fillsWidth ? CGFloat.infinity : nil, alignment: .leading)
-                .background(activeSection == sec ? Theme.surface : Color.clear, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func goTo(_ sec: SettingsSection) {
-        activeSection = sec
-        isJumping = true
-        jump = sec
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) { isJumping = false }
-    }
-
-    /// The section whose top edge was passed last wins; the first one when none was.
-    private func updateActive(_ tops: [SettingsSection: CGFloat]) {
-        offsets = tops
-        guard !isJumping else { return }
-        let current = SettingsSection.allCases.last { (tops[$0] ?? .greatestFiniteMagnitude) <= 160 } ?? .general
-        if current != activeSection { activeSection = current }
-    }
-
-    private var savedNote: some View {
-        HStack(spacing: Theme.Space.xs) {
-            Image(systemName: "checkmark.circle")
-                .font(Theme.font(size: 12))
-            Text(tr: "Changes save automatically")
-                .style(.init(size: 12, weight: .regular, color: Theme.textMuted))
-        }
-        .foregroundColor(Theme.textMuted)
-        .padding(.leading, 24)
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    /// One section drawn like a page of its own; it fades in and rises as it comes into view.
-    private func page(_ sec: SettingsSection, viewportHeight: CGFloat) -> some View {
-        let top = offsets[sec] ?? (sec == .general ? 0 : .greatestFiniteMagnitude)
-        let shown = !animates || top < viewportHeight - 80
-        return VStack(alignment: .leading, spacing: Theme.Space.l) {
-            sectionContent(sec)
-            if sec == .about { savedNote.padding(.top, Theme.Space.s) }
-        }
-        .frame(maxWidth: .infinity, minHeight: max(viewportHeight - 40, 0), alignment: .topLeading)
-        .opacity(shown ? 1 : 0.35)
-        .offset(y: shown ? 0 : 14)
-        .animation(animates ? .easeOut(duration: 0.35) : nil, value: shown)
-        .id(sec)
-        .background(
-            GeometryReader { proxy in
-                Color.clear.preference(key: SectionOffsetKey.self, value: [sec: proxy.frame(in: .named(Self.scrollSpace)).minY])
-            }
-        )
-    }
-
-    private var sections: some View {
-        GeometryReader { viewport in
-            ScrollViewReader { reader in
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 48) {
-                        ForEach(SettingsSection.allCases, id: \.self) { page($0, viewportHeight: viewport.size.height) }
-                    }
-                    .padding(.bottom, 40)
-                }
-                .coordinateSpace(name: Self.scrollSpace)
-                .onPreferenceChange(SectionOffsetKey.self) { updateActive($0) }
-                .onChange(of: jump) { _, target in
-                    guard let target else { return }
-                    withAnimation(animates ? .easeInOut(duration: 0.45) : nil) {
-                        reader.scrollTo(target, anchor: .top)
-                    }
-                    jump = nil
-                }
-            }
-        }
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            PageHeader(eyebrow: "YOUR SPACE", title: "Settings", subtitle: "A few thoughtful choices to make Ember feel like yours.", alignment: .leading)
-                .padding(.bottom, 34)
-
-            if windowWidth < 760 {
-                VStack(alignment: .leading, spacing: 16) {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 5) {
-                            ForEach(SettingsSection.allCases, id: \.self) { navButton($0, fillsWidth: false) }
-                        }
-                    }
-                    sections
-                }
-            } else {
-                HStack(alignment: .top, spacing: 32) {
-                    VStack(spacing: 5) {
-                        ForEach(SettingsSection.allCases, id: \.self) { navButton($0, fillsWidth: true) }
-                    }
-                    .frame(width: 190)
-
-                    sections
-                        .frame(maxWidth: .infinity)
-                }
-            }
-        }
-        .frame(maxWidth: 1120)
-        .padding(.top, 40)
-        .padding(.horizontal, 40)
-        .frame(maxWidth: .infinity)
     }
 }

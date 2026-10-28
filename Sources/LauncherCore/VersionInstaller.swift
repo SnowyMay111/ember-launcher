@@ -133,6 +133,7 @@ public final class VersionInstaller: Sendable {
                         }
                     }
                 }
+                fm.createFile(atPath: nativesDir.appendingPathComponent(".extracted").path, contents: nil)
             }
         }
 

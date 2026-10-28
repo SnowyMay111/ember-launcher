@@ -9,10 +9,12 @@ struct TopBar: View {
         switch app.screen {
         case .play:
             return L("Welcome home.")
+        case .social:
+            return L("Social")
         case .library:
             return L("Instances")
         case .mods:
-            return L("Mods")
+            return L("Explore")
         case .skins:
             return L("Skins")
         case .settings:
@@ -22,21 +24,28 @@ struct TopBar: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: 7) {
-                Text(verbatim: L("Welcome back"))
-                    .font(Theme.font(size: 12, weight: .medium))
-                    .foregroundColor(Color(red: 0x7b/255, green: 0x77/255, blue: 0x71/255))
+            if app.screen != .settings {
+                VStack(alignment: .leading, spacing: 7) {
+                    Text(verbatim: L("Welcome back"))
+                        .font(Theme.font(size: 12, weight: .medium))
+                        .foregroundColor(Color(red: 0x7b/255, green: 0x77/255, blue: 0x71/255))
 
-                Text(pageTitle)
-                    .font(Theme.font(size: 23, weight: .semibold))
-                    .tracking(-0.69)
-                    .foregroundColor(Theme.text)
+                    Text(pageTitle)
+                        .font(Theme.font(size: 23, weight: .semibold))
+                        .tracking(-0.69)
+                        .foregroundColor(Theme.text)
+                }
             }
 
             Spacer(minLength: 16)
 
-            HStack(spacing: 24) {
+            HStack(spacing: 16) {
                 UpdatePill()
+                SocialTopButton {
+                    withAnimation(.easeInOut(duration: 0.22)) {
+                        app.friendsDrawerOpen.toggle()
+                    }
+                }
                 AccountPill(name: settings.nickname) { app.modal = .profile }
             }
         }
@@ -110,6 +119,58 @@ struct UpdateNotice: View {
             .background(Capsule().fill(Theme.black40))
             .overlay(Capsule().strokeBorder(Theme.line, lineWidth: 1))
             .padding(.top, 10)
+        }
+    }
+}
+
+private struct SocialTopButton: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                HStack(spacing: -6) {
+                    avatarCircle("M", bg: Color(red: 102/255, green: 75/255, blue: 60/255))
+                    avatarCircle("L", bg: Color(red: 83/255, green: 94/255, blue: 71/255))
+                    avatarCircle("N", bg: Color(red: 93/255, green: 72/255, blue: 94/255))
+                }
+                .padding(.leading, 2)
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(verbatim: "3 online")
+                        .font(Theme.font(size: 10, weight: .bold))
+                        .foregroundColor(Color(red: 216/255, green: 208/255, blue: 198/255))
+                    Text(verbatim: "Friends")
+                        .font(Theme.font(size: 9, weight: .regular))
+                        .foregroundColor(Color(red: 142/255, green: 136/255, blue: 128/255))
+                }
+
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(Color(red: 142/255, green: 136/255, blue: 128/255))
+                    .padding(.trailing, 2)
+            }
+            .padding(.horizontal, 8)
+            .frame(height: 38)
+            .background(Color(red: 17/255, green: 16/255, blue: 14/255))
+            .cornerRadius(8)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color(red: 41/255, green: 38/255, blue: 34/255), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func avatarCircle(_ letter: String, bg: Color) -> some View {
+        ZStack {
+            Circle()
+                .fill(bg)
+                .frame(width: 22, height: 22)
+                .overlay(Circle().stroke(Color(red: 17/255, green: 16/255, blue: 14/255), lineWidth: 2))
+            Text(letter)
+                .font(Theme.font(size: 8, weight: .bold))
+                .foregroundColor(.white)
         }
     }
 }

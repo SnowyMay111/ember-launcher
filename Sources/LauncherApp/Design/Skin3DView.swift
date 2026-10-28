@@ -1,6 +1,7 @@
 import SwiftUI
 import SceneKit
 import AppKit
+import LauncherCore
 
 /// Interactive 3D Minecraft player character model (Boba) rendered with native SceneKit.
 /// Features pixel-crisp nearest-neighbor textures, 360° mouse drag rotation, classic (4px) / slim (3px) arms,
@@ -447,7 +448,8 @@ public struct Skin3DView: NSViewRepresentable {
 
     /// Loads a preset PNG skin from the bundled resources or disk.
     public static func loadPresetResource(named name: String) -> CGImage? {
-        if let url = Bundle.module.url(forResource: name, withExtension: "png", subdirectory: "Resources/Skins") ??
+        if let url = Bundle.module.url(forResource: name, withExtension: "png", subdirectory: "Skins") ??
+                     Bundle.module.url(forResource: name, withExtension: "png", subdirectory: "Resources/Skins") ??
                      Bundle.module.url(forResource: name, withExtension: "png") {
             if let data = try? Data(contentsOf: url),
                let rep = NSBitmapImageRep(data: data),
@@ -455,9 +457,10 @@ public struct Skin3DView: NSViewRepresentable {
                 return cg
             }
         }
-        // Fallback: check project or app data paths
+        // Fallback: check app support or tmp
+        let root = LauncherPaths().root
         let paths = [
-            "/Users/may/Projects/mc-launcher/Sources/LauncherApp/Resources/Skins/\(name).png",
+            root.appendingPathComponent("skins/\(name).png").path,
             "/tmp/\(name).png"
         ]
         for path in paths {

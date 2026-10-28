@@ -606,24 +606,34 @@ do {
             let group = option("--group")
             let memoryMB = option("--memory").flatMap { Int($0) } ?? 4096
 
-            var lastPhase = ""
-            var lastPercent = -10
+            final class ProgressPrinter: @unchecked Sendable {
+                private let lock = NSLock()
+                private var lastPhase = ""
+                private var lastPercent = -10
+
+                func report(phase: String, fraction: Double) {
+                    let percent = Int(fraction * 100)
+                    let decile = (percent / 10) * 10
+                    lock.lock()
+                    defer { lock.unlock() }
+                    if phase != lastPhase {
+                        lastPhase = phase
+                        lastPercent = decile
+                        print("[\(phase)]")
+                    } else if phase == "Downloading mods" && decile >= lastPercent + 10 {
+                        lastPercent = decile
+                        print("[\(phase)] \(percent)%")
+                    }
+                }
+            }
+            let printer = ProgressPrinter()
             let report = try await manager.importPack(
                 from: archiveURL,
                 name: customName,
                 group: group,
                 memoryMB: memoryMB
             ) { phase, fraction in
-                let percent = Int(fraction * 100)
-                let decile = (percent / 10) * 10
-                if phase != lastPhase {
-                    lastPhase = phase
-                    lastPercent = decile
-                    print("[\(phase)]")
-                } else if phase == "Downloading mods" && decile >= lastPercent + 10 {
-                    lastPercent = decile
-                    print("[\(phase)] \(percent)%")
-                }
+                printer.report(phase: phase, fraction: fraction)
             }
 
             for f in report.failed {
