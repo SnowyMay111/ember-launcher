@@ -8,13 +8,13 @@
 
 English · [Русский](README.ru.md) · [Українська](README.uk.md)
 
-[![Latest release](https://img.shields.io/github/v/release/SnowyMay111/mc-launcher?style=for-the-badge&label=download&color=ee8a56)](https://github.com/SnowyMay111/mc-launcher/releases/latest)
+[![Latest release](https://img.shields.io/github/v/release/SnowyMay111/ember-launcher?style=for-the-badge&label=download&color=ee8a56)](https://github.com/SnowyMay111/ember-launcher/releases/latest)
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-black?style=for-the-badge&logo=apple)
 ![Apple Silicon](https://img.shields.io/badge/Apple%20Silicon-native-blue?style=for-the-badge)
 ![Swift 6](https://img.shields.io/badge/Swift-6%20%C2%B7%20SwiftUI-F05138?style=for-the-badge&logo=swift&logoColor=white)
 [![MIT](https://img.shields.io/badge/license-MIT-lightgrey?style=for-the-badge)](LICENSE)
 
-[Download](https://github.com/SnowyMay111/mc-launcher/releases/latest) · [What's new](#whats-new) · [Features](#features) · [Screenshots](#screenshots) · [How it works](#how-it-works) · [Install](#install) · [FAQ](#faq) · [Roadmap](#roadmap)
+[Download](https://github.com/SnowyMay111/ember-launcher/releases/latest) · [What's new](#whats-new) · [Features](#features) · [Screenshots](#screenshots) · [How it works](#how-it-works) · [Install](#install) · [FAQ](#faq) · [Roadmap](#roadmap)
 
 <img src="docs/screenshots/play.png" alt="Ember: Play screen with the hero card, version picker and Play button" width="860">
 
@@ -88,7 +88,7 @@ All game logic lives in `LauncherCore`, a Swift package that uses only Foundatio
 
 You need a Mac with an Apple chip (M1 or newer) and macOS 14 or newer. You do **not** need to install Minecraft or Java: Ember downloads what the game needs.
 
-1. Download **`Ember-mac-arm64.zip`** from the [latest release](https://github.com/SnowyMay111/mc-launcher/releases/latest) and unzip it.
+1. Download **`Ember-mac-arm64.zip`** from the [latest release](https://github.com/SnowyMay111/ember-launcher/releases/latest) and unzip it.
 2. Drag **`Ember.app`** into your **Applications** folder.
 3. First launch only: the app is not notarized by Apple yet, so macOS will refuse to open it. Open **Terminal**, paste this and press Enter:
 
@@ -170,8 +170,8 @@ Windows is on the roadmap. The core is portable; the SwiftUI interface is not, s
 Xcode is not required, only the Command Line Tools and Swift 6.
 
 ```bash
-git clone https://github.com/SnowyMay111/mc-launcher.git
-cd mc-launcher
+git clone https://github.com/SnowyMay111/ember-launcher.git
+cd ember-launcher
 scripts/build-app.sh          # builds build/Ember.app
 scripts/package-app.sh        # release build + dist/Ember-mac-arm64.zip
 ```
@@ -191,7 +191,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) if you want to send a change.
 - [ ] Apple notarization
 - [ ] Windows
 
-Found a bug or have an idea? [Open an issue](https://github.com/SnowyMay111/mc-launcher/issues/new/choose).
+Found a bug or have an idea? [Open an issue](https://github.com/SnowyMay111/ember-launcher/issues/new/choose).
 
 ## Disclaimer
 

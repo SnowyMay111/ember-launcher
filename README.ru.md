@@ -8,13 +8,13 @@
 
 [English](README.md) · Русский · [Українська](README.uk.md)
 
-[![Latest release](https://img.shields.io/github/v/release/SnowyMay111/mc-launcher?style=for-the-badge&label=download&color=ee8a56)](https://github.com/SnowyMay111/mc-launcher/releases/latest)
+[![Latest release](https://img.shields.io/github/v/release/SnowyMay111/ember-launcher?style=for-the-badge&label=download&color=ee8a56)](https://github.com/SnowyMay111/ember-launcher/releases/latest)
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-black?style=for-the-badge&logo=apple)
 ![Apple Silicon](https://img.shields.io/badge/Apple%20Silicon-native-blue?style=for-the-badge)
 ![Swift 6](https://img.shields.io/badge/Swift-6%20%C2%B7%20SwiftUI-F05138?style=for-the-badge&logo=swift&logoColor=white)
 [![MIT](https://img.shields.io/badge/license-MIT-lightgrey?style=for-the-badge)](LICENSE)
 
-[Скачать](https://github.com/SnowyMay111/mc-launcher/releases/latest) · [Что нового](#whats-new) · [Возможности](#features) · [Скриншоты](#screenshots) · [Как устроен](#how-it-works) · [Установка](#install) · [Вопросы и ответы](#faq) · [Планы](#roadmap)
+[Скачать](https://github.com/SnowyMay111/ember-launcher/releases/latest) · [Что нового](#whats-new) · [Возможности](#features) · [Скриншоты](#screenshots) · [Как устроен](#how-it-works) · [Установка](#install) · [Вопросы и ответы](#faq) · [Планы](#roadmap)
 
 <img src="docs/screenshots/play.png" alt="Ember: экран запуска с главной карточкой, выбором версии и кнопкой «Играть»" width="860">
 
@@ -88,7 +88,7 @@
 
 Нужен Mac с чипом Apple (M1 или новее) и macOS 14 или новее. Устанавливать Minecraft или Java **не нужно**: Ember сам скачает всё, что нужно игре.
 
-1. Скачайте **`Ember-mac-arm64.zip`** из [последнего релиза](https://github.com/SnowyMay111/mc-launcher/releases/latest) и распакуйте.
+1. Скачайте **`Ember-mac-arm64.zip`** из [последнего релиза](https://github.com/SnowyMay111/ember-launcher/releases/latest) и распакуйте.
 2. Перетащите **`Ember.app`** в папку **Программы**.
 3. Только при первом запуске: приложение ещё не нотаризовано Apple, поэтому macOS откажется его открыть. Откройте **Терминал**, вставьте команду и нажмите Enter:
 
@@ -170,8 +170,8 @@ Windows есть в планах. Ядро переносимо, а интерф
 Xcode не нужен, достаточно Command Line Tools и Swift 6.
 
 ```bash
-git clone https://github.com/SnowyMay111/mc-launcher.git
-cd mc-launcher
+git clone https://github.com/SnowyMay111/ember-launcher.git
+cd ember-launcher
 scripts/build-app.sh          # builds build/Ember.app
 scripts/package-app.sh        # release build + dist/Ember-mac-arm64.zip
 ```
@@ -191,7 +191,7 @@ scripts/package-app.sh        # release build + dist/Ember-mac-arm64.zip
 - [ ] Нотаризация Apple
 - [ ] Windows
 
-Нашли ошибку или есть идея? [Создайте issue](https://github.com/SnowyMay111/mc-launcher/issues/new/choose).
+Нашли ошибку или есть идея? [Создайте issue](https://github.com/SnowyMay111/ember-launcher/issues/new/choose).
 
 ## Отказ от ответственности
 

@@ -4,15 +4,15 @@ Thanks for wanting to help. Bug reports, ideas, translations and pull requests a
 
 ## Report a bug or suggest something
 
-Use [Issues](https://github.com/SnowyMay111/mc-launcher/issues/new/choose); the forms ask for what is needed. For a bug please include the Ember version (shown at the bottom of the Home screen), your macOS version, the Minecraft version and loader, and the game log or crash report if there is one.
+Use [Issues](https://github.com/SnowyMay111/ember-launcher/issues/new/choose); the forms ask for what is needed. For a bug please include the Ember version (shown at the bottom of the Home screen), your macOS version, the Minecraft version and loader, and the game log or crash report if there is one.
 
 ## Build and run
 
 You need a Mac with Apple Silicon, macOS 14 or newer, and the Command Line Tools with Swift 6. Xcode is not required.
 
 ```bash
-git clone https://github.com/SnowyMay111/mc-launcher.git
-cd mc-launcher
+git clone https://github.com/SnowyMay111/ember-launcher.git
+cd ember-launcher
 swift build                   # quick compile check
 scripts/build-app.sh          # builds build/Ember.app
 open build/Ember.app

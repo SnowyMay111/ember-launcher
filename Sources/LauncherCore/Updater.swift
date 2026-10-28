@@ -114,7 +114,7 @@ private struct GitHubRelease: Decodable {
 
 /// Looks for a newer launcher on GitHub Releases. No token is sent.
 public enum UpdateChecker {
-    public static let repository = "SnowyMay111/mc-launcher"
+    public static let repository = "SnowyMay111/ember-launcher"
     public static let assetName = "Ember-mac-arm64.zip"
     /// The project was called Voxel before 0.2.1; releases keep a zip under the old name so older launchers can still update.
     static let assetNames = [assetName, "Voxel-mac-arm64.zip"]
