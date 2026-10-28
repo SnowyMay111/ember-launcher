@@ -429,5 +429,7 @@
   "PLAYTIME": "ЧАС ГРИ",
   "%@ · %d mods": "%@ · модів: %d",
   "Show on Home": "Показати на головній",
-  "Delete instance": "Видалити збірку"
+  "Delete instance": "Видалити збірку",
+  "All systems operational": "Усі системи працюють штатно",
+  "%@ RAM": "%@ ОЗП"
 }

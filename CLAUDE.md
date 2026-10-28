@@ -20,3 +20,6 @@
 - **ИИ:** свой ключ пользователя в настройках, Claude или Gemini на выбор. Ключ хранится в Keychain, в код и логи не попадает.
 - **Аккаунты:** офлайн-ник (UUID из `OfflinePlayer:<ник>`). Вход через Microsoft можно добавить позже.
 - **Этапы:** 1 ядро (скачать и запустить) → 2 моды и совместимость → 3 ИИ-генератор → 4 оптимизация под Mac.
+
+## Gemini и бесплатные модели (с 2026-10-27)
+Кто что делает (Claude, Gemini, бесплатные Groq и OpenRouter) — в `../CLAUDE.md`, раздел «Бесплатные онлайн-модели». Скрипты: `/Users/may/Projects/tools/gemini-do.sh` и `/Users/may/Projects/tools/ask-free.sh`. Проверка для `gemini-do.sh --check`: `swift build` (проект на SwiftPM; `npm` здесь нет).

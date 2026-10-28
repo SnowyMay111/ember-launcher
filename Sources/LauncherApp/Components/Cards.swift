@@ -71,7 +71,7 @@ struct PageHeader: View {
         HStack(alignment: .bottom, spacing: Theme.Space.l) {
             VStack(alignment: alignment, spacing: 0) {
                 Text(tr: eyebrow)
-                    .style(.init(size: 10, weight: .medium, mono: true, tracking: 0.2, color: Color(hex: 0x7b7771), uppercase: true))
+                    .style(.init(size: 10, weight: .medium, mono: true, tracking: 0.2, color: Color(hex: 0x7b7771)))
                     .padding(.bottom, 7)
                 Text(tr: title)
                     .style(.init(size: titleSize, weight: .bold, tracking: -0.055, color: Theme.text))
@@ -195,6 +195,7 @@ struct InstancePreview: View {
     }
 }
 
+/// Capsule play button with text and triangle icon, used on instance cards.
 private struct CardPlayButton: View {
     let instanceName: String
     let action: () -> Void
@@ -320,15 +321,19 @@ struct InstanceCard: View {
             .padding(.horizontal, 17)
             .padding(.top, 6)
 
+            let memoryRAM = String(format: L("%@ RAM"), instance.memoryText)
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 8) {
                     InstanceChip(systemImage: "puzzlepiece.extension", text: instance.modsText)
-                    InstanceChip(systemImage: "memorychip", text: instance.memoryText + " RAM")
+                    InstanceChip(systemImage: "memorychip", text: memoryRAM)
                     InstanceChip(systemImage: "clock", text: instance.playtimeText)
                 }
                 HStack(spacing: 8) {
                     InstanceChip(systemImage: "puzzlepiece.extension", text: instance.modsText)
-                    InstanceChip(systemImage: "memorychip", text: instance.memoryText + " RAM")
+                    InstanceChip(systemImage: "memorychip", text: memoryRAM)
+                }
+                HStack(spacing: 8) {
+                    InstanceChip(systemImage: "puzzlepiece.extension", text: instance.modsText)
                 }
             }
             .padding(.horizontal, 17)
@@ -406,7 +411,7 @@ struct StatCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.s) {
             Text(tr: label)
-                .style(.init(size: 10, weight: .medium, mono: true, tracking: 0.14, color: Theme.textMuted, uppercase: true))
+                .style(.init(size: 10, weight: .medium, mono: true, tracking: 0.14, color: Theme.textMuted))
             Text(verbatim: value)
                 .style(.statValue)
         }

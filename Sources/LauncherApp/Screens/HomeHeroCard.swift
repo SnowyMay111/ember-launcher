@@ -111,7 +111,7 @@ private extension HomeHeroCard {
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(title.components(separatedBy: "\n").enumerated()), id: \.offset) { _, line in
                     Text(verbatim: line)
-                        .font(Theme.font(size: titleSize, weight: .heavy, mono: false))
+                        .font(Theme.font(size: titleSize, weight: .semibold, mono: false))
                         .tracking(-0.03 * titleSize)
                         .lineLimit(1)
                         .minimumScaleFactor(0.6)

@@ -59,8 +59,7 @@ struct EmberHealthCard: View {
                             weight: .medium,
                             mono: true,
                             tracking: 0.13,
-                            color: Color(red: 142/255, green: 105/255, blue: 126/255),
-                            uppercase: true
+                            color: Color(red: 142/255, green: 105/255, blue: 126/255)
                         )
                     )
                 Text(tr: hasWarning ? "Memory is above the recommended range." : "Everything feels good.")
@@ -128,7 +127,7 @@ struct SettingsGroup<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text(tr: title)
-                .style(.init(size: 11, weight: .medium, mono: true, tracking: 0.14, color: Theme.textMuted, uppercase: true))
+                .style(.init(size: 11, weight: .medium, mono: true, tracking: 0.14, color: Theme.textMuted))
                 .padding(.horizontal, 24)
                 .padding(.top, 16)
                 .padding(.bottom, 10)

@@ -158,9 +158,9 @@ private struct NewInstanceTile: View {
                     .style(.init(size: 13, color: Theme.textSecondary))
                     .multilineTextAlignment(.center)
             }
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(height: 340)
+        .frame(minHeight: 330, maxHeight: .infinity)
         .background(
             RoundedRectangle(cornerRadius: Theme.radiusCard, style: .continuous)
                 .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [7, 6]))

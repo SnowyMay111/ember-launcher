@@ -19,11 +19,10 @@ extension Theme {
         return 400
     }
 
+    /// Гарантирует читаемый минимальный кегль для интерфейса (не менее 12 pt), сохраняя размеры >= 12 без искажений.
     static func readableSize(_ size: CGFloat) -> CGFloat {
-        if size <= 8 { return 12 }
-        if size >= 17 { return size }
-        let interpolated = 12 + (size - 8) * (5.0 / 9.0)
-        return (interpolated * 2).rounded() / 2
+        if size < 12 { return 12 }
+        return size
     }
 
     static func font(size: CGFloat, weight: Font.Weight = .regular, mono: Bool = false) -> Font {

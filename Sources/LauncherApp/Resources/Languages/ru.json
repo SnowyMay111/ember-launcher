@@ -429,5 +429,7 @@
   "PLAYTIME": "ВРЕМЯ ИГРЫ",
   "%@ · %d mods": "%@ · модов: %d",
   "Show on Home": "Показать на главной",
-  "Delete instance": "Удалить сборку"
+  "Delete instance": "Удалить сборку",
+  "All systems operational": "Все системы работают штатно",
+  "%@ RAM": "%@ ОЗУ"
 }

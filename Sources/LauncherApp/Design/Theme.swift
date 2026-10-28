@@ -74,7 +74,6 @@ public enum Theme {
         public var mono: Bool
         public var tracking: CGFloat // in em
         public var color: Color
-        public var uppercase: Bool
         public var lineSpacing: CGFloat?
 
         public init(
@@ -83,7 +82,6 @@ public enum Theme {
             mono: Bool = false,
             tracking: CGFloat = -0.01,
             color: Color = Theme.text,
-            uppercase: Bool = false,
             lineSpacing: CGFloat? = nil
         ) {
             self.size = size
@@ -91,7 +89,6 @@ public enum Theme {
             self.mono = mono
             self.tracking = tracking
             self.color = color
-            self.uppercase = uppercase
             self.lineSpacing = lineSpacing
         }
 
@@ -132,13 +129,13 @@ public enum Theme {
             tracking: -0.01,
             color: Theme.muted
         )
+        /// Small category or section label rendered above headers.
         public static let eyebrow = TextStyle(
             size: 12,
             weight: .medium,
             mono: false,
             tracking: 0.01,
-            color: Theme.muted,
-            uppercase: true
+            color: Theme.muted
         )
         public static let body16 = TextStyle(
             size: 16,
@@ -153,7 +150,7 @@ extension Text {
     @ViewBuilder
     public func style(_ style: Theme.TextStyle) -> some View {
         let font = Theme.font(size: style.size, weight: style.weight, mono: style.mono)
-        let trackingPt = min(style.tracking, 0.02) * style.size
+        let trackingPt = style.tracking * style.size
 
         let styledText = self
             .font(font)
@@ -162,11 +159,9 @@ extension Text {
 
         if let lineSpacing = style.lineSpacing {
             styledText
-                .textCase(nil)
                 .lineSpacing(lineSpacing)
         } else {
             styledText
-                .textCase(nil)
         }
     }
 }
