@@ -447,5 +447,7 @@
   "PRESET STYLES": "ГОТОВЫЕ ОБРАЗЫ",
   "Get skin by player nickname (e.g. Notch, Steve, DanTDM)...": "Скин по нику игрока (например Notch, Steve, DanTDM)...",
   "Drag with mouse to rotate Boba 360° · Double-click to reset": "Вращайте мышью на 360° · Двойной клик для сброса",
-  "Drag with mouse to rotate 360° · Double-click to reset": "Вращайте мышью на 360° · Двойной клик для сброса"
+  "Drag with mouse to rotate 360° · Double-click to reset": "Вращайте мышью на 360° · Двойной клик для сброса",
+  "Equip skin": "Надеть скин",
+  "Model": "Модель"
 }

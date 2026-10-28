@@ -455,74 +455,96 @@ struct SkinsScreen: View {
             }
 
             if let skin = activeSkin {
-                VStack(alignment: .leading, spacing: Theme.Space.s) {
+                VStack(alignment: .leading, spacing: 12) {
                     Divider()
                         .background(Theme.border)
 
-                    HStack(spacing: Theme.Space.s) {
-                        if store.equippedID == skin.id {
-                            HStack(spacing: 7) {
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 11, weight: .bold))
-                                Text(tr: "Equipped")
-                                    .style(.init(size: 15, weight: .medium, color: Theme.ember))
-                            }
-                            .foregroundColor(Theme.ember)
-                            .padding(.horizontal, 22)
-                            .frame(height: 36)
-                            .background(Capsule().fill(Theme.ember.opacity(0.12)))
-                            .overlay(Capsule().strokeBorder(Theme.ember.opacity(0.35), lineWidth: 1))
-                            .fixedSize()
-                        } else {
-                            PrimaryPill(title: "Equip", height: 36, horizontalPadding: 22) {
-                                store.equip(id: skin.id)
-                            }
-                            .fixedSize()
-                        }
+                    // Model selector (Classic 4px / Slim 3px)
+                    HStack(alignment: .center) {
+                        Text(tr: "Model")
+                            .style(.init(size: 11, weight: .semibold, mono: true, color: Theme.textMuted))
 
-                        Spacer(minLength: Theme.Space.s)
+                        Spacer()
 
-                        HStack(spacing: 8) {
-                            VoxelToggle(
-                                label: "Slim arms",
-                                isOn: Binding(
-                                    get: { skin.slim },
-                                    set: { store.setSlim(id: skin.id, $0) }
-                                )
-                            )
-                            Text(tr: "Slim arms")
-                                .style(.init(size: 13, weight: .medium, color: Theme.textSecondary))
+                        HStack(spacing: 6) {
+                            FilterChip(title: "Classic (4px)", isActive: !skin.slim, compact: true) {
+                                store.setSlim(id: skin.id, false)
+                            }
+                            FilterChip(title: "Slim (3px)", isActive: skin.slim, compact: true) {
+                                store.setSlim(id: skin.id, true)
+                            }
                         }
                     }
 
+                    // Main Action: Equip (full width)
+                    if store.equippedID == skin.id {
+                        HStack(spacing: 8) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 13, weight: .bold))
+                            Text(tr: "Currently equipped")
+                                .font(Theme.font(size: 13, weight: .semibold))
+                        }
+                        .foregroundColor(Theme.ember)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 38)
+                        .background(Capsule().fill(Theme.ember.opacity(0.12)))
+                        .overlay(Capsule().strokeBorder(Theme.ember.opacity(0.35), lineWidth: 1))
+                    } else {
+                        Button {
+                            store.equip(id: skin.id)
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "tshirt.fill")
+                                    .font(.system(size: 13, weight: .semibold))
+                                Text(tr: "Equip skin")
+                                    .font(Theme.font(size: 13, weight: .semibold))
+                            }
+                            .foregroundColor(Theme.ink)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 38)
+                            .background(Capsule().fill(Theme.emberGradient))
+                            .overlay(Capsule().strokeBorder(Theme.ember, lineWidth: 1))
+                            .contentShape(Capsule())
+                        }
+                        .buttonStyle(PressDimStyle())
+                    }
+
+                    // Secondary Actions: Rename & Remove
                     if isRenaming {
-                        VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                        VStack(alignment: .leading, spacing: 8) {
                             VoxelInput(label: "Skin name", text: $renameText, width: width - 44, placeholder: "Skin name")
 
-                            HStack(spacing: Theme.Space.xs) {
-                                PrimaryPill(title: "Save", height: 36, horizontalPadding: 22) {
+                            HStack(spacing: 8) {
+                                Button {
                                     let trimmed = renameText.trimmingCharacters(in: .whitespacesAndNewlines)
                                     if !trimmed.isEmpty {
                                         store.rename(id: skin.id, to: trimmed)
                                     }
                                     isRenaming = false
+                                } label: {
+                                    Text(tr: "Save")
+                                        .font(Theme.font(size: 13, weight: .semibold))
+                                        .foregroundColor(Theme.ink)
+                                        .frame(maxWidth: .infinity)
+                                        .frame(height: 34)
+                                        .background(Capsule().fill(Theme.emberGradient))
+                                        .overlay(Capsule().strokeBorder(Theme.ember, lineWidth: 1))
                                 }
-                                .fixedSize()
+                                .buttonStyle(PressDimStyle())
 
-                                SecondaryPill(title: "Cancel", height: 36) {
+                                SecondaryPill(title: "Cancel", height: 34, fillsWidth: true) {
                                     isRenaming = false
                                 }
-                                .fixedSize()
                             }
                         }
                     } else {
-                        HStack(spacing: Theme.Space.s) {
-                            SecondaryPill(title: "Rename", height: 36, fillsWidth: true) {
+                        HStack(spacing: 8) {
+                            SecondaryPill(title: "Rename", height: 34, fillsWidth: true) {
                                 renameText = skin.name
                                 isRenaming = true
                             }
 
-                            SecondaryPill(title: "Remove", height: 36, fillsWidth: true) {
+                            SecondaryPill(title: "Remove", height: 34, fillsWidth: true) {
                                 showDeleteConfirm = true
                             }
                             .confirmationDialog(
