@@ -98,14 +98,14 @@ public enum Theme {
         public static let hero = TextStyle(
             size: 60,
             weight: .semibold,
-            tracking: -0.04,
+            tracking: -0.025,
             color: Theme.ink,
             lineSpacing: 60 * (1.08 - 1.0)
         )
         public static let pageTitle = TextStyle(
             size: 40,
             weight: .semibold,
-            tracking: -0.04,
+            tracking: -0.02,
             color: Theme.ink
         )
         public static let cardTitle = TextStyle(
@@ -133,10 +133,10 @@ public enum Theme {
             color: Theme.muted
         )
         public static let eyebrow = TextStyle(
-            size: 11,
-            weight: .regular,
-            mono: true,
-            tracking: 0.14,
+            size: 12,
+            weight: .medium,
+            mono: false,
+            tracking: 0.01,
             color: Theme.muted,
             uppercase: true
         )
@@ -153,7 +153,7 @@ extension Text {
     @ViewBuilder
     public func style(_ style: Theme.TextStyle) -> some View {
         let font = Theme.font(size: style.size, weight: style.weight, mono: style.mono)
-        let trackingPt = style.tracking * style.size
+        let trackingPt = min(style.tracking, 0.02) * style.size
 
         let styledText = self
             .font(font)
@@ -162,11 +162,11 @@ extension Text {
 
         if let lineSpacing = style.lineSpacing {
             styledText
-                .textCase(style.uppercase ? .uppercase : nil)
+                .textCase(nil)
                 .lineSpacing(lineSpacing)
         } else {
             styledText
-                .textCase(style.uppercase ? .uppercase : nil)
+                .textCase(nil)
         }
     }
 }

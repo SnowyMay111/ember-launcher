@@ -8,7 +8,9 @@ struct LibraryScreen: View {
     @Local private var pendingDelete: String? = nil
     @Local private var deleteError = ""
 
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 14), count: 2)
+    private func columns(for width: CGFloat) -> [GridItem] {
+        Array(repeating: GridItem(.flexible(), spacing: 14), count: width >= 1000 ? 3 : 2)
+    }
 
     var body: some View {
         let items = app.groupedInstances.flatMap(\.items)
@@ -23,15 +25,20 @@ struct LibraryScreen: View {
                         alignment: .leading,
                         actionTitle: "New instance"
                     ) { app.modal = .newInstance }
-                    .padding(.bottom, 34)
+                    .padding(.bottom, 26)
 
-                    HStack(spacing: 6) {
+                    WideSearchField(placeholder: "Search instances", text: $app.search, resultText: L("%d found", items.count))
+                        .padding(.bottom, 16)
+
+                    HStack(spacing: 8) {
                         ForEach(LoaderFilter.allCases) { filter in
-                            FilterChip(title: filter.rawValue, isActive: app.filter == filter, compact: true) { app.filter = filter }
+                            FilterChip(title: filter.rawValue, isActive: app.filter == filter, compact: false) { app.filter = filter }
                         }
-                        FilterChip(title: "All versions", isActive: false, compact: true) { app.modal = .allVersions }
+                        FilterChip(title: "All versions", isActive: false, compact: false) { app.modal = .allVersions }
                         Spacer(minLength: 16)
-                        SearchField(placeholder: "Search instances", text: $app.search, compact: true)
+                        Text(verbatim: L("%d instances", items.count) + " · " + LibraryInstance.duration(minutes: items.reduce(0) { $0 + $1.playtimeSeconds } / 60) + " · " + L("%d mods", items.reduce(0) { $0 + $1.modCount }))
+                            .style(.init(size: 13, color: Theme.textSecondary))
+                            .lineLimit(1)
                     }
                     .padding(.bottom, 20)
 
@@ -46,19 +53,29 @@ struct LibraryScreen: View {
                             .frame(maxWidth: .infinity)
                             .padding(.top, 60)
                     } else {
-                        LazyVGrid(columns: columns, spacing: 14) {
+                        LazyVGrid(columns: columns(for: width), spacing: 14) {
                             ForEach(items) { item in
-                                InstanceCard(instance: item, onOpen: { app.modal = .instanceDetails(item.name) }, onPlay: {
-                                    app.open(item)
-                                    player.play(item, settings: settings, app: app)
-                                }, onDelete: {
-                                    pendingDelete = item.name
-                                })
+                                InstanceCard(
+                                    instance: item,
+                                    onOpen: { app.modal = .instanceDetails(item.name) },
+                                    onPlay: {
+                                        app.open(item)
+                                        player.play(item, settings: settings, app: app)
+                                    },
+                                    onDelete: {
+                                        pendingDelete = item.name
+                                    },
+                                    onFolder: { app.openFolder(item.name) },
+                                    onSettings: { app.modal = .instanceSettings(item.name) }
+                                )
                                 .contextMenu {
                                     Button(L("Instance settings")) { app.modal = .instanceSettings(item.name) }
                                     Button(L("Open folder")) { app.openFolder(item.name) }
                                     Button(L("Delete…")) { pendingDelete = item.name }
                                 }
+                            }
+                            if app.search.isEmpty {
+                                NewInstanceTile { app.modal = .newInstance }
                             }
                         }
                     }
@@ -121,5 +138,40 @@ struct LibraryScreen: View {
         } message: {
             Text(deleteError)
         }
+    }
+}
+
+private struct NewInstanceTile: View {
+    let action: () -> Void
+
+    @Local private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 10) {
+                Image(systemName: "plus")
+                    .font(Theme.font(size: 24, weight: .medium))
+                    .foregroundColor(Theme.ember)
+                Text(tr: "New instance")
+                    .style(.init(size: 16, weight: .semibold, color: Theme.text))
+                Text(tr: "Vanilla, Fabric, Forge or NeoForge")
+                    .style(.init(size: 13, color: Theme.textSecondary))
+                    .multilineTextAlignment(.center)
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .frame(height: 340)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.radiusCard, style: .continuous)
+                .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [7, 6]))
+                .foregroundColor(isHovered ? Theme.ember.opacity(0.7) : Theme.lineStrong)
+        )
+        .contentShape(RoundedRectangle(cornerRadius: Theme.radiusCard, style: .continuous))
+        .buttonStyle(.plain)
+        .onHover { hovering in
+            isHovered = hovering
+        }
+        .animation(.easeInOut(duration: 0.2), value: isHovered)
+        .accessibilityLabel(L("New instance"))
     }
 }

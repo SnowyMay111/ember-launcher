@@ -48,7 +48,7 @@ struct HomeScreen: View {
     
     private var eyebrow: String {
         guard let item = currentItem else { return "" }
-        return "LAST PLAYED · " + item.lastPlayedAgo.uppercased()
+        return L("Last played") + " · " + item.lastPlayedAgo
     }
     
     private var instanceName: String {
@@ -80,9 +80,9 @@ struct HomeScreen: View {
     
     private var playTitle: String {
         switch player.state {
-        case .idle, .failed: "PLAY"
-        case .preparing: "PREPARING"
-        case .running: "PLAYING"
+        case .idle, .failed: L("Play")
+        case .preparing: L("Preparing")
+        case .running: L("Playing")
         }
     }
     
@@ -249,15 +249,13 @@ struct HomeScreen: View {
                     .fill(Color(red: 0x6f/255, green: 0x80/255, blue: 0x55/255))
                     .frame(width: 5, height: 5)
                     .shadow(color: Color(red: 0x6f/255, green: 0x80/255, blue: 0x55/255, opacity: 0.5), radius: 8)
-                Text(verbatim: "All systems operational")
-                    .font(Theme.font(size: 8, weight: .regular, mono: true))
-                    .tracking(0.06 * 8)
+                Text(verbatim: L("All systems operational"))
+                    .font(Theme.font(size: 12, weight: .regular))
                     .foregroundColor(Color(red: 0x55/255, green: 0x52/255, blue: 0x4d/255))
             }
             Spacer()
             Text(verbatim: "Ember Launcher · \(LauncherInfo.version)")
-                .font(Theme.font(size: 8, weight: .regular, mono: true))
-                .tracking(0.06 * 8)
+                .font(Theme.font(size: 12, weight: .regular))
                 .foregroundColor(Color(red: 0x55/255, green: 0x52/255, blue: 0x4d/255))
         }
     }

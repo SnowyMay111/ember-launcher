@@ -1,10 +1,10 @@
 import SwiftUI
 import CoreText
 
-/// Manrope (one variable file, weight axis 200-800) for text and DM Mono (400 / 500) for labels,
-/// the two families of the Ember prototype. Falls back to the system fonts if the files are not registered.
+/// Geist for text and Geist Mono for numbers and small labels.
+/// Falls back to the system fonts if the files are not registered.
 extension Theme {
-    private static let weightAxis = NSNumber(value: 0x77676874) // 'wght'
+
     private static let cacheLock = NSLock()
     private static var fontCache: [String: Font] = [:]
 
@@ -19,7 +19,15 @@ extension Theme {
         return 400
     }
 
+    static func readableSize(_ size: CGFloat) -> CGFloat {
+        if size <= 8 { return 12 }
+        if size >= 17 { return size }
+        let interpolated = 12 + (size - 8) * (5.0 / 9.0)
+        return (interpolated * 2).rounded() / 2
+    }
+
     static func font(size: CGFloat, weight: Font.Weight = .regular, mono: Bool = false) -> Font {
+        let size = readableSize(size)
         let css = cssWeight(weight)
         let key = "\(size)|\(css)|\(mono)"
         cacheLock.lock()
@@ -32,19 +40,22 @@ extension Theme {
 
     private static func makeFont(size: CGFloat, css: Int, mono: Bool) -> Font {
         if mono {
-            let name = css >= 500 ? "DMMono-Medium" : "DMMono-Regular"
+            let name = css >= 500 ? "GeistMono-Medium" : "GeistMono-Regular"
             let ct = CTFontCreateWithName(name as CFString, size, nil)
             if CTFontCopyPostScriptName(ct) as String == name { return Font(ct) }
             return .system(size: size, weight: css >= 500 ? .medium : .regular, design: .monospaced)
         }
-        var descriptor = CTFontDescriptorCreateWithAttributes([
-            kCTFontFamilyNameAttribute: "Manrope",
-            kCTFontSizeAttribute: size,
-        ] as CFDictionary)
-        descriptor = CTFontDescriptorCreateCopyWithVariation(descriptor, weightAxis, CGFloat(min(max(css, 200), 800)))
-        let ct = CTFontCreateWithFontDescriptor(descriptor, size, nil)
-        if CTFontCopyFamilyName(ct) as String == "Manrope" { return Font(ct) }
-        return .system(size: size, weight: Font.Weight(rawCSS: css), design: .rounded)
+        let name: String
+        if css < 450 {
+            name = "Geist-Regular"
+        } else if css < 550 {
+            name = "Geist-Medium"
+        } else {
+            name = "Geist-SemiBold"
+        }
+        let ct = CTFontCreateWithName(name as CFString, size, nil)
+        if CTFontCopyPostScriptName(ct) as String == name { return Font(ct) }
+        return .system(size: size, weight: Font.Weight(rawCSS: css), design: .default)
     }
 }
 

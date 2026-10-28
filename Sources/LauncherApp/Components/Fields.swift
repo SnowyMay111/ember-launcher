@@ -6,7 +6,7 @@ private let fieldFont = Font.custom("Geist-Regular", size: 14)
 struct SearchField: View {
     let placeholder: String
     @Binding var text: String
-    /// Toolbar look of the prototype's `.search-field`: 220×38, 10 pt text.
+    /// Toolbar look of the prototype's `.search-field`: 280×42, 13 pt text.
     var compact = false
     @FocusState private var focused: Bool
     @Local private var isHovered = false
@@ -16,17 +16,17 @@ struct SearchField: View {
         HStack(spacing: compact ? 8 : 10) {
             SearchIcon()
                 .stroke(focused ? Theme.ember : (compact ? Color(hex: 0x77716b) : Theme.textMuted), style: StrokeStyle(lineWidth: 1.6, lineCap: .round, lineJoin: .round))
-                .frame(width: compact ? 12 : 16, height: compact ? 12 : 16)
+                .frame(width: compact ? 15 : 16, height: compact ? 15 : 16)
                 .accessibilityHidden(true)
             TextField("", text: $text, prompt: Text(verbatim: L(placeholder)).foregroundColor(compact ? Color(hex: 0x56524e) : Theme.textMuted))
                 .textFieldStyle(.plain)
-                .font(compact ? Theme.font(size: 10, weight: .regular, mono: false) : fieldFont)
+                .font(compact ? Theme.font(size: 13, weight: .regular, mono: false) : fieldFont)
                 .foregroundColor(compact ? Color(hex: 0xddd7d0) : Theme.text)
                 .focused($focused)
                 .accessibilityLabel(L(placeholder))
         }
         .padding(.horizontal, compact ? 13 : 14)
-        .frame(width: compact ? 220 : 260, height: compact ? 38 : 40)
+        .frame(width: compact ? 280 : 260, height: compact ? 42 : 40)
         .background(
             RoundedRectangle(cornerRadius: radius, style: .continuous)
                 .fill(compact ? Color(hex: 0x10100f) : Theme.elevated)
@@ -41,6 +41,84 @@ struct SearchField: View {
         .contentShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
         .onHover { isHovered = $0 }
         .onTapGesture { focused = true }
+        .animation(.easeInOut(duration: 0.18), value: isHovered)
+        .animation(.easeInOut(duration: 0.18), value: focused)
+    }
+}
+
+/// Full-width search field for list screens.
+struct WideSearchField: View {
+    let placeholder: String
+    @Binding var text: String
+    let resultText: String?
+    @FocusState private var focused: Bool
+    @Local private var isHovered = false
+    @Local private var isClearHovered = false
+
+    init(placeholder: String, text: Binding<String>, resultText: String? = nil) {
+        self.placeholder = placeholder
+        self._text = text
+        self.resultText = resultText
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            SearchIcon()
+                .stroke(
+                    focused ? Theme.ember : Theme.textSecondary,
+                    style: StrokeStyle(lineWidth: 1.7, lineCap: .round, lineJoin: .round)
+                )
+                .frame(width: 18, height: 18)
+                .accessibilityHidden(true)
+            TextField(
+                "",
+                text: $text,
+                prompt: Text(verbatim: L(placeholder)).foregroundColor(Theme.textSecondary)
+            )
+                .textFieldStyle(.plain)
+                .font(Theme.font(size: 15))
+                .foregroundColor(Theme.text)
+                .focused($focused)
+                .accessibilityLabel(L(placeholder))
+            if !text.isEmpty {
+                if let resultText = resultText {
+                    Text(verbatim: resultText)
+                        .font(Theme.font(size: 13))
+                        .foregroundColor(Theme.textSecondary)
+                        .lineLimit(1)
+                }
+                Button {
+                    text = ""
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(Theme.font(size: 11, weight: .semibold))
+                        .foregroundColor(isClearHovered ? Theme.text : Theme.textSecondary)
+                        .frame(width: 24, height: 24)
+                        .background(Circle().fill(Color.white.opacity(0.08)))
+                }
+                .buttonStyle(.plain)
+                .onHover { isClearHovered = $0 }
+                .accessibilityLabel(L("Clear search"))
+            }
+        }
+        .padding(.horizontal, 16)
+        .frame(maxWidth: .infinity)
+        .frame(height: 48)
+        .background(
+            RoundedRectangle(cornerRadius: 13, style: .continuous)
+                .fill(Theme.elevated)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 13, style: .continuous)
+                .strokeBorder(
+                    focused ? Theme.ember.opacity(0.6) : (isHovered ? Theme.lineStrong : Theme.border),
+                    lineWidth: focused ? 1.5 : 1
+                )
+        )
+        .contentShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
+        .onHover { isHovered = $0 }
+        .onTapGesture { focused = true }
+        .onExitCommand { text = "" }
         .animation(.easeInOut(duration: 0.18), value: isHovered)
         .animation(.easeInOut(duration: 0.18), value: focused)
     }

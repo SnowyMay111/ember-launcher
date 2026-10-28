@@ -23,9 +23,8 @@ struct TopBar: View {
     var body: some View {
         HStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 7) {
-                Text(verbatim: L("Welcome back").uppercased())
-                    .font(Theme.font(size: 10, weight: .medium, mono: true))
-                    .tracking(2)
+                Text(verbatim: L("Welcome back"))
+                    .font(Theme.font(size: 12, weight: .medium))
                     .foregroundColor(Color(red: 0x7b/255, green: 0x77/255, blue: 0x71/255))
 
                 Text(pageTitle)

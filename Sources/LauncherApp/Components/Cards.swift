@@ -195,7 +195,6 @@ struct InstancePreview: View {
     }
 }
 
-/// Small round play button of an instance card (prototype `.instance-info button`).
 private struct CardPlayButton: View {
     let instanceName: String
     let action: () -> Void
@@ -204,14 +203,18 @@ private struct CardPlayButton: View {
 
     var body: some View {
         Button(action: action) {
-            PlayTriangle()
-                .fill(isHovered ? Color(hex: 0x1b110a) : Theme.ember)
-                .frame(width: 11, height: 11)
-                .frame(width: 35, height: 35)
-                .background(Circle().fill(isHovered ? Theme.ember : Color(hex: 0x171615)))
-                .overlay(Circle().strokeBorder(Color(hex: 0x3a3733), lineWidth: 1))
-                .frame(width: 40, height: 40)
-                .contentShape(Circle())
+            HStack(spacing: 8) {
+                PlayTriangle()
+                    .fill(Color(hex: 0x1b110a))
+                    .frame(width: 11, height: 11)
+                Text(tr: "Play")
+                    .style(.init(size: 14, weight: .semibold, color: Color(hex: 0x1b110a)))
+            }
+            .padding(.horizontal, 18)
+            .frame(height: 40)
+            .background(Capsule().fill(Theme.ember))
+            .overlay(Capsule().fill(Color.white.opacity(isHovered ? 0.14 : 0)))
+            .contentShape(Capsule())
         }
         .buttonStyle(PressDimStyle())
         .onHover { isHovered = $0 }
@@ -220,66 +223,143 @@ private struct CardPlayButton: View {
     }
 }
 
-/// Instance card (prototype `.instance-card`): artwork, name and version line, play button, last played / Manage / playtime.
+private struct InstanceChip: View {
+    let systemImage: String
+    let text: String
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: systemImage)
+                .font(Theme.font(size: 12))
+                .foregroundColor(Theme.textSecondary)
+            Text(verbatim: text)
+                .style(.init(size: 13, weight: .medium, color: Theme.textSecondary))
+                .lineLimit(1)
+        }
+        .fixedSize()
+        .padding(.horizontal, 10)
+        .frame(height: 30)
+        .background(
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .fill(Color(hex: 0x1a1918))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .strokeBorder(Color(hex: 0x262422), lineWidth: 1)
+        )
+    }
+}
+
+private struct CardIconButton: View {
+    let systemImage: String
+    let help: String
+    let action: () -> Void
+
+    @Local private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(Theme.font(size: 15))
+                .foregroundColor(isHovered ? Theme.text : Theme.textSecondary)
+                .frame(width: 34, height: 34)
+                .background(Circle().fill(Color.white.opacity(isHovered ? 0.07 : 0)))
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
+        .help(help)
+        .accessibilityLabel(help)
+    }
+}
+
+/// Instance card (prototype `.instance-card`): artwork, metadata, actions and last played information.
 struct InstanceCard: View {
     let instance: LibraryInstance
     var onOpen: () -> Void
     var onPlay: () -> Void = {}
     var onDelete: (() -> Void)? = nil
+    var onFolder: (() -> Void)? = nil
+    var onSettings: (() -> Void)? = nil
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Local private var isHovered = false
     @Local private var manageHovered = false
 
-    private var detail: String {
-        instance.versionLine + (instance.modCount > 0 ? " · \(instance.modCount) mods" : "")
-    }
-
-    private let metaColor = Color(hex: 0x5d5954)
-
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             InstancePreview(variant: instance.previewVariant)
-                .frame(height: 126)
+                .frame(height: 150)
+                .overlay(alignment: .topLeading) {
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(instance.loader == .vanilla ? Theme.textSecondary : Theme.ember)
+                            .frame(width: 7, height: 7)
+                        Text(tr: instance.loader.rawValue)
+                            .style(.init(size: 12, weight: .medium, color: Theme.text))
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Capsule().fill(Color.black.opacity(0.5)))
+                    .padding(10)
+                }
                 .padding(10)
 
             HStack(alignment: .center) {
-                VStack(alignment: .leading, spacing: 5) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text(verbatim: instance.name)
-                        .style(.init(size: 14, weight: .bold, color: Theme.text))
+                        .style(.init(size: 18, weight: .semibold, color: Theme.text))
                         .lineLimit(1)
-                    Text(verbatim: detail)
-                        .style(.init(size: 9, weight: .regular, color: Color(hex: 0x6f6a64)))
+                    Text(verbatim: instance.versionLine)
+                        .style(.init(size: 13, weight: .regular, color: Theme.textSecondary))
                         .lineLimit(1)
                 }
                 Spacer(minLength: 8)
                 CardPlayButton(instanceName: instance.name, action: onPlay)
-                    .padding(.trailing, -2.5)
             }
             .padding(.horizontal, 17)
-            .padding(.top, 4)
-            .padding(.bottom, 15)
+            .padding(.top, 6)
 
-            Color(hex: 0x201f1d).frame(height: 1)
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) {
+                    InstanceChip(systemImage: "puzzlepiece.extension", text: instance.modsText)
+                    InstanceChip(systemImage: "memorychip", text: instance.memoryText + " RAM")
+                    InstanceChip(systemImage: "clock", text: instance.playtimeText)
+                }
+                HStack(spacing: 8) {
+                    InstanceChip(systemImage: "puzzlepiece.extension", text: instance.modsText)
+                    InstanceChip(systemImage: "memorychip", text: instance.memoryText + " RAM")
+                }
+            }
+            .padding(.horizontal, 17)
+            .padding(.top, 14)
+
+            Color(hex: 0x201f1d)
+                .frame(height: 1)
+                .padding(.top, 16)
 
             HStack(spacing: 0) {
                 Text(verbatim: instance.lastPlayedAgo)
-                    .style(.init(size: 8, weight: .medium, mono: true, color: metaColor, uppercase: true))
+                    .style(.init(size: 13, weight: .regular, color: Theme.textSecondary))
                     .lineLimit(1)
                 Spacer(minLength: 8)
+                if let onFolder {
+                    CardIconButton(systemImage: "folder", help: L("Open folder"), action: onFolder)
+                }
+                if let onSettings {
+                    CardIconButton(systemImage: "slider.horizontal.3", help: L("Instance settings"), action: onSettings)
+                }
                 Button(action: onOpen) {
                     Text(tr: "Manage")
-                        .style(.init(size: 8, weight: .medium, mono: true, color: manageHovered ? Theme.ember : Color(hex: 0x776d67)))
+                        .style(.init(size: 14, weight: .medium, color: manageHovered ? Theme.ember : Theme.text))
                 }
                 .buttonStyle(.plain)
                 .onHover { manageHovered = $0 }
-                .padding(.trailing, 14)
-                Text(verbatim: instance.playtimeText)
-                    .style(.init(size: 8, weight: .medium, mono: true, color: Color(hex: 0x88827a)))
-                    .lineLimit(1)
+                .padding(.leading, 8)
             }
             .padding(.horizontal, 17)
-            .padding(.vertical, 12)
+            .padding(.vertical, 10)
+            .frame(minHeight: 48)
         }
         .background(Theme.surface)
         .clipShape(RoundedRectangle(cornerRadius: Theme.radiusCard, style: .continuous))
@@ -296,9 +376,9 @@ struct InstanceCard: View {
             if let onDelete {
                 Button(action: onDelete) {
                     Image(systemName: "trash")
-                        .font(Theme.font(size: 12))
+                        .font(Theme.font(size: 14))
                         .foregroundColor(Color(hex: 0xd8d2ca))
-                        .frame(width: 28, height: 28)
+                        .frame(width: 32, height: 32)
                         .background(Circle().fill(Color.black.opacity(0.45)))
                         .contentShape(Rectangle())
                 }

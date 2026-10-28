@@ -1,5 +1,12 @@
 {
   "Play": "Играть",
+  "Clear search": "Очистить поиск",
+  "Preparing": "Подготовка",
+  "Welcome back": "С возвращением",
+  "Instance": "Сборка",
+  "%d found": "Найдено: %d",
+  "%d instances": "Сборок: %d",
+  "Vanilla, Fabric, Forge or NeoForge": "Vanilla, Fabric, Forge или NeoForge",
   "Library": "Библиотека",
   "Mods": "Моды",
   "Skins": "Скины",

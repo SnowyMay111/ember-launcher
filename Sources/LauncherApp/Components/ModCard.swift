@@ -36,19 +36,19 @@ struct ModCard<Actions: View>: View {
                 .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous).strokeBorder(Color.white.opacity(0.08)))
             VStack(alignment: .leading, spacing: 4) {
                 Text(verbatim: category)
-                    .style(.init(size: 7, weight: .medium, mono: true, tracking: 0.12, color: Color(hex: 0x8b657f), uppercase: true))
+                    .style(.init(size: 12, weight: .medium, color: Color(hex: 0xa9809c)))
                 Text(verbatim: title)
-                    .style(.init(size: 14, weight: .bold))
+                    .style(.init(size: 16, weight: .semibold))
                     .lineLimit(1)
                 Text(verbatim: summary)
-                    .style(.init(size: 10, color: Color(hex: 0x77716a), lineSpacing: 5))
+                    .style(.init(size: 13, color: Color(hex: 0x8d877f), lineSpacing: 4))
                     .lineLimit(3)
                     .fixedSize(horizontal: false, vertical: true)
                 Text(verbatim: footnote)
-                    .style(.init(size: 8, color: Color(hex: 0x504d49)))
+                    .style(.init(size: 12, color: Color(hex: 0x7a756e)))
                 if let note = note {
                     Text(verbatim: note.text)
-                        .style(.init(size: 8,
+                        .style(.init(size: 12,
                                      color: note.isWarning ? Theme.danger.opacity(0.9) : Color(hex: 0x8f9d72)))
                 }
             }
@@ -56,10 +56,10 @@ struct ModCard<Actions: View>: View {
             VStack(alignment: .center, spacing: 7) {
                 actions()
             }
-            .frame(width: 76)
+            .frame(width: 100)
         }
         .padding(22)
-        .frame(maxWidth: .infinity, minHeight: 154, maxHeight: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity, minHeight: 170, maxHeight: .infinity, alignment: .topLeading)
         .background(Color(hex: 0x111110))
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
@@ -131,7 +131,7 @@ struct ModActionButton: View {
         switch kind {
         case .normal: return Color(hex: 0xc0b8b0)
         case .installed: return Color(hex: 0x8f9d72)
-        case .text: return Color(hex: 0x6e6862)
+        case .text: return Color(hex: 0x9a948c)
         }
     }
 
@@ -163,10 +163,10 @@ struct ModActionButton: View {
             if !isDisabled { action() }
         }) {
             Text(tr: title)
-                .style(.init(size: 9, color: isDisabled ? baseColor.opacity(0.5) : (isHovered ? hoverColor : baseColor)))
+                .style(.init(size: 13, weight: .medium, color: isDisabled ? baseColor.opacity(0.5) : (isHovered ? hoverColor : baseColor)))
                 .frame(maxWidth: .infinity)
                 .padding(.horizontal, 11)
-                .padding(.vertical, 8)
+                .padding(.vertical, 10)
         }
         .buttonStyle(.plain)
         .background(backgroundColor)

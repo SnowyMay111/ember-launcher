@@ -1,5 +1,12 @@
 {
   "Play": "Грати",
+  "Clear search": "Очистити пошук",
+  "Preparing": "Підготовка",
+  "Welcome back": "З поверненням",
+  "Instance": "Збірка",
+  "%d found": "Знайдено: %d",
+  "%d instances": "Збірок: %d",
+  "Vanilla, Fabric, Forge or NeoForge": "Vanilla, Fabric, Forge або NeoForge",
   "Library": "Бібліотека",
   "Mods": "Моди",
   "Skins": "Скіни",

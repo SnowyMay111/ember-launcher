@@ -113,9 +113,8 @@ struct HomeLaunchPanel<MenuContent: View>: View {
                         .frame(width: 36, height: 36)
                     }
                     VStack(alignment: .leading, spacing: 5) {
-                        Text(verbatim: "VERSION")
-                            .font(Theme.font(size: 8, weight: .medium, mono: true))
-                            .tracking(0.13 * 8)
+                        Text(verbatim: L("Version"))
+                            .font(Theme.font(size: 12, weight: .medium))
                             .foregroundColor(homeHex(0x6f6b65))
                         Text(verbatim: versionName)
                             .font(Theme.font(size: 12, weight: .semibold))
@@ -162,12 +161,10 @@ struct HomeLaunchPanel<MenuContent: View>: View {
                 .frame(width: 34, height: 34)
                 VStack(alignment: .leading, spacing: 4) {
                     Text(verbatim: playTitle)
-                        .font(Theme.font(size: 12, weight: .bold, mono: true))
-                        .tracking(0.12 * 12)
+                        .font(Theme.font(size: 15, weight: .semibold))
                         .foregroundColor(ink)
                     Text(verbatim: playSubtitle)
-                        .font(Theme.font(size: 8, weight: .medium, mono: true))
-                        .tracking(0.04 * 8)
+                        .font(Theme.font(size: 12, weight: .medium))
                         .foregroundColor(homeHex(0x23150c, opacity: 0.58))
                         .lineLimit(1)
                 }

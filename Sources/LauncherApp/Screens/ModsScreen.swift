@@ -285,7 +285,7 @@ struct ModsScreen: View {
         return ModCard(
             iconURL: record.iconURL,
             paletteIndex: Self.paletteIndex(record.projectId),
-            category: L(record.kind == .shader ? "Shader" : "Resource pack").uppercased(),
+            category: L(record.kind == .shader ? "Shader" : "Resource pack"),
             title: record.title,
             summary: record.fileName,
             footnote: record.versionNumber,
@@ -316,7 +316,7 @@ struct ModsScreen: View {
         return ModCard(
             iconURL: mod.record?.iconURL,
             paletteIndex: Self.paletteIndex(mod.record?.projectId ?? mod.fileName),
-            category: category.uppercased(),
+            category: category,
             title: mod.displayTitle,
             summary: summary,
             footnote: version == mod.displayTitle ? "" : version,
@@ -437,9 +437,9 @@ struct ModsScreen: View {
         let isBusy = mods.busy.contains(hit.projectId)
         let category: String
         if let first = hit.categories.first(where: { !Self.loaderSlugs.contains($0) }) {
-            category = Self.prettifyCategory(first).uppercased()
+            category = Self.prettifyCategory(first)
         } else {
-            category = Self.title(of: kind).uppercased()
+            category = Self.title(of: kind)
         }
         return ModCard(
             iconURL: hit.iconURL,

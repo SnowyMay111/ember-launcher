@@ -103,8 +103,7 @@ private extension HomeHeroCard {
                     .frame(width: 5, height: 5)
                     .shadow(color: Theme.ember, radius: 5)
                 Text(verbatim: eyebrow)
-                    .font(Theme.font(size: 9, weight: .medium, mono: true))
-                    .tracking(0.14 * 9)
+                    .font(Theme.font(size: 12, weight: .medium))
                     .foregroundColor(Color(red: 0x93/255, green: 0x8d/255, blue: 0x84/255))
             }
             .padding(.bottom, 24)
@@ -113,7 +112,7 @@ private extension HomeHeroCard {
                 ForEach(Array(title.components(separatedBy: "\n").enumerated()), id: \.offset) { _, line in
                     Text(verbatim: line)
                         .font(Theme.font(size: titleSize, weight: .heavy, mono: false))
-                        .tracking(-0.06 * titleSize)
+                        .tracking(-0.03 * titleSize)
                         .lineLimit(1)
                         .minimumScaleFactor(0.6)
                         .fixedSize(horizontal: false, vertical: true)
@@ -129,9 +128,9 @@ private extension HomeHeroCard {
                 .padding(.bottom, 40)
 
             HStack(alignment: .top, spacing: statGap) {
-                statRow(label: "INSTANCE", value: instance)
-                statRow(label: "LOADER", value: loader)
-                statRow(label: "PLAYTIME", value: playtime)
+                statRow(label: L("Instance"), value: instance)
+                statRow(label: L("Loader"), value: loader)
+                statRow(label: L("Playtime"), value: playtime)
             }
         }
         .padding(padding)
@@ -140,8 +139,7 @@ private extension HomeHeroCard {
     func statRow(label: String, value: String) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(verbatim: label)
-                .font(Theme.font(size: 8, weight: .medium, mono: true))
-                .tracking(0.17 * 8)
+                .font(Theme.font(size: 12, weight: .medium))
                 .foregroundColor(Color(red: 0x65/255, green: 0x61/255, blue: 0x5c/255))
             Text(verbatim: value)
                 .font(Theme.font(size: 12, weight: .semibold, mono: false))
