@@ -29,7 +29,7 @@ public struct Skin3DView: NSViewRepresentable {
         let scene = SCNScene()
         scnView.scene = scene
 
-        // Camera setup: slightly elevated front view, zoomed in to fill stage beautifully
+        // Camera setup: elevated front view, zoomed to comfortably display full character and ground shadow
         let cameraNode = SCNNode()
         let camera = SCNCamera()
         camera.usesOrthographicProjection = false
@@ -37,7 +37,7 @@ public struct Skin3DView: NSViewRepresentable {
         camera.zNear = 0.5
         camera.zFar = 50.0
         cameraNode.camera = camera
-        cameraNode.position = SCNVector3(x: 0, y: 0.1, z: 3.8)
+        cameraNode.position = SCNVector3(x: 0, y: 0.0, z: 4.35)
         scene.rootNode.addChildNode(cameraNode)
 
         // Lighting: Soft ambient + directional key light for Minecraft blocky shading
@@ -56,17 +56,17 @@ public struct Skin3DView: NSViewRepresentable {
         dirNode.eulerAngles = SCNVector3(x: -0.45, y: 0.45, z: 0)
         scene.rootNode.addChildNode(dirNode)
 
-        // Soft floor shadow under Boba's feet
-        let shadowPlane = SCNPlane(width: 1.6, height: 1.0)
-        shadowPlane.cornerRadius = 0.5
+        // Soft floor shadow under Boba's feet (scaled for scale = 0.07)
+        let shadowPlane = SCNPlane(width: 1.4, height: 0.9)
+        shadowPlane.cornerRadius = 0.45
         let shadowMat = SCNMaterial()
-        shadowMat.diffuse.contents = NSColor.black.withAlphaComponent(0.40)
+        shadowMat.diffuse.contents = NSColor.black.withAlphaComponent(0.35)
         shadowMat.isDoubleSided = true
         shadowMat.blendMode = .alpha
         shadowPlane.materials = [shadowMat]
         let shadowNode = SCNNode(geometry: shadowPlane)
         shadowNode.eulerAngles = SCNVector3(x: -.pi / 2, y: 0, z: 0)
-        shadowNode.position = SCNVector3(0, -1.34, 0)
+        shadowNode.position = SCNVector3(0, -1.13, 0)
         scene.rootNode.addChildNode(shadowNode)
 
         let charNode = buildCharacterNode(image: image, isSlim: isSlim)
@@ -107,11 +107,13 @@ public struct Skin3DView: NSViewRepresentable {
     private func buildCharacterNode(image: CGImage?, isSlim: Bool) -> SCNNode {
         let root = SCNNode()
         root.name = "characterRoot"
-        let fallbackImage = image ?? Self.loadPresetResource(named: "ember") ?? Self.generateDefaultSkin()
+        let rawImage = image ?? Self.loadPresetResource(named: "ember") ?? Self.generateDefaultSkin()
+        let fallbackImage = Self.sanitizeSkinImage(rawImage)
 
-        // 32-pixel tall character * 0.08 scale = ~2.56 units tall
-        let scale: CGFloat = 0.08
-        let armW: CGFloat = isSlim ? 3.0 : 4.0
+        // 32-pixel tall character * 0.07 scale = ~2.24 units tall (comfortably fits frame with margins)
+        let scale: CGFloat = 0.07
+        let effectiveSlim = isSlim || Self.detectIsSlim(image: fallbackImage)
+        let armW: CGFloat = effectiveSlim ? 3.0 : 4.0
         let is64x32 = (fallbackImage.height == 32)
 
         func makeBox(
@@ -119,7 +121,21 @@ public struct Skin3DView: NSViewRepresentable {
             pos: SCNVector3,
             faces: [CGRect],
             isOverlay: Bool = false
-        ) -> SCNNode {
+        ) -> SCNNode? {
+            // If it's an overlay part, only generate if it has visible opaque pixels
+            if isOverlay {
+                var hasAnyVisible = false
+                for rect in faces {
+                    if Self.hasOpaquePixels(in: rect, from: fallbackImage) {
+                        hasAnyVisible = true
+                        break
+                    }
+                }
+                if !hasAnyVisible {
+                    return nil
+                }
+            }
+
             let box = SCNBox(width: w * scale, height: h * scale, length: d * scale, chamferRadius: 0)
             box.materials = faces.map { rect in
                 makeMaterial(crop: rect, in: fallbackImage, isOverlay: isOverlay)
@@ -139,8 +155,9 @@ public struct Skin3DView: NSViewRepresentable {
             CGRect(x: 8, y: 0, width: 8, height: 8),    // 4: Top
             CGRect(x: 16, y: 0, width: 8, height: 8)    // 5: Bottom
         ]
-        let headNode = makeBox(w: 8, h: 8, d: 8, pos: SCNVector3(0, 12, 0), faces: headFaces)
-        root.addChildNode(headNode)
+        if let headNode = makeBox(w: 8, h: 8, d: 8, pos: SCNVector3(0, 12, 0), faces: headFaces) {
+            root.addChildNode(headNode)
+        }
 
         let hatFaces = [
             CGRect(x: 40, y: 8, width: 8, height: 8),
@@ -150,8 +167,9 @@ public struct Skin3DView: NSViewRepresentable {
             CGRect(x: 40, y: 0, width: 8, height: 8),
             CGRect(x: 48, y: 0, width: 8, height: 8)
         ]
-        let hatNode = makeBox(w: 8.7, h: 8.7, d: 8.7, pos: SCNVector3(0, 12, 0), faces: hatFaces, isOverlay: true)
-        root.addChildNode(hatNode)
+        if let hatNode = makeBox(w: 8.7, h: 8.7, d: 8.7, pos: SCNVector3(0, 12, 0), faces: hatFaces, isOverlay: true) {
+            root.addChildNode(hatNode)
+        }
 
         // --- 2. TORSO (8x12x4) at y = 2 + JACKET overlay (8.6x12.6x4.6) ---
         let torsoFaces = [
@@ -162,8 +180,9 @@ public struct Skin3DView: NSViewRepresentable {
             CGRect(x: 20, y: 16, width: 8, height: 4),  // Top
             CGRect(x: 28, y: 16, width: 8, height: 4)   // Bottom
         ]
-        let torsoNode = makeBox(w: 8, h: 12, d: 4, pos: SCNVector3(0, 2, 0), faces: torsoFaces)
-        root.addChildNode(torsoNode)
+        if let torsoNode = makeBox(w: 8, h: 12, d: 4, pos: SCNVector3(0, 2, 0), faces: torsoFaces) {
+            root.addChildNode(torsoNode)
+        }
 
         if !is64x32 {
             let jacketFaces = [
@@ -174,22 +193,24 @@ public struct Skin3DView: NSViewRepresentable {
                 CGRect(x: 20, y: 32, width: 8, height: 4),
                 CGRect(x: 28, y: 32, width: 8, height: 4)
             ]
-            let jacketNode = makeBox(w: 8.6, h: 12.6, d: 4.6, pos: SCNVector3(0, 2, 0), faces: jacketFaces, isOverlay: true)
-            root.addChildNode(jacketNode)
+            if let jacketNode = makeBox(w: 8.6, h: 12.6, d: 4.6, pos: SCNVector3(0, 2, 0), faces: jacketFaces, isOverlay: true) {
+                root.addChildNode(jacketNode)
+            }
         }
 
         // --- 3. RIGHT ARM (armW x 12 x 4) at x = -(4 + armW/2), y = 2 ---
         let rightArmX: CGFloat = -(4.0 + armW / 2.0)
         let rightArmFaces = [
-            CGRect(x: 44, y: 20, width: armW, height: 12),         // Front
-            CGRect(x: 44 + armW, y: 20, width: 4, height: 12),     // Right (+X, facing torso)
-            CGRect(x: 44 + armW + 4, y: 20, width: armW, height: 12), // Back
-            CGRect(x: 40, y: 20, width: 4, height: 12),             // Left (-X, outside)
-            CGRect(x: 44, y: 16, width: armW, height: 4),          // Top
-            CGRect(x: 44 + armW, y: 16, width: armW, height: 4)    // Bottom
+            CGRect(x: 44, y: 20, width: armW, height: 12),              // 0: Front (+Z)
+            CGRect(x: 44 + armW, y: 20, width: 4, height: 12),          // 1: Right (+X, facing torso)
+            CGRect(x: 44 + armW + 4, y: 20, width: armW, height: 12),   // 2: Back (-Z)
+            CGRect(x: 40, y: 20, width: 4, height: 12),                 // 3: Left (-X, outside)
+            CGRect(x: 44, y: 16, width: armW, height: 4),               // 4: Top
+            CGRect(x: 44 + armW, y: 16, width: armW, height: 4)         // 5: Bottom
         ]
-        let rightArmNode = makeBox(w: armW, h: 12, d: 4, pos: SCNVector3(rightArmX, 2, 0), faces: rightArmFaces)
-        root.addChildNode(rightArmNode)
+        if let rightArmNode = makeBox(w: armW, h: 12, d: 4, pos: SCNVector3(rightArmX, 2, 0), faces: rightArmFaces) {
+            root.addChildNode(rightArmNode)
+        }
 
         if !is64x32 {
             let rightSleeveFaces = [
@@ -200,8 +221,9 @@ public struct Skin3DView: NSViewRepresentable {
                 CGRect(x: 44, y: 32, width: armW, height: 4),
                 CGRect(x: 44 + armW, y: 32, width: armW, height: 4)
             ]
-            let sleeveNode = makeBox(w: armW + 0.5, h: 12.5, d: 4.5, pos: SCNVector3(rightArmX, 2, 0), faces: rightSleeveFaces, isOverlay: true)
-            root.addChildNode(sleeveNode)
+            if let sleeveNode = makeBox(w: armW + 0.5, h: 12.5, d: 4.5, pos: SCNVector3(rightArmX, 2, 0), faces: rightSleeveFaces, isOverlay: true) {
+                root.addChildNode(sleeveNode)
+            }
         }
 
         // --- 4. LEFT ARM (armW x 12 x 4) at x = +(4 + armW/2), y = 2 ---
@@ -211,28 +233,30 @@ public struct Skin3DView: NSViewRepresentable {
             leftArmFaces = rightArmFaces
         } else {
             leftArmFaces = [
-                CGRect(x: 36, y: 52, width: armW, height: 12),         // Front
-                CGRect(x: 32, y: 52, width: 4, height: 12),            // Right (+X, outside)
-                CGRect(x: 36 + armW + 4, y: 52, width: armW, height: 12), // Back
-                CGRect(x: 36 + armW, y: 52, width: 4, height: 12),     // Left (-X, facing torso)
-                CGRect(x: 36, y: 48, width: armW, height: 4),          // Top
-                CGRect(x: 36 + armW, y: 48, width: armW, height: 4)    // Bottom
+                CGRect(x: 36, y: 52, width: armW, height: 12),              // 0: Front (+Z)
+                CGRect(x: 32, y: 52, width: 4, height: 12),                 // 1: Right (+X, outside)
+                CGRect(x: 36 + armW + 4, y: 52, width: armW, height: 12),   // 2: Back (-Z)
+                CGRect(x: 36 + armW, y: 52, width: 4, height: 12),          // 3: Left (-X, facing torso)
+                CGRect(x: 36, y: 48, width: armW, height: 4),               // 4: Top
+                CGRect(x: 36 + armW, y: 48, width: armW, height: 4)         // 5: Bottom
             ]
         }
-        let leftArmNode = makeBox(w: armW, h: 12, d: 4, pos: SCNVector3(leftArmX, 2, 0), faces: leftArmFaces)
-        root.addChildNode(leftArmNode)
+        if let leftArmNode = makeBox(w: armW, h: 12, d: 4, pos: SCNVector3(leftArmX, 2, 0), faces: leftArmFaces) {
+            root.addChildNode(leftArmNode)
+        }
 
         if !is64x32 {
             let leftSleeveFaces = [
-                CGRect(x: 52, y: 52, width: armW, height: 12),
-                CGRect(x: 48, y: 52, width: 4, height: 12),
-                CGRect(x: 52 + armW + 4, y: 52, width: armW, height: 12),
-                CGRect(x: 52 + armW, y: 52, width: 4, height: 12),
-                CGRect(x: 52, y: 48, width: armW, height: 4),
-                CGRect(x: 52 + armW, y: 48, width: armW, height: 4)
+                CGRect(x: 52, y: 52, width: armW, height: 12),              // 0: Front (+Z)
+                CGRect(x: 48, y: 52, width: 4, height: 12),                 // 1: Right (+X, outside)
+                CGRect(x: 52 + armW + 4, y: 52, width: armW, height: 12),   // 2: Back (-Z)
+                CGRect(x: 52 + armW, y: 52, width: 4, height: 12),          // 3: Left (-X, facing torso)
+                CGRect(x: 52, y: 48, width: armW, height: 4),               // 4: Top
+                CGRect(x: 52 + armW, y: 48, width: armW, height: 4)         // 5: Bottom
             ]
-            let leftSleeveNode = makeBox(w: armW + 0.5, h: 12.5, d: 4.5, pos: SCNVector3(leftArmX, 2, 0), faces: leftSleeveFaces, isOverlay: true)
-            root.addChildNode(leftSleeveNode)
+            if let sleeveNode = makeBox(w: armW + 0.5, h: 12.5, d: 4.5, pos: SCNVector3(leftArmX, 2, 0), faces: leftSleeveFaces, isOverlay: true) {
+                root.addChildNode(sleeveNode)
+            }
         }
 
         // --- 5. RIGHT LEG (4x12x4) at x = -2, y = -10 ---
@@ -244,8 +268,9 @@ public struct Skin3DView: NSViewRepresentable {
             CGRect(x: 4, y: 16, width: 4, height: 4),   // Top
             CGRect(x: 8, y: 16, width: 4, height: 4)    // Bottom
         ]
-        let rightLegNode = makeBox(w: 4, h: 12, d: 4, pos: SCNVector3(-2, -10, 0), faces: rightLegFaces)
-        root.addChildNode(rightLegNode)
+        if let rightLegNode = makeBox(w: 4, h: 12, d: 4, pos: SCNVector3(-2, -10, 0), faces: rightLegFaces) {
+            root.addChildNode(rightLegNode)
+        }
 
         if !is64x32 {
             let rightPantsFaces = [
@@ -256,8 +281,9 @@ public struct Skin3DView: NSViewRepresentable {
                 CGRect(x: 4, y: 32, width: 4, height: 4),
                 CGRect(x: 8, y: 32, width: 4, height: 4)
             ]
-            let rightPantsNode = makeBox(w: 4.5, h: 12.5, d: 4.5, pos: SCNVector3(-2, -10, 0), faces: rightPantsFaces, isOverlay: true)
-            root.addChildNode(rightPantsNode)
+            if let rightPantsNode = makeBox(w: 4.5, h: 12.5, d: 4.5, pos: SCNVector3(-2, -10, 0), faces: rightPantsFaces, isOverlay: true) {
+                root.addChildNode(rightPantsNode)
+            }
         }
 
         // --- 6. LEFT LEG (4x12x4) at x = +2, y = -10 ---
@@ -274,8 +300,9 @@ public struct Skin3DView: NSViewRepresentable {
                 CGRect(x: 24, y: 48, width: 4, height: 4)   // Bottom
             ]
         }
-        let leftLegNode = makeBox(w: 4, h: 12, d: 4, pos: SCNVector3(2, -10, 0), faces: leftLegFaces)
-        root.addChildNode(leftLegNode)
+        if let leftLegNode = makeBox(w: 4, h: 12, d: 4, pos: SCNVector3(2, -10, 0), faces: leftLegFaces) {
+            root.addChildNode(leftLegNode)
+        }
 
         if !is64x32 {
             let leftPantsFaces = [
@@ -286,8 +313,9 @@ public struct Skin3DView: NSViewRepresentable {
                 CGRect(x: 4, y: 48, width: 4, height: 4),
                 CGRect(x: 8, y: 48, width: 4, height: 4)
             ]
-            let leftPantsNode = makeBox(w: 4.5, h: 12.5, d: 4.5, pos: SCNVector3(2, -10, 0), faces: leftPantsFaces, isOverlay: true)
-            root.addChildNode(leftPantsNode)
+            if let leftPantsNode = makeBox(w: 4.5, h: 12.5, d: 4.5, pos: SCNVector3(2, -10, 0), faces: leftPantsFaces, isOverlay: true) {
+                root.addChildNode(leftPantsNode)
+            }
         }
 
         return root
@@ -308,12 +336,113 @@ public struct Skin3DView: NSViewRepresentable {
             mat.diffuse.contents = nsImage
             if isOverlay {
                 mat.blendMode = .alpha
-                mat.transparencyMode = .aOne
             }
         } else {
-            mat.diffuse.contents = NSColor(white: 0.2, alpha: isOverlay ? 0.0 : 1.0)
+            mat.diffuse.contents = NSColor.clear
         }
         return mat
+    }
+
+    /// Sanitizes the Minecraft skin texture to Java Edition standards:
+    /// Applies 1-bit binary alpha thresholding to the 2nd layer (overlay):
+    /// Any pixel with alpha < 128 is treated as completely transparent (alpha = 0), preventing
+    /// ghost translucent shells and dark border line artifacts. Base layer alpha is normalized to solid 255.
+    public static func sanitizeSkinImage(_ image: CGImage) -> CGImage {
+        let width = image.width
+        let height = image.height
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let bitmapInfo = CGImageAlphaInfo.premultipliedLast.rawValue
+        guard let ctx = CGContext(
+            data: nil,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: width * 4,
+            space: colorSpace,
+            bitmapInfo: bitmapInfo
+        ) else {
+            return image
+        }
+
+        ctx.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+        guard let data = ctx.data else { return image }
+        let ptr = data.assumingMemoryBound(to: UInt8.self)
+
+        for y in 0..<height {
+            for x in 0..<width {
+                let idx = (y * width + x) * 4
+                let a = ptr[idx + 3]
+                let isOverlay = (y < 16 && x >= 32) || (y >= 32)
+                if isOverlay {
+                    if a < 128 {
+                        ptr[idx] = 0
+                        ptr[idx + 1] = 0
+                        ptr[idx + 2] = 0
+                        ptr[idx + 3] = 0
+                    } else {
+                        ptr[idx + 3] = 255
+                    }
+                } else {
+                    if a > 0 { ptr[idx + 3] = 255 }
+                }
+            }
+        }
+        return ctx.makeImage() ?? image
+    }
+
+    /// Detects whether an overlay face contains any visible non-transparent pixels.
+    private static func hasOpaquePixels(in rect: CGRect, from image: CGImage) -> Bool {
+        guard let cropped = image.cropping(to: rect) else { return false }
+        let w = cropped.width
+        let h = cropped.height
+        guard w > 0 && h > 0 else { return false }
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let bitmapInfo = CGImageAlphaInfo.premultipliedLast.rawValue
+        var buffer = [UInt32](repeating: 0, count: w * h)
+        guard let ctx = CGContext(
+            data: &buffer,
+            width: w,
+            height: h,
+            bitsPerComponent: 8,
+            bytesPerRow: w * 4,
+            space: colorSpace,
+            bitmapInfo: bitmapInfo
+        ) else { return false }
+        ctx.draw(cropped, in: CGRect(x: 0, y: 0, width: w, height: h))
+        for px in buffer {
+            let a = (px >> 24) & 0xFF
+            if a > 10 { return true }
+        }
+        return false
+    }
+
+    /// Detects if a 64x64 skin uses the Slim (Alex 3px) arm model.
+    public static func detectIsSlim(image: CGImage) -> Bool {
+        guard image.width == 64 && image.height == 64 else { return false }
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let bitmapInfo = CGImageAlphaInfo.premultipliedLast.rawValue
+        var buffer = [UInt32](repeating: 0, count: 64 * 64)
+        guard let ctx = CGContext(
+            data: &buffer,
+            width: 64,
+            height: 64,
+            bitsPerComponent: 8,
+            bytesPerRow: 64 * 4,
+            space: colorSpace,
+            bitmapInfo: bitmapInfo
+        ) else { return false }
+        ctx.draw(image, in: CGRect(x: 0, y: 0, width: 64, height: 64))
+
+        // In a Slim skin, right arm columns 54 and 55 (y: 20..<32) are transparent
+        var opaqueExtra = 0
+        for y in 20..<32 {
+            for x in 54..<56 {
+                let px = buffer[y * 64 + x]
+                let a = (px >> 24) & 0xFF
+                if a > 128 { opaqueExtra += 1 }
+            }
+        }
+        return opaqueExtra == 0
     }
 
     /// Loads a preset PNG skin from the bundled resources or disk.

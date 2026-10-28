@@ -67,6 +67,13 @@ final class SkinStore: ObservableObject {
                 equippedID = first.id
                 UserDefaults.standard.set(first.id.uuidString, forKey: "equippedSkinID")
             }
+        } else {
+            // Auto-detect slim model for skins that have 3px arms
+            for i in 0..<skins.count {
+                if !skins[i].slim, let img = image(for: skins[i].id), Skin3DView.detectIsSlim(image: img) {
+                    skins[i].slim = true
+                }
+            }
         }
     }
 
@@ -116,7 +123,8 @@ final class SkinStore: ObservableObject {
 
             let baseName = url.deletingPathExtension().lastPathComponent
             let skinName = baseName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Skin" : baseName
-            let skin = SavedSkin(id: id, name: skinName, slim: false, addedAt: Date())
+            let isSlim = rep.cgImage.map { Skin3DView.detectIsSlim(image: $0) } ?? false
+            let skin = SavedSkin(id: id, name: skinName, slim: isSlim, addedAt: Date())
 
             if let cg = rep.cgImage {
                 imageCache[id] = cg
