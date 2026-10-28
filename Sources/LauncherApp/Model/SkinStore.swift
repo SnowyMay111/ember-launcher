@@ -55,6 +55,38 @@ final class SkinStore: ObservableObject {
            let uuid = UUID(uuidString: savedEquipped) {
             equippedID = uuid
         }
+
+        if skins.isEmpty {
+            if let emberData = loadPresetData(named: "ember") {
+                _ = importSkinData(emberData, name: "Ember", isSlim: false)
+            }
+            if let steveData = loadPresetData(named: "steve") {
+                _ = importSkinData(steveData, name: "Classic Steve", isSlim: false)
+            }
+            if let first = skins.first {
+                equippedID = first.id
+                UserDefaults.standard.set(first.id.uuidString, forKey: "equippedSkinID")
+            }
+        }
+    }
+
+    private func loadPresetData(named name: String) -> Data? {
+        if let url = Bundle.module.url(forResource: name, withExtension: "png", subdirectory: "Resources/Skins") ??
+                     Bundle.module.url(forResource: name, withExtension: "png") {
+            if let data = try? Data(contentsOf: url) {
+                return data
+            }
+        }
+        let fallbackPaths = [
+            "/Users/may/Projects/mc-launcher/Sources/LauncherApp/Resources/Skins/\(name).png",
+            "/tmp/\(name).png"
+        ]
+        for path in fallbackPaths {
+            if let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
+                return data
+            }
+        }
+        return nil
     }
 
     /// Imports a PNG skin from a file URL, validating its pixel dimensions (64x64 or 64x32).

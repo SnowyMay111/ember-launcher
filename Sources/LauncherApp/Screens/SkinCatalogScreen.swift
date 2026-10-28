@@ -33,56 +33,42 @@ struct SkinCatalogScreen: View {
                 name: "Ember",
                 category: "Signature",
                 isSlim: false,
-                imageProvider: { Self.makeSkin(tone: (0.74, 0.50, 0.38), shirt: (0.94, 0.45, 0.22), pants: (0.16, 0.15, 0.20), hair: (0.24, 0.14, 0.18)) }
-            ),
-            CatalogSkin(
-                id: "wanderer",
-                name: "Wanderer",
-                category: "Adventurer",
-                isSlim: false,
-                imageProvider: { Self.makeSkin(tone: (0.72, 0.48, 0.35), shirt: (0.45, 0.32, 0.24), pants: (0.22, 0.22, 0.24), hair: (0.18, 0.12, 0.08)) }
-            ),
-            CatalogSkin(
-                id: "nightfall",
-                name: "Nightfall",
-                category: "Cyberpunk",
-                isSlim: true,
-                imageProvider: { Self.makeSkin(tone: (0.78, 0.54, 0.42), shirt: (0.14, 0.14, 0.18), pants: (0.10, 0.10, 0.12), hair: (0.58, 0.22, 0.65)) }
+                imageProvider: { Skin3DView.loadPresetResource(named: "ember") ?? Self.fallbackSkin() }
             ),
             CatalogSkin(
                 id: "steve",
                 name: "Classic Steve",
                 category: "Original",
                 isSlim: false,
-                imageProvider: { Self.makeSkin(tone: (0.72, 0.48, 0.35), shirt: (0.00, 0.55, 0.55), pants: (0.26, 0.20, 0.60), hair: (0.27, 0.17, 0.11)) }
+                imageProvider: { Skin3DView.loadPresetResource(named: "steve") ?? Self.fallbackSkin() }
             ),
             CatalogSkin(
                 id: "alex",
                 name: "Classic Alex",
                 category: "Original",
                 isSlim: true,
-                imageProvider: { Self.makeSkin(tone: (0.85, 0.65, 0.50), shirt: (0.35, 0.48, 0.24), pants: (0.30, 0.22, 0.15), hair: (0.80, 0.42, 0.18)) }
+                imageProvider: { Skin3DView.loadPresetResource(named: "alex") ?? Self.fallbackSkin() }
             ),
             CatalogSkin(
                 id: "knight",
                 name: "Iron Knight",
                 category: "Medieval",
                 isSlim: false,
-                imageProvider: { Self.makeSkin(tone: (0.70, 0.48, 0.35), shirt: (0.70, 0.72, 0.75), pants: (0.45, 0.48, 0.52), hair: (0.20, 0.20, 0.22)) }
+                imageProvider: { Skin3DView.loadPresetResource(named: "knight") ?? Self.fallbackSkin() }
             ),
             CatalogSkin(
-                id: "mage",
-                name: "Arcane Mage",
-                category: "Fantasy",
+                id: "nightfall",
+                name: "Nightfall",
+                category: "Cyberpunk",
                 isSlim: true,
-                imageProvider: { Self.makeSkin(tone: (0.80, 0.62, 0.48), shirt: (0.38, 0.18, 0.55), pants: (0.18, 0.12, 0.28), hair: (0.85, 0.85, 0.90)) }
+                imageProvider: { Skin3DView.loadPresetResource(named: "nightfall") ?? Self.fallbackSkin() }
             ),
             CatalogSkin(
                 id: "astronaut",
                 name: "Cosmonaut",
                 category: "Sci-Fi",
                 isSlim: false,
-                imageProvider: { Self.makeSkin(tone: (0.75, 0.55, 0.40), shirt: (0.90, 0.90, 0.92), pants: (0.85, 0.85, 0.88), hair: (0.15, 0.15, 0.18)) }
+                imageProvider: { Skin3DView.loadPresetResource(named: "astronaut") ?? Self.fallbackSkin() }
             )
         ]
     }
@@ -214,13 +200,13 @@ struct SkinCatalogScreen: View {
                     let maxContentWidth: CGFloat = min(1120, geo.size.width)
                     let columns = maxContentWidth - 18
                     HStack(alignment: .top, spacing: 18) {
-                        catalog3DStage(width: columns * 0.58, height: 500)
-                        catalogListPane(width: columns * 0.42, height: 500)
+                        catalog3DStage(width: columns * 0.58, height: 520)
+                        catalogListPane(width: columns * 0.42, height: 520)
                     }
                     .frame(width: maxContentWidth, alignment: .leading)
                     .frame(maxWidth: .infinity, alignment: .center)
                 }
-                .frame(height: 500)
+                .frame(height: 520)
             }
             .padding(.top, 24)
             .padding(.horizontal, Theme.Space.xl)
@@ -231,13 +217,13 @@ struct SkinCatalogScreen: View {
     // MARK: - 3D Stage
 
     private func catalog3DStage(width: CGFloat, height: CGFloat) -> some View {
-        VStack(spacing: Theme.Space.m) {
+        VStack(spacing: 0) {
             HStack {
-                HStack(spacing: 8) {
-                    FilterChip(title: "Classic (4px)", isActive: !isSlimModel) {
+                HStack(spacing: 6) {
+                    FilterChip(title: "Classic (4px)", isActive: !isSlimModel, compact: true) {
                         isSlimModel = false
                     }
-                    FilterChip(title: "Slim (3px)", isActive: isSlimModel) {
+                    FilterChip(title: "Slim (3px)", isActive: isSlimModel, compact: true) {
                         isSlimModel = true
                     }
                 }
@@ -247,8 +233,8 @@ struct SkinCatalogScreen: View {
                 Button(action: addActiveToWardrobe) {
                     HStack(spacing: 6) {
                         Image(systemName: "plus.circle.fill")
-                        Text("Add to wardrobe")
-                            .font(Theme.font(size: 13, weight: .semibold))
+                        Text(tr: "Add to wardrobe")
+                            .font(Theme.font(size: 12, weight: .semibold))
                     }
                     .foregroundColor(.white)
                     .padding(.horizontal, 14)
@@ -258,22 +244,25 @@ struct SkinCatalogScreen: View {
                 }
                 .buttonStyle(.plain)
             }
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
+            .padding(.bottom, 8)
 
-            Spacer()
+            Spacer(minLength: 4)
 
             Skin3DView(image: activeImage, isSlim: isSlimModel, autoRotate: true)
-                .frame(width: 240, height: 320)
+                .frame(width: 250, height: 320)
 
-            Spacer()
+            Spacer(minLength: 4)
 
             VStack(spacing: 4) {
                 Text(verbatim: activeSkinName)
                     .style(.init(size: 15, weight: .semibold, color: Theme.text))
-                Text("Drag with mouse to rotate 360° · Double-click to reset")
+                Text(tr: "Drag with mouse to rotate 360° · Double-click to reset")
                     .style(.init(size: 11, weight: .regular, mono: true, color: Theme.textMuted))
             }
+            .padding(.bottom, 16)
         }
-        .padding(Theme.Space.l)
         .frame(width: width, height: height)
         .background {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
@@ -392,14 +381,9 @@ struct SkinCatalogScreen: View {
         return rep.representation(using: .png, properties: [:])
     }
 
-    // MARK: - Procedural Minecraft 64x64 Skin Generator
+    // MARK: - Fallback Skin
 
-    private static func makeSkin(
-        tone: (CGFloat, CGFloat, CGFloat),
-        shirt: (CGFloat, CGFloat, CGFloat),
-        pants: (CGFloat, CGFloat, CGFloat),
-        hair: (CGFloat, CGFloat, CGFloat)
-    ) -> CGImage {
+    private static func fallbackSkin() -> CGImage {
         let width = 64
         let height = 64
         let colorSpace = CGColorSpaceCreateDeviceRGB()
@@ -415,44 +399,8 @@ struct SkinCatalogScreen: View {
         ) else {
             return NSImage(size: NSSize(width: 64, height: 64)).cgImage(forProposedRect: nil, context: nil, hints: nil)!
         }
-
-        // Head Base Skin
-        ctx.setFillColor(red: tone.0, green: tone.1, blue: tone.2, alpha: 1.0)
-        ctx.fill(CGRect(x: 0, y: 0, width: 32, height: 16))
-
-        // Head Hair
-        ctx.setFillColor(red: hair.0, green: hair.1, blue: hair.2, alpha: 1.0)
-        ctx.fill(CGRect(x: 0, y: 0, width: 32, height: 6))
-
-        // Eyes
-        ctx.setFillColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0)
-        ctx.fill(CGRect(x: 9, y: 10, width: 2, height: 1))
-        ctx.fill(CGRect(x: 13, y: 10, width: 2, height: 1))
-        ctx.setFillColor(red: 0.15, green: 0.15, blue: 0.35, alpha: 1.0)
-        ctx.fill(CGRect(x: 10, y: 10, width: 1, height: 1))
-        ctx.fill(CGRect(x: 14, y: 10, width: 1, height: 1))
-
-        // Torso Shirt
-        ctx.setFillColor(red: shirt.0, green: shirt.1, blue: shirt.2, alpha: 1.0)
-        ctx.fill(CGRect(x: 16, y: 16, width: 24, height: 16))
-
-        // Arms
-        ctx.setFillColor(red: shirt.0, green: shirt.1, blue: shirt.2, alpha: 1.0)
-        ctx.fill(CGRect(x: 40, y: 16, width: 16, height: 6))
-        ctx.setFillColor(red: tone.0, green: tone.1, blue: tone.2, alpha: 1.0)
-        ctx.fill(CGRect(x: 40, y: 22, width: 16, height: 10))
-
-        // Left arm
-        ctx.setFillColor(red: shirt.0, green: shirt.1, blue: shirt.2, alpha: 1.0)
-        ctx.fill(CGRect(x: 32, y: 48, width: 16, height: 6))
-        ctx.setFillColor(red: tone.0, green: tone.1, blue: tone.2, alpha: 1.0)
-        ctx.fill(CGRect(x: 32, y: 54, width: 16, height: 10))
-
-        // Legs (Pants)
-        ctx.setFillColor(red: pants.0, green: pants.1, blue: pants.2, alpha: 1.0)
-        ctx.fill(CGRect(x: 0, y: 16, width: 16, height: 16))
-        ctx.fill(CGRect(x: 16, y: 48, width: 16, height: 16))
-
+        ctx.setFillColor(red: 0.72, green: 0.48, blue: 0.35, alpha: 1.0)
+        ctx.fill(CGRect(x: 0, y: 0, width: 64, height: 64))
         return ctx.makeImage()!
     }
 }
@@ -468,12 +416,8 @@ private struct CatalogSkinRow: View {
     var body: some View {
         Button(action: onSelect) {
             HStack(spacing: 12) {
-                Image(decorative: item.imageProvider(), scale: 1.0)
-                    .interpolation(.none)
-                    .resizable()
+                SkinHeadThumbnail(image: item.imageProvider())
                     .frame(width: 38, height: 38)
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                    .background(Theme.elevated)
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text(verbatim: item.name)

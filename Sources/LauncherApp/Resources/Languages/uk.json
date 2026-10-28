@@ -8,6 +8,8 @@
   "%d instances": "Збірок: %d",
   "Vanilla, Fabric, Forge or NeoForge": "Vanilla, Fabric, Forge або NeoForge",
   "Library": "Бібліотека",
+  "Social": "Друзі",
+  "Explore": "Огляд",
   "Mods": "Моди",
   "Skins": "Скіни",
   "Settings": "Налаштування",
@@ -438,5 +440,12 @@
   "Browse Catalog": "Відкрити каталог",
   "3D Boba": "3D Боба",
   "2D Flat": "2D Текстура",
-  "Add to wardrobe": "Додати до гардеробу"
+  "Add to wardrobe": "Додати до гардеробу",
+  "Classic (4px)": "Класика (4px)",
+  "Slim (3px)": "Слім (3px)",
+  "Find player skin": "Знайти скін гравця",
+  "PRESET STYLES": "ГОТОВІ ОБРАЗИ",
+  "Get skin by player nickname (e.g. Notch, Steve, DanTDM)...": "Скін за ніком гравця (наприклад Notch, Steve, DanTDM)...",
+  "Drag with mouse to rotate Boba 360° · Double-click to reset": "Обертайте мишею на 360° · Подвійний клік для скидання",
+  "Drag with mouse to rotate 360° · Double-click to reset": "Обертайте мишею на 360° · Подвійний клік для скидання"
 }

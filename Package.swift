@@ -19,7 +19,11 @@ let package = Package(
         .executableTarget(
             name: "LauncherApp",
             dependencies: ["LauncherCore"],
-            resources: [.copy("Resources/Fonts"), .copy("Resources/Languages")]
+            resources: [
+                .copy("Resources/Fonts"),
+                .copy("Resources/Languages"),
+                .copy("Resources/Skins")
+            ]
         ),
     ],
     swiftLanguageModes: [.v5]

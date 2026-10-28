@@ -4,7 +4,7 @@ import AppKit
 
 /// Interactive 3D Minecraft player character model (Boba) rendered with native SceneKit.
 /// Features pixel-crisp nearest-neighbor textures, 360° mouse drag rotation, classic (4px) / slim (3px) arms,
-/// full 2-layer skin support (base + hat/jacket/sleeves/pants), and smooth idle rotation.
+/// full 2-layer skin support (base + hat/jacket/sleeves/pants), soft floor shadow, and authentic proportions.
 public struct Skin3DView: NSViewRepresentable {
     public let image: CGImage?
     public let isSlim: Bool
@@ -29,32 +29,45 @@ public struct Skin3DView: NSViewRepresentable {
         let scene = SCNScene()
         scnView.scene = scene
 
-        // Camera setup: slightly elevated front-isometric view
+        // Camera setup: slightly elevated front view, zoomed in to fill stage beautifully
         let cameraNode = SCNNode()
         let camera = SCNCamera()
         camera.usesOrthographicProjection = false
-        camera.fieldOfView = 34
-        camera.zNear = 1.0
-        camera.zFar = 100.0
+        camera.fieldOfView = 36
+        camera.zNear = 0.5
+        camera.zFar = 50.0
         cameraNode.camera = camera
-        cameraNode.position = SCNVector3(x: 0, y: 1.1, z: 6.2)
+        cameraNode.position = SCNVector3(x: 0, y: 0.1, z: 3.8)
         scene.rootNode.addChildNode(cameraNode)
 
         // Lighting: Soft ambient + directional key light for Minecraft blocky shading
         let ambientNode = SCNNode()
         let ambientLight = SCNLight()
         ambientLight.type = .ambient
-        ambientLight.color = NSColor(white: 0.65, alpha: 1.0)
+        ambientLight.color = NSColor(white: 0.70, alpha: 1.0)
         ambientNode.light = ambientLight
         scene.rootNode.addChildNode(ambientNode)
 
         let dirNode = SCNNode()
         let dirLight = SCNLight()
         dirLight.type = .directional
-        dirLight.color = NSColor(white: 0.60, alpha: 1.0)
+        dirLight.color = NSColor(white: 0.55, alpha: 1.0)
         dirNode.light = dirLight
-        dirNode.eulerAngles = SCNVector3(x: -0.5, y: 0.4, z: 0)
+        dirNode.eulerAngles = SCNVector3(x: -0.45, y: 0.45, z: 0)
         scene.rootNode.addChildNode(dirNode)
+
+        // Soft floor shadow under Boba's feet
+        let shadowPlane = SCNPlane(width: 1.6, height: 1.0)
+        shadowPlane.cornerRadius = 0.5
+        let shadowMat = SCNMaterial()
+        shadowMat.diffuse.contents = NSColor.black.withAlphaComponent(0.40)
+        shadowMat.isDoubleSided = true
+        shadowMat.blendMode = .alpha
+        shadowPlane.materials = [shadowMat]
+        let shadowNode = SCNNode(geometry: shadowPlane)
+        shadowNode.eulerAngles = SCNVector3(x: -.pi / 2, y: 0, z: 0)
+        shadowNode.position = SCNVector3(0, -1.34, 0)
+        scene.rootNode.addChildNode(shadowNode)
 
         let charNode = buildCharacterNode(image: image, isSlim: isSlim)
         scene.rootNode.addChildNode(charNode)
@@ -94,13 +107,13 @@ public struct Skin3DView: NSViewRepresentable {
     private func buildCharacterNode(image: CGImage?, isSlim: Bool) -> SCNNode {
         let root = SCNNode()
         root.name = "characterRoot"
-        let fallbackImage = image ?? Self.generateDefaultSkin()
+        let fallbackImage = image ?? Self.loadPresetResource(named: "ember") ?? Self.generateDefaultSkin()
 
-        let scale: CGFloat = 0.05
+        // 32-pixel tall character * 0.08 scale = ~2.56 units tall
+        let scale: CGFloat = 0.08
         let armW: CGFloat = isSlim ? 3.0 : 4.0
         let is64x32 = (fallbackImage.height == 32)
 
-        // Helper to build a box node with 6 cut face materials
         func makeBox(
             w: CGFloat, h: CGFloat, d: CGFloat,
             pos: SCNVector3,
@@ -116,97 +129,97 @@ public struct Skin3DView: NSViewRepresentable {
             return node
         }
 
-        // --- 1. HEAD (8x8x8) at y = 20 (base) + HAT overlay (8.6x8.6x8.6) ---
+        // --- 1. HEAD (8x8x8) at y = 12 (base) + HAT overlay (8.7x8.7x8.7) ---
+        // SCNBox faces order: [0: Front(+Z), 1: Right(+X), 2: Back(-Z), 3: Left(-X), 4: Top(+Y), 5: Bottom(-Y)]
         let headFaces = [
-            CGRect(x: 8, y: 8, width: 8, height: 8),   // 0: Front (+Z)
-            CGRect(x: 0, y: 8, width: 8, height: 8),   // 1: Right (+X)
-            CGRect(x: 24, y: 8, width: 8, height: 8),  // 2: Back (-Z)
-            CGRect(x: 16, y: 8, width: 8, height: 8),  // 3: Left (-X)
-            CGRect(x: 8, y: 0, width: 8, height: 8),   // 4: Top (+Y)
-            CGRect(x: 16, y: 0, width: 8, height: 8)   // 5: Bottom (-Y)
+            CGRect(x: 8, y: 8, width: 8, height: 8),    // 0: Front
+            CGRect(x: 16, y: 8, width: 8, height: 8),   // 1: Right (+X, left ear)
+            CGRect(x: 24, y: 8, width: 8, height: 8),   // 2: Back
+            CGRect(x: 0, y: 8, width: 8, height: 8),    // 3: Left (-X, right ear)
+            CGRect(x: 8, y: 0, width: 8, height: 8),    // 4: Top
+            CGRect(x: 16, y: 0, width: 8, height: 8)    // 5: Bottom
         ]
-        let headNode = makeBox(w: 8, h: 8, d: 8, pos: SCNVector3(0, 18, 0), faces: headFaces)
+        let headNode = makeBox(w: 8, h: 8, d: 8, pos: SCNVector3(0, 12, 0), faces: headFaces)
         root.addChildNode(headNode)
 
         let hatFaces = [
-            CGRect(x: 40, y: 8, width: 8, height: 8),  // Front
-            CGRect(x: 32, y: 8, width: 8, height: 8),  // Right
-            CGRect(x: 56, y: 8, width: 8, height: 8),  // Back
-            CGRect(x: 48, y: 8, width: 8, height: 8),  // Left
-            CGRect(x: 40, y: 0, width: 8, height: 8),  // Top
-            CGRect(x: 48, y: 0, width: 8, height: 8)   // Bottom
+            CGRect(x: 40, y: 8, width: 8, height: 8),
+            CGRect(x: 48, y: 8, width: 8, height: 8),
+            CGRect(x: 56, y: 8, width: 8, height: 8),
+            CGRect(x: 32, y: 8, width: 8, height: 8),
+            CGRect(x: 40, y: 0, width: 8, height: 8),
+            CGRect(x: 48, y: 0, width: 8, height: 8)
         ]
-        let hatNode = makeBox(w: 8.7, h: 8.7, d: 8.7, pos: SCNVector3(0, 18, 0), faces: hatFaces, isOverlay: true)
+        let hatNode = makeBox(w: 8.7, h: 8.7, d: 8.7, pos: SCNVector3(0, 12, 0), faces: hatFaces, isOverlay: true)
         root.addChildNode(hatNode)
 
-        // --- 2. TORSO (8x12x4) at y = 8 + JACKET overlay (8.5x12.5x4.5) ---
+        // --- 2. TORSO (8x12x4) at y = 2 + JACKET overlay (8.6x12.6x4.6) ---
         let torsoFaces = [
             CGRect(x: 20, y: 20, width: 8, height: 12), // Front
-            CGRect(x: 16, y: 20, width: 4, height: 12), // Right
+            CGRect(x: 28, y: 20, width: 4, height: 12), // Right (+X)
             CGRect(x: 32, y: 20, width: 8, height: 12), // Back
-            CGRect(x: 28, y: 20, width: 4, height: 12), // Left
+            CGRect(x: 16, y: 20, width: 4, height: 12), // Left (-X)
             CGRect(x: 20, y: 16, width: 8, height: 4),  // Top
             CGRect(x: 28, y: 16, width: 8, height: 4)   // Bottom
         ]
-        let torsoNode = makeBox(w: 8, h: 12, d: 4, pos: SCNVector3(0, 8, 0), faces: torsoFaces)
+        let torsoNode = makeBox(w: 8, h: 12, d: 4, pos: SCNVector3(0, 2, 0), faces: torsoFaces)
         root.addChildNode(torsoNode)
 
         if !is64x32 {
             let jacketFaces = [
                 CGRect(x: 20, y: 36, width: 8, height: 12),
-                CGRect(x: 16, y: 36, width: 4, height: 12),
-                CGRect(x: 32, y: 36, width: 8, height: 12),
                 CGRect(x: 28, y: 36, width: 4, height: 12),
+                CGRect(x: 32, y: 36, width: 8, height: 12),
+                CGRect(x: 16, y: 36, width: 4, height: 12),
                 CGRect(x: 20, y: 32, width: 8, height: 4),
                 CGRect(x: 28, y: 32, width: 8, height: 4)
             ]
-            let jacketNode = makeBox(w: 8.6, h: 12.6, d: 4.6, pos: SCNVector3(0, 8, 0), faces: jacketFaces, isOverlay: true)
+            let jacketNode = makeBox(w: 8.6, h: 12.6, d: 4.6, pos: SCNVector3(0, 2, 0), faces: jacketFaces, isOverlay: true)
             root.addChildNode(jacketNode)
         }
 
-        // --- 3. RIGHT ARM (armW x 12 x 4) at x = -(4 + armW/2) ---
+        // --- 3. RIGHT ARM (armW x 12 x 4) at x = -(4 + armW/2), y = 2 ---
         let rightArmX: CGFloat = -(4.0 + armW / 2.0)
         let rightArmFaces = [
-            CGRect(x: 44, y: 20, width: armW, height: 12), // Front
-            CGRect(x: 40, y: 20, width: 4, height: 12),    // Right
+            CGRect(x: 44, y: 20, width: armW, height: 12),         // Front
+            CGRect(x: 44 + armW, y: 20, width: 4, height: 12),     // Right (+X, facing torso)
             CGRect(x: 44 + armW + 4, y: 20, width: armW, height: 12), // Back
-            CGRect(x: 44 + armW, y: 20, width: 4, height: 12),        // Left
-            CGRect(x: 44, y: 16, width: armW, height: 4),  // Top
-            CGRect(x: 44 + armW, y: 16, width: armW, height: 4) // Bottom
+            CGRect(x: 40, y: 20, width: 4, height: 12),             // Left (-X, outside)
+            CGRect(x: 44, y: 16, width: armW, height: 4),          // Top
+            CGRect(x: 44 + armW, y: 16, width: armW, height: 4)    // Bottom
         ]
-        let rightArmNode = makeBox(w: armW, h: 12, d: 4, pos: SCNVector3(rightArmX, 8, 0), faces: rightArmFaces)
+        let rightArmNode = makeBox(w: armW, h: 12, d: 4, pos: SCNVector3(rightArmX, 2, 0), faces: rightArmFaces)
         root.addChildNode(rightArmNode)
 
         if !is64x32 {
             let rightSleeveFaces = [
                 CGRect(x: 44, y: 36, width: armW, height: 12),
-                CGRect(x: 40, y: 36, width: 4, height: 12),
-                CGRect(x: 44 + armW + 4, y: 36, width: armW, height: 12),
                 CGRect(x: 44 + armW, y: 36, width: 4, height: 12),
+                CGRect(x: 44 + armW + 4, y: 36, width: armW, height: 12),
+                CGRect(x: 40, y: 36, width: 4, height: 12),
                 CGRect(x: 44, y: 32, width: armW, height: 4),
                 CGRect(x: 44 + armW, y: 32, width: armW, height: 4)
             ]
-            let sleeveNode = makeBox(w: armW + 0.5, h: 12.5, d: 4.5, pos: SCNVector3(rightArmX, 8, 0), faces: rightSleeveFaces, isOverlay: true)
+            let sleeveNode = makeBox(w: armW + 0.5, h: 12.5, d: 4.5, pos: SCNVector3(rightArmX, 2, 0), faces: rightSleeveFaces, isOverlay: true)
             root.addChildNode(sleeveNode)
         }
 
-        // --- 4. LEFT ARM (armW x 12 x 4) at x = +(4 + armW/2) ---
+        // --- 4. LEFT ARM (armW x 12 x 4) at x = +(4 + armW/2), y = 2 ---
         let leftArmX: CGFloat = 4.0 + armW / 2.0
         let leftArmFaces: [CGRect]
         if is64x32 {
-            // Mirror right arm textures for legacy skins
             leftArmFaces = rightArmFaces
         } else {
             leftArmFaces = [
-                CGRect(x: 36, y: 52, width: armW, height: 12), // Front
-                CGRect(x: 32, y: 52, width: 4, height: 12),    // Right
+                CGRect(x: 36, y: 52, width: armW, height: 12),         // Front
+                CGRect(x: 32, y: 52, width: 4, height: 12),            // Right (+X, outside)
                 CGRect(x: 36 + armW + 4, y: 52, width: armW, height: 12), // Back
-                CGRect(x: 36 + armW, y: 52, width: 4, height: 12),        // Left
-                CGRect(x: 36, y: 48, width: armW, height: 4),  // Top
-                CGRect(x: 36 + armW, y: 48, width: armW, height: 4) // Bottom
+                CGRect(x: 36 + armW, y: 52, width: 4, height: 12),     // Left (-X, facing torso)
+                CGRect(x: 36, y: 48, width: armW, height: 4),          // Top
+                CGRect(x: 36 + armW, y: 48, width: armW, height: 4)    // Bottom
             ]
         }
-        let leftArmNode = makeBox(w: armW, h: 12, d: 4, pos: SCNVector3(leftArmX, 8, 0), faces: leftArmFaces)
+        let leftArmNode = makeBox(w: armW, h: 12, d: 4, pos: SCNVector3(leftArmX, 2, 0), faces: leftArmFaces)
         root.addChildNode(leftArmNode)
 
         if !is64x32 {
@@ -218,50 +231,50 @@ public struct Skin3DView: NSViewRepresentable {
                 CGRect(x: 52, y: 48, width: armW, height: 4),
                 CGRect(x: 52 + armW, y: 48, width: armW, height: 4)
             ]
-            let leftSleeveNode = makeBox(w: armW + 0.5, h: 12.5, d: 4.5, pos: SCNVector3(leftArmX, 8, 0), faces: leftSleeveFaces, isOverlay: true)
+            let leftSleeveNode = makeBox(w: armW + 0.5, h: 12.5, d: 4.5, pos: SCNVector3(leftArmX, 2, 0), faces: leftSleeveFaces, isOverlay: true)
             root.addChildNode(leftSleeveNode)
         }
 
-        // --- 5. RIGHT LEG (4x12x4) at x = -2, y = -4 ---
+        // --- 5. RIGHT LEG (4x12x4) at x = -2, y = -10 ---
         let rightLegFaces = [
             CGRect(x: 4, y: 20, width: 4, height: 12),  // Front
-            CGRect(x: 0, y: 20, width: 4, height: 12),  // Right
+            CGRect(x: 8, y: 20, width: 4, height: 12),  // Right (+X, inside)
             CGRect(x: 12, y: 20, width: 4, height: 12), // Back
-            CGRect(x: 8, y: 20, width: 4, height: 12),  // Left
+            CGRect(x: 0, y: 20, width: 4, height: 12),  // Left (-X, outside)
             CGRect(x: 4, y: 16, width: 4, height: 4),   // Top
             CGRect(x: 8, y: 16, width: 4, height: 4)    // Bottom
         ]
-        let rightLegNode = makeBox(w: 4, h: 12, d: 4, pos: SCNVector3(-2, -4, 0), faces: rightLegFaces)
+        let rightLegNode = makeBox(w: 4, h: 12, d: 4, pos: SCNVector3(-2, -10, 0), faces: rightLegFaces)
         root.addChildNode(rightLegNode)
 
         if !is64x32 {
             let rightPantsFaces = [
                 CGRect(x: 4, y: 36, width: 4, height: 12),
-                CGRect(x: 0, y: 36, width: 4, height: 12),
-                CGRect(x: 12, y: 36, width: 4, height: 12),
                 CGRect(x: 8, y: 36, width: 4, height: 12),
+                CGRect(x: 12, y: 36, width: 4, height: 12),
+                CGRect(x: 0, y: 36, width: 4, height: 12),
                 CGRect(x: 4, y: 32, width: 4, height: 4),
                 CGRect(x: 8, y: 32, width: 4, height: 4)
             ]
-            let rightPantsNode = makeBox(w: 4.5, h: 12.5, d: 4.5, pos: SCNVector3(-2, -4, 0), faces: rightPantsFaces, isOverlay: true)
+            let rightPantsNode = makeBox(w: 4.5, h: 12.5, d: 4.5, pos: SCNVector3(-2, -10, 0), faces: rightPantsFaces, isOverlay: true)
             root.addChildNode(rightPantsNode)
         }
 
-        // --- 6. LEFT LEG (4x12x4) at x = +2, y = -4 ---
+        // --- 6. LEFT LEG (4x12x4) at x = +2, y = -10 ---
         let leftLegFaces: [CGRect]
         if is64x32 {
             leftLegFaces = rightLegFaces
         } else {
             leftLegFaces = [
                 CGRect(x: 20, y: 52, width: 4, height: 12), // Front
-                CGRect(x: 16, y: 52, width: 4, height: 12), // Right
+                CGRect(x: 16, y: 52, width: 4, height: 12), // Right (+X, outside)
                 CGRect(x: 28, y: 52, width: 4, height: 12), // Back
-                CGRect(x: 24, y: 52, width: 4, height: 12), // Left
+                CGRect(x: 24, y: 52, width: 4, height: 12), // Left (-X, inside)
                 CGRect(x: 20, y: 48, width: 4, height: 4),  // Top
                 CGRect(x: 24, y: 48, width: 4, height: 4)   // Bottom
             ]
         }
-        let leftLegNode = makeBox(w: 4, h: 12, d: 4, pos: SCNVector3(2, -4, 0), faces: leftLegFaces)
+        let leftLegNode = makeBox(w: 4, h: 12, d: 4, pos: SCNVector3(2, -10, 0), faces: leftLegFaces)
         root.addChildNode(leftLegNode)
 
         if !is64x32 {
@@ -273,12 +286,10 @@ public struct Skin3DView: NSViewRepresentable {
                 CGRect(x: 4, y: 48, width: 4, height: 4),
                 CGRect(x: 8, y: 48, width: 4, height: 4)
             ]
-            let leftPantsNode = makeBox(w: 4.5, h: 12.5, d: 4.5, pos: SCNVector3(2, -4, 0), faces: leftPantsFaces, isOverlay: true)
+            let leftPantsNode = makeBox(w: 4.5, h: 12.5, d: 4.5, pos: SCNVector3(2, -10, 0), faces: leftPantsFaces, isOverlay: true)
             root.addChildNode(leftPantsNode)
         }
 
-        // Center origin slightly above ground
-        root.position = SCNVector3(0, -0.2, 0)
         return root
     }
 
@@ -305,8 +316,35 @@ public struct Skin3DView: NSViewRepresentable {
         return mat
     }
 
-    // Default Boba / Ember warm player skin if no image is supplied
+    /// Loads a preset PNG skin from the bundled resources or disk.
+    public static func loadPresetResource(named name: String) -> CGImage? {
+        if let url = Bundle.module.url(forResource: name, withExtension: "png", subdirectory: "Resources/Skins") ??
+                     Bundle.module.url(forResource: name, withExtension: "png") {
+            if let data = try? Data(contentsOf: url),
+               let rep = NSBitmapImageRep(data: data),
+               let cg = rep.cgImage {
+                return cg
+            }
+        }
+        // Fallback: check project or app data paths
+        let paths = [
+            "/Users/may/Projects/mc-launcher/Sources/LauncherApp/Resources/Skins/\(name).png",
+            "/tmp/\(name).png"
+        ]
+        for path in paths {
+            if let data = try? Data(contentsOf: URL(fileURLWithPath: path)),
+               let rep = NSBitmapImageRep(data: data),
+               let cg = rep.cgImage {
+                return cg
+            }
+        }
+        return nil
+    }
+
     private static func generateDefaultSkin() -> CGImage {
+        if let steve = loadPresetResource(named: "steve") {
+            return steve
+        }
         let width = 64
         let height = 64
         let colorSpace = CGColorSpaceCreateDeviceRGB()
@@ -322,23 +360,8 @@ public struct Skin3DView: NSViewRepresentable {
         ) else {
             return NSImage(size: NSSize(width: 64, height: 64)).cgImage(forProposedRect: nil, context: nil, hints: nil)!
         }
-
-        // Base tone (warm Steve tone)
         ctx.setFillColor(red: 0.72, green: 0.48, blue: 0.35, alpha: 1.0)
         ctx.fill(CGRect(x: 0, y: 0, width: 64, height: 64))
-
-        // Ember shirt (violet / aubergine)
-        ctx.setFillColor(red: 0.38, green: 0.26, blue: 0.44, alpha: 1.0)
-        ctx.fill(CGRect(x: 16, y: 20, width: 24, height: 12))
-
-        // Pants (dark charcoal)
-        ctx.setFillColor(red: 0.16, green: 0.15, blue: 0.20, alpha: 1.0)
-        ctx.fill(CGRect(x: 0, y: 20, width: 16, height: 12))
-
-        // Hair (warm dark espresso)
-        ctx.setFillColor(red: 0.18, green: 0.11, blue: 0.15, alpha: 1.0)
-        ctx.fill(CGRect(x: 0, y: 0, width: 32, height: 8))
-
         return ctx.makeImage()!
     }
 }
@@ -347,7 +370,7 @@ public struct Skin3DView: NSViewRepresentable {
 
 public final class SkinSCNView: SCNView {
     public var characterNode: SCNNode?
-    public var eulerY: CGFloat = -0.32 // Default stylish front-three-quarter angle
+    public var eulerY: CGFloat = -0.32
     public var eulerX: CGFloat = 0.04
     public var autoRotate: Bool = true
 
@@ -367,22 +390,19 @@ public final class SkinSCNView: SCNView {
         let dy = current.y - lastMousePoint.y
         lastMousePoint = current
 
-        eulerY += dx * 0.018
-        // Clamp pitch so the player cannot be flipped upside down
-        eulerX = min(max(eulerX - dy * 0.012, -0.45), 0.45)
+        eulerY += dx * 0.016
+        eulerX = min(max(eulerX - dy * 0.010, -0.45), 0.45)
 
         characterNode?.eulerAngles = SCNVector3(eulerX, eulerY, 0)
     }
 
     override public func mouseUp(with event: NSEvent) {
-        // Double-click resets rotation
         if event.clickCount == 2 {
             eulerY = -0.32
             eulerX = 0.04
             characterNode?.eulerAngles = SCNVector3(eulerX, eulerY, 0)
         }
 
-        // Resume gentle auto-rotate after 2.5s of mouse idle
         idleResumeTimer?.invalidate()
         idleResumeTimer = Timer.scheduledTimer(withTimeInterval: 2.5, repeats: false) { [weak self] _ in
             self?.autoRotate = true

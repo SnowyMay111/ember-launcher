@@ -138,7 +138,7 @@ private struct SkinCharacterCanvas: View {
 }
 
 /// 48pt head thumbnail showing the front face with hat overlay.
-private struct SkinHeadThumbnail: View {
+struct SkinHeadThumbnail: View {
     let image: CGImage?
 
     var body: some View {
@@ -250,13 +250,13 @@ struct SkinsScreen: View {
                 let maxContentWidth: CGFloat = min(1120, geo.size.width)
                 let columns = maxContentWidth - 18
                 HStack(alignment: .top, spacing: 18) {
-                    previewStage(width: columns * 0.625, height: 480)
-                    collectionPane(width: columns * 0.375, height: 480)
+                    previewStage(width: columns * 0.625, height: 520)
+                    collectionPane(width: columns * 0.375, height: 520)
                 }
                 .frame(width: maxContentWidth, alignment: .leading)
                 .frame(maxWidth: .infinity, alignment: .center)
             }
-            .frame(height: 480)
+            .frame(height: 520)
         }
         .padding(.top, 28)
         .padding(.horizontal, Theme.Space.xl)
@@ -268,23 +268,23 @@ struct SkinsScreen: View {
 
     @ViewBuilder
     private func previewStage(width: CGFloat, height: CGFloat) -> some View {
-        VStack(spacing: Theme.Space.m) {
+        VStack(spacing: 0) {
             HStack {
                 HStack(spacing: Theme.Space.xs) {
-                    FilterChip(title: "3D Boba", isActive: is3DMode) {
+                    FilterChip(title: "3D Boba", isActive: is3DMode, compact: true) {
                         is3DMode = true
                     }
-                    FilterChip(title: "2D Flat", isActive: !is3DMode) {
+                    FilterChip(title: "2D Flat", isActive: !is3DMode, compact: true) {
                         is3DMode = false
                     }
                 }
 
                 if !is3DMode {
                     HStack(spacing: Theme.Space.xs) {
-                        FilterChip(title: "Front", isActive: viewAngle == .front) {
+                        FilterChip(title: "Front", isActive: viewAngle == .front, compact: true) {
                             switchAngle(to: .front)
                         }
-                        FilterChip(title: "Back", isActive: viewAngle == .back) {
+                        FilterChip(title: "Back", isActive: viewAngle == .back, compact: true) {
                             switchAngle(to: .back)
                         }
                     }
@@ -293,26 +293,31 @@ struct SkinsScreen: View {
                 Spacer()
 
                 Button(action: { isCatalogOpen = true }) {
-                    HStack(spacing: 4) {
+                    HStack(spacing: 5) {
                         Image(systemName: "sparkles")
+                            .font(.system(size: 11, weight: .semibold))
                         Text(tr: "Catalog")
-                            .font(Theme.font(size: 11, weight: .medium))
+                            .font(Theme.font(size: 11, weight: .semibold))
                     }
                     .foregroundColor(Theme.ember)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
                     .background(Theme.elevated)
                     .clipShape(Capsule())
+                    .overlay(Capsule().strokeBorder(Theme.border, lineWidth: 1))
                 }
                 .buttonStyle(.plain)
             }
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
+            .padding(.bottom, 8)
 
-            Spacer()
+            Spacer(minLength: 4)
 
             if let skin = activeSkin, let cgImage = store.image(for: skin.id) {
                 if is3DMode {
                     Skin3DView(image: cgImage, isSlim: skin.slim, autoRotate: true)
-                        .frame(width: 240, height: 310)
+                        .frame(width: 250, height: 320)
                 } else {
                     SkinCharacterCanvas(cgImage: cgImage, isSlim: skin.slim, isBack: viewAngle == .back)
                         .frame(width: 170, height: 300)
@@ -338,7 +343,7 @@ struct SkinsScreen: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
 
-            Spacer()
+            Spacer(minLength: 4)
 
             if let skin = activeSkin {
                 VStack(spacing: 4) {
@@ -355,8 +360,9 @@ struct SkinsScreen: View {
                 .style(.init(size: 9, weight: .regular, mono: true, color: Color(hex: 0x4F4A50)))
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 16)
         }
-        .padding(Theme.Space.l)
         .frame(width: width, height: height)
         .background {
             ZStack {
@@ -385,13 +391,6 @@ struct SkinsScreen: View {
                     context.stroke(path, with: .color(Color.white.opacity(0.02)), lineWidth: 1)
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-
-                // Floor shadow (stage-shadow) – matches prototype
-                Ellipse()
-                    .fill(Color.black.opacity(0.45))
-                    .frame(width: 180, height: 28)
-                    .blur(radius: 8)
-                    .offset(y: 0.14 * 340) // 14% of stage height (~340)
 
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .strokeBorder(Color(hex: 0x262325), lineWidth: 1)
