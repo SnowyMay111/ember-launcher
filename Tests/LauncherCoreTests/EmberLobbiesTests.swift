@@ -147,4 +147,97 @@ struct EmberLobbiesTests {
         let signals = try EmberLobbies.decodeSignals(Data("[]".utf8))
         #expect(signals.isEmpty)
     }
+
+    @Test func decodesJoinRowRoomStarting() throws {
+        let json = """
+        [
+          {
+            "result": "ok",
+            "lobby": {
+              "id": "lobby-1",
+              "name": "Friday Pack",
+              "mc_version": "1.20.1",
+              "loader": "fabric",
+              "pack_url": null,
+              "pack_sha1": null,
+              "address": null,
+              "max_players": 6,
+              "host": "user-1",
+              "status": "starting",
+              "edit_policy": "friends",
+              "sync_shaders": true,
+              "sync_resourcepacks": false,
+              "can_edit": true
+            }
+          }
+        ]
+        """
+
+        let outcome = try EmberLobbies.decodeJoin(Data(json.utf8))
+        guard case .ok(let lobby) = outcome else {
+            Issue.record("expected .ok outcome")
+            return
+        }
+        #expect(lobby.address == nil)
+        #expect(lobby.status == "starting")
+        #expect(lobby.editPolicy == .friends)
+        #expect(lobby.syncShaders == true)
+        #expect(lobby.syncResourcePacks == false)
+        #expect(lobby.canEdit == true)
+    }
+
+    @Test func decodesRosterWithCanEdit() throws {
+        let json = """
+        [
+          { "user_id": "user-1", "nick": "Alice", "state": "joined", "can_edit": true },
+          { "user_id": "user-2", "nick": "Bob", "state": "joined" }
+        ]
+        """
+
+        let roster = try EmberLobbies.decodeRoster(Data(json.utf8))
+        #expect(roster.count == 2)
+        #expect(roster[0].canEdit == true)
+        #expect(roster[1].canEdit == false)
+    }
+
+    @Test func decodesItems() throws {
+        let json = """
+        [
+          {
+            "id": "item-1",
+            "kind": "mod",
+            "project_id": "AANobbMI",
+            "version_id": "abcd1234",
+            "title": "Sodium",
+            "added_by": "user-1",
+            "added_nick": "Alice"
+          }
+        ]
+        """
+
+        let items = try EmberLobbies.decodeItems(Data(json.utf8))
+        #expect(items.count == 1)
+        #expect(items[0].id == "item-1")
+        #expect(items[0].kind == .mod)
+        #expect(items[0].projectID == "AANobbMI")
+        #expect(items[0].versionID == "abcd1234")
+        #expect(items[0].title == "Sodium")
+        #expect(items[0].addedBy == "user-1")
+        #expect(items[0].addedNick == "Alice")
+    }
+
+    @Test func decodesItemResultOk() throws {
+        let result = try EmberLobbies.decodeItemResult(Data("\"ok\"".utf8))
+        #expect(result == .ok)
+    }
+
+    @Test func decodesItemResultNotFound() throws {
+        let result = try EmberLobbies.decodeItemResult(Data("\"not_found\"".utf8))
+        #expect(result == .notFound)
+    }
+
+    @Test func decodesInfoNull() throws {
+        let info = try EmberLobbies.decodeInfo(Data("null".utf8))
+        #expect(info == nil)
+    }
 }

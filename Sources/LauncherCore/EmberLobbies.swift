@@ -93,6 +93,13 @@ public enum LobbyInviteResult: String, Sendable {
     case notFriends = "not_friends"
 }
 
+/// Visibility rule for who may edit a lobby's content list.
+public enum LobbyEditPolicy: String, Codable, Sendable, CaseIterable {
+    case host
+    case friends
+    case all
+}
+
 /// The lobby details returned when a join succeeds.
 public struct JoinedLobby: Codable, Sendable, Identifiable, Equatable {
     public let id: String
@@ -101,9 +108,14 @@ public struct JoinedLobby: Codable, Sendable, Identifiable, Equatable {
     public let loader: String
     public let packURL: String?
     public let packSHA1: String?
-    public let address: String
+    public let address: String?
     public let maxPlayers: Int
     public let host: String
+    public let status: String
+    public let editPolicy: LobbyEditPolicy
+    public let syncShaders: Bool
+    public let syncResourcePacks: Bool
+    public let canEdit: Bool
 
     private enum CodingKeys: String, CodingKey {
         case id
@@ -115,6 +127,11 @@ public struct JoinedLobby: Codable, Sendable, Identifiable, Equatable {
         case address
         case maxPlayers = "max_players"
         case host
+        case status
+        case editPolicy = "edit_policy"
+        case syncShaders = "sync_shaders"
+        case syncResourcePacks = "sync_resourcepacks"
+        case canEdit = "can_edit"
     }
 
     public init(
@@ -124,9 +141,14 @@ public struct JoinedLobby: Codable, Sendable, Identifiable, Equatable {
         loader: String,
         packURL: String?,
         packSHA1: String?,
-        address: String,
+        address: String? = nil,
         maxPlayers: Int,
-        host: String
+        host: String,
+        status: String = "open",
+        editPolicy: LobbyEditPolicy = .host,
+        syncShaders: Bool = false,
+        syncResourcePacks: Bool = true,
+        canEdit: Bool = false
     ) {
         self.id = id
         self.name = name
@@ -137,6 +159,29 @@ public struct JoinedLobby: Codable, Sendable, Identifiable, Equatable {
         self.address = address
         self.maxPlayers = maxPlayers
         self.host = host
+        self.status = status
+        self.editPolicy = editPolicy
+        self.syncShaders = syncShaders
+        self.syncResourcePacks = syncResourcePacks
+        self.canEdit = canEdit
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        mcVersion = try container.decode(String.self, forKey: .mcVersion)
+        loader = try container.decode(String.self, forKey: .loader)
+        packURL = try container.decodeIfPresent(String.self, forKey: .packURL)
+        packSHA1 = try container.decodeIfPresent(String.self, forKey: .packSHA1)
+        address = try container.decodeIfPresent(String.self, forKey: .address)
+        maxPlayers = try container.decode(Int.self, forKey: .maxPlayers)
+        host = try container.decode(String.self, forKey: .host)
+        status = try container.decodeIfPresent(String.self, forKey: .status) ?? "open"
+        editPolicy = try container.decodeIfPresent(LobbyEditPolicy.self, forKey: .editPolicy) ?? .host
+        syncShaders = try container.decodeIfPresent(Bool.self, forKey: .syncShaders) ?? false
+        syncResourcePacks = try container.decodeIfPresent(Bool.self, forKey: .syncResourcePacks) ?? true
+        canEdit = try container.decodeIfPresent(Bool.self, forKey: .canEdit) ?? false
     }
 }
 
@@ -156,6 +201,7 @@ public struct LobbyMember: Codable, Sendable, Identifiable, Equatable {
     public let userID: String
     public let nick: String
     public let state: String
+    public let canEdit: Bool
 
     public var id: String { userID }
 
@@ -163,12 +209,22 @@ public struct LobbyMember: Codable, Sendable, Identifiable, Equatable {
         case userID = "user_id"
         case nick
         case state
+        case canEdit = "can_edit"
     }
 
-    public init(userID: String, nick: String, state: String) {
+    public init(userID: String, nick: String, state: String, canEdit: Bool = false) {
         self.userID = userID
         self.nick = nick
         self.state = state
+        self.canEdit = canEdit
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        userID = try container.decode(String.self, forKey: .userID)
+        nick = try container.decode(String.self, forKey: .nick)
+        state = try container.decode(String.self, forKey: .state)
+        canEdit = try container.decodeIfPresent(Bool.self, forKey: .canEdit) ?? false
     }
 }
 
@@ -185,6 +241,7 @@ public struct VisibleLobby: Codable, Sendable, Identifiable, Equatable {
     public let maxPlayers: Int
     public let invited: Bool
     public let ready: Bool
+    public let running: Bool
 
     public var id: String { lobbyID }
 
@@ -200,6 +257,7 @@ public struct VisibleLobby: Codable, Sendable, Identifiable, Equatable {
         case maxPlayers = "max_players"
         case invited
         case ready
+        case running
     }
 
     public init(
@@ -213,7 +271,8 @@ public struct VisibleLobby: Codable, Sendable, Identifiable, Equatable {
         players: Int,
         maxPlayers: Int,
         invited: Bool,
-        ready: Bool
+        ready: Bool,
+        running: Bool = false
     ) {
         self.lobbyID = lobbyID
         self.name = name
@@ -226,7 +285,140 @@ public struct VisibleLobby: Codable, Sendable, Identifiable, Equatable {
         self.maxPlayers = maxPlayers
         self.invited = invited
         self.ready = ready
+        self.running = running
     }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        lobbyID = try container.decode(String.self, forKey: .lobbyID)
+        name = try container.decode(String.self, forKey: .name)
+        mcVersion = try container.decode(String.self, forKey: .mcVersion)
+        loader = try container.decode(String.self, forKey: .loader)
+        hostUser = try container.decode(String.self, forKey: .hostUser)
+        hostTag = try container.decode(String.self, forKey: .hostTag)
+        hostName = try container.decode(String.self, forKey: .hostName)
+        players = try container.decode(Int.self, forKey: .players)
+        maxPlayers = try container.decode(Int.self, forKey: .maxPlayers)
+        invited = try container.decode(Bool.self, forKey: .invited)
+        ready = try container.decode(Bool.self, forKey: .ready)
+        running = try container.decodeIfPresent(Bool.self, forKey: .running) ?? false
+    }
+}
+
+/// The kind of content tracked in a lobby's item list.
+public enum LobbyItemKind: String, Codable, Sendable, CaseIterable {
+    case mod
+    case shader
+    case resourcepack
+}
+
+/// A single mod/shader/resource pack entry in a lobby's content list.
+public struct LobbyItem: Codable, Sendable, Identifiable, Equatable {
+    public let id: String
+    public let kind: LobbyItemKind
+    public let projectID: String?
+    public let versionID: String
+    public let title: String
+    public let addedBy: String?
+    public let addedNick: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case kind
+        case projectID = "project_id"
+        case versionID = "version_id"
+        case title
+        case addedBy = "added_by"
+        case addedNick = "added_nick"
+    }
+
+    public init(
+        id: String,
+        kind: LobbyItemKind,
+        projectID: String?,
+        versionID: String,
+        title: String,
+        addedBy: String?,
+        addedNick: String?
+    ) {
+        self.id = id
+        self.kind = kind
+        self.projectID = projectID
+        self.versionID = versionID
+        self.title = title
+        self.addedBy = addedBy
+        self.addedNick = addedNick
+    }
+}
+
+/// Full snapshot of a lobby's room state, as returned by lobby_info.
+public struct LobbyInfo: Codable, Sendable, Equatable {
+    public let id: String
+    public let name: String
+    public let mcVersion: String
+    public let loader: String
+    public let host: String
+    public let status: String
+    public let maxPlayers: Int
+    public let editPolicy: LobbyEditPolicy
+    public let syncShaders: Bool
+    public let syncResourcePacks: Bool
+    public let canEdit: Bool
+    public let address: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case mcVersion = "mc_version"
+        case loader
+        case host
+        case status
+        case maxPlayers = "max_players"
+        case editPolicy = "edit_policy"
+        case syncShaders = "sync_shaders"
+        case syncResourcePacks = "sync_resourcepacks"
+        case canEdit = "can_edit"
+        case address
+    }
+
+    public init(
+        id: String,
+        name: String,
+        mcVersion: String,
+        loader: String,
+        host: String,
+        status: String,
+        maxPlayers: Int,
+        editPolicy: LobbyEditPolicy,
+        syncShaders: Bool,
+        syncResourcePacks: Bool,
+        canEdit: Bool,
+        address: String?
+    ) {
+        self.id = id
+        self.name = name
+        self.mcVersion = mcVersion
+        self.loader = loader
+        self.host = host
+        self.status = status
+        self.maxPlayers = maxPlayers
+        self.editPolicy = editPolicy
+        self.syncShaders = syncShaders
+        self.syncResourcePacks = syncResourcePacks
+        self.canEdit = canEdit
+        self.address = address
+    }
+}
+
+/// Outcome of add_lobby_item / remove_lobby_item.
+public enum LobbyItemResult: String, Sendable {
+    case ok
+    case forbidden
+    case locked
+    case limit
+    case duplicate
+    case invalid
+    case notFound = "not_found"
 }
 
 /// A single pending WebRTC signaling message for the tunnel handshake.
@@ -394,6 +586,104 @@ public struct EmberLobbies: Sendable {
         return try Self.decodeSignals(data)
     }
 
+    public func info(lobby: String, session: EmberSession) async throws -> LobbyInfo? {
+        let data = try await auth.perform(
+            path: "rest/v1/rpc/lobby_info",
+            method: "POST",
+            body: try JSONEncoder().encode(LobbyBody(lobby: lobby)),
+            session: session,
+            prefer: nil
+        )
+        return try Self.decodeInfo(data)
+    }
+
+    public func items(lobby: String, session: EmberSession) async throws -> [LobbyItem] {
+        let data = try await auth.perform(
+            path: "rest/v1/rpc/lobby_items_list",
+            method: "POST",
+            body: try JSONEncoder().encode(LobbyBody(lobby: lobby)),
+            session: session,
+            prefer: nil
+        )
+        return try Self.decodeItems(data)
+    }
+
+    public func addItem(
+        lobby: String,
+        kind: LobbyItemKind,
+        projectID: String?,
+        versionID: String,
+        title: String,
+        session: EmberSession
+    ) async throws -> LobbyItemResult {
+        let data = try await auth.perform(
+            path: "rest/v1/rpc/add_lobby_item",
+            method: "POST",
+            body: try JSONEncoder().encode(AddItemBody(
+                lobby: lobby,
+                kind: kind,
+                projectID: projectID,
+                versionID: versionID,
+                title: title
+            )),
+            session: session,
+            prefer: nil
+        )
+        return try Self.decodeItemResult(data)
+    }
+
+    public func removeItem(lobby: String, item: String, session: EmberSession) async throws -> LobbyItemResult {
+        let data = try await auth.perform(
+            path: "rest/v1/rpc/remove_lobby_item",
+            method: "POST",
+            body: try JSONEncoder().encode(RemoveItemBody(lobby: lobby, item: item)),
+            session: session,
+            prefer: nil
+        )
+        return try Self.decodeItemResult(data)
+    }
+
+    public func setSettings(
+        lobby: String,
+        editPolicy: LobbyEditPolicy,
+        syncShaders: Bool,
+        syncResourcePacks: Bool,
+        session: EmberSession
+    ) async throws {
+        _ = try await auth.perform(
+            path: "rest/v1/rpc/set_lobby_settings",
+            method: "POST",
+            body: try JSONEncoder().encode(SetSettingsBody(
+                lobby: lobby,
+                editPolicy: editPolicy,
+                syncShaders: syncShaders,
+                syncResourcePacks: syncResourcePacks
+            )),
+            session: session,
+            prefer: nil
+        )
+    }
+
+    public func setMemberCanEdit(lobby: String, user: String, can: Bool, session: EmberSession) async throws {
+        _ = try await auth.perform(
+            path: "rest/v1/rpc/set_member_can_edit",
+            method: "POST",
+            body: try JSONEncoder().encode(SetMemberCanEditBody(lobby: lobby, user: user, can: can)),
+            session: session,
+            prefer: nil
+        )
+    }
+
+    public func reopen(lobby: String, session: EmberSession) async throws {
+        _ = try await auth.perform(
+            path: "rest/v1/rpc/reopen_lobby",
+            method: "POST",
+            body: try JSONEncoder().encode(LobbyBody(lobby: lobby)),
+            session: session,
+            prefer: nil
+        )
+    }
+
     // MARK: - Decoding helpers (public so tests can call them directly)
 
     /// Decodes a create_lobby response: an array with a single {lobby_id, code} row.
@@ -482,6 +772,35 @@ public struct EmberLobbies: Sendable {
             throw EmberAuthError.invalidResponse
         }
     }
+
+    /// Decodes a lobby_info response: a jsonb object, or JSON null when not visible.
+    public static func decodeInfo(_ data: Data) throws -> LobbyInfo? {
+        do {
+            return try JSONDecoder().decode(LobbyInfo?.self, from: data)
+        } catch {
+            throw EmberAuthError.invalidResponse
+        }
+    }
+
+    /// Decodes a lobby_items_list response.
+    public static func decodeItems(_ data: Data) throws -> [LobbyItem] {
+        do {
+            return try JSONDecoder().decode([LobbyItem].self, from: data)
+        } catch {
+            throw EmberAuthError.invalidResponse
+        }
+    }
+
+    /// Decodes an add_lobby_item / remove_lobby_item response: a bare JSON string.
+    public static func decodeItemResult(_ data: Data) throws -> LobbyItemResult {
+        guard
+            let raw = try? JSONDecoder().decode(String.self, from: data),
+            let result = LobbyItemResult(rawValue: raw)
+        else {
+            throw EmberAuthError.invalidResponse
+        }
+        return result
+    }
 }
 
 private struct LobbyBody: Encodable, Sendable {
@@ -559,5 +878,71 @@ private struct FetchSignalsBody: Encodable, Sendable {
     private enum CodingKeys: String, CodingKey {
         case lobby = "p_lobby"
         case after = "p_after"
+    }
+}
+
+private struct AddItemBody: Encodable, Sendable {
+    let lobby: String
+    let kind: LobbyItemKind
+    let projectID: String?
+    let versionID: String
+    let title: String
+
+    private enum CodingKeys: String, CodingKey {
+        case lobby = "p_lobby"
+        case kind = "p_kind"
+        case projectID = "p_project"
+        case versionID = "p_version"
+        case title = "p_title"
+    }
+
+    // Encodes a nil project id as explicit JSON null rather than omitting the key.
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(lobby, forKey: .lobby)
+        try container.encode(kind, forKey: .kind)
+        if let projectID {
+            try container.encode(projectID, forKey: .projectID)
+        } else {
+            try container.encodeNil(forKey: .projectID)
+        }
+        try container.encode(versionID, forKey: .versionID)
+        try container.encode(title, forKey: .title)
+    }
+}
+
+private struct RemoveItemBody: Encodable, Sendable {
+    let lobby: String
+    let item: String
+
+    private enum CodingKeys: String, CodingKey {
+        case lobby = "p_lobby"
+        case item = "p_item"
+    }
+}
+
+private struct SetSettingsBody: Encodable, Sendable {
+    let lobby: String
+    let editPolicy: LobbyEditPolicy
+    let syncShaders: Bool
+    let syncResourcePacks: Bool
+
+    private enum CodingKeys: String, CodingKey {
+        case lobby = "p_lobby"
+        case editPolicy = "p_edit_policy"
+        case syncShaders = "p_sync_shaders"
+        case syncResourcePacks = "p_sync_resourcepacks"
+    }
+}
+
+private struct SetMemberCanEditBody: Encodable, Sendable {
+    let lobby: String
+    let user: String
+    let can: Bool
+
+    private enum CodingKeys: String, CodingKey {
+        case lobby = "p_lobby"
+        case user = "p_user"
+        case can = "p_can"
     }
 }
