@@ -72,6 +72,65 @@ public enum ContentKind: String, Codable, Sendable, CaseIterable {
     }
 }
 
+/// One chip in Browse: a few Modrinth category slugs shown as a single filter (matched with OR).
+public struct CategoryGroup: Sendable, Hashable {
+    public let id: String
+    public let title: String
+    public let slugs: [String]
+}
+
+extension ContentKind {
+    /// What Browse offers as category chips. Mods and modpacks fold Modrinth's long slug list into a few groups.
+    public var browseGroups: [CategoryGroup] {
+        switch self {
+        case .mod:
+            return [
+                CategoryGroup(id: "optimization", title: "Optimization", slugs: ["optimization"]),
+                CategoryGroup(id: "adventure", title: "Adventure", slugs: ["adventure", "mobs", "worldgen", "equipment", "game-mechanics", "minigame", "cursed"]),
+                CategoryGroup(id: "magic", title: "Magic", slugs: ["magic"]),
+                CategoryGroup(id: "technology", title: "Technology", slugs: ["technology", "transportation", "storage"]),
+                CategoryGroup(id: "food", title: "Food & farming", slugs: ["food"]),
+                CategoryGroup(id: "decor", title: "Decor & building", slugs: ["decoration"]),
+                CategoryGroup(id: "utility", title: "Utility", slugs: ["utility", "management", "social", "economy"]),
+                CategoryGroup(id: "library", title: "Libraries", slugs: ["library"]),
+            ]
+        case .modpack:
+            return [
+                CategoryGroup(id: "adventure", title: "Adventure", slugs: ["adventure", "quests"]),
+                CategoryGroup(id: "magic", title: "Magic", slugs: ["magic"]),
+                CategoryGroup(id: "technology", title: "Technology", slugs: ["technology"]),
+                CategoryGroup(id: "kitchen-sink", title: "Kitchen sink", slugs: ["kitchen-sink"]),
+                CategoryGroup(id: "challenging", title: "Challenging", slugs: ["challenging"]),
+                CategoryGroup(id: "multiplayer", title: "Multiplayer", slugs: ["multiplayer"]),
+                CategoryGroup(id: "combat", title: "Combat", slugs: ["combat"]),
+                CategoryGroup(id: "optimization", title: "Optimization", slugs: ["optimization", "lightweight"]),
+            ]
+        case .shader, .resourcepack:
+            return browseCategories.map { CategoryGroup(id: $0, title: $0, slugs: [$0]) }
+        }
+    }
+}
+
+extension ContentKind {
+    /// Hand-picked full modpacks shown above the search in Browse (Modrinth slugs). Order is the display order.
+    public static let bigBuildSlugs: [String] = [
+        "prominence-2-fabric",
+        "better-mc-fabric-bmc2",
+        "better-mc-forge-bmc4",
+        "medieval-mc-forge-mmc4",
+        "medieval-mc-fabric-mmc2",
+        "cabricality",
+        "valhelsia-infinite",
+        "technical-electrical",
+        "techmagic",
+        "dungeon-train-pack-a-lore-rich-roguelite-adventure",
+        "the-pixelmon-modpack",
+        "cobbleverse",
+        "of-scales-and-claws",
+        "rpg-adventure-vita-smp",
+    ]
+}
+
 /// Metadata record persisted in content.json for installed shaders and resourcepacks.
 public struct ContentRecord: Codable, Sendable, Equatable {
     public var fileName: String

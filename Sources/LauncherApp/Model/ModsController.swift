@@ -31,8 +31,15 @@ final class ModsController: ObservableObject {
     @Published var isCheckingUpdates: Bool = false
     @Published var busy: Set<String> = []
     @Published var message: String?
-    @Published var sort: BrowseSort?
+    @Published var sort: BrowseSort? = .downloads
     @Published var categories: Set<String> = []
+    /// "Big builds" in Browse > Modpacks.
+    @Published var featured: [ModrinthHit] = []
+
+    /// Selected chips as Modrinth facets: slugs inside a group are alternatives, groups are combined with AND.
+    var selectedCategoryGroups: [[String]] {
+        kind.browseGroups.filter { categories.contains($0.id) }.map(\.slugs)
+    }
     @Published var totalHits: Int = 0
     @Published var isLoadingMore: Bool = false
     /// What Browse searches for. Mods are handled above; shaders, resource packs and modpacks go through `ContentInstaller`.
@@ -223,7 +230,7 @@ final class ModsController: ObservableObject {
                 query: query,
                 gameVersion: instance.minecraftVersion,
                 loader: instance.loader.supportsMods ? instance.loader.coreName : "fabric",
-                categories: Array(categories),
+                categoryGroups: selectedCategoryGroups,
                 sortBy: sort?.rawValue
             )
             guard searchCounter == searchID else { return }
@@ -309,7 +316,7 @@ final class ModsController: ObservableObject {
                 projectType: kind.projectType,
                 gameVersion: kind == .modpack ? modpackGameVersion : app.current?.minecraftVersion,
                 loaders: kind == .modpack ? ContentInstaller.packLoaders : [],
-                categories: Array(categories),
+                categoryGroups: selectedCategoryGroups,
                 sortBy: sort?.rawValue
             )
             guard searchCounter == searchID else { return }
@@ -327,6 +334,12 @@ final class ModsController: ObservableObject {
             guard searchCounter == searchID else { return }
             message = error.localizedDescription
         }
+    }
+
+    /// The hand-picked modpacks above the search; fetched once.
+    func loadFeatured() async {
+        guard featured.isEmpty else { return }
+        featured = (try? await manager.client.hits(slugs: ContentKind.bigBuildSlugs)) ?? []
     }
 
     func loadMore(query: String) async {
@@ -352,7 +365,7 @@ final class ModsController: ObservableObject {
                     query: query,
                     gameVersion: instance.minecraftVersion,
                     loader: instance.loader.supportsMods ? instance.loader.coreName : "fabric",
-                    categories: Array(categories),
+                    categoryGroups: selectedCategoryGroups,
                     sortBy: sort?.rawValue,
                     limit: limit,
                     offset: offset
@@ -364,7 +377,7 @@ final class ModsController: ObservableObject {
                     projectType: currentKind.projectType,
                     gameVersion: currentKind == .modpack ? modpackGameVersion : app.current?.minecraftVersion,
                     loaders: currentKind == .modpack ? ContentInstaller.packLoaders : [],
-                    categories: Array(categories),
+                    categoryGroups: selectedCategoryGroups,
                     sortBy: sort?.rawValue,
                     limit: limit,
                     offset: offset

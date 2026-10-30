@@ -86,9 +86,11 @@ struct ModDetailPanel: View {
                         .foregroundColor(.white)
 
                     // Author
-                    Text(L("by %@", hit.author))
-                        .font(Theme.font(size: 10))
-                        .foregroundColor(Color(hex: 0x686168))
+                    if !hit.author.isEmpty {
+                        Text(L("by %@", hit.author))
+                            .font(Theme.font(size: 10))
+                            .foregroundColor(Color(hex: 0x686168))
+                    }
                 }
             }
             .padding(.horizontal, 22)

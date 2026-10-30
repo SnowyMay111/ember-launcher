@@ -289,6 +289,7 @@ public final class ModrinthClient: Sendable {
         loader: String? = nil,
         loaders: [String] = [],
         categories: [String] = [],
+        categoryGroups: [[String]] = [],
         sortBy: String? = nil,
         limit: Int = 20,
         offset: Int = 0
@@ -309,6 +310,9 @@ public final class ModrinthClient: Sendable {
         }
         for category in categories where !category.isEmpty {
             facets.append(["categories:\(category)"])
+        }
+        for group in categoryGroups where !group.isEmpty {
+            facets.append(group.map { "categories:\($0)" })
         }
         let facetsData = try JSONSerialization.data(withJSONObject: facets)
         let facetsString = String(data: facetsData, encoding: .utf8) ?? "[]"
@@ -377,6 +381,34 @@ public final class ModrinthClient: Sendable {
         }
 
         return try await downloader.fetchJSON([ModrinthProject].self, from: url)
+    }
+
+    /// Projects by slug as search-style hits, in the order of `slugs`; slugs Modrinth does not know are skipped.
+    public func hits(slugs: [String]) async throws -> [ModrinthHit] {
+        guard !slugs.isEmpty else { return [] }
+        let data = try JSONSerialization.data(withJSONObject: slugs)
+        var components = URLComponents(string: "https://api.modrinth.com/v2/projects")
+        components?.queryItems = [URLQueryItem(name: "ids", value: String(data: data, encoding: .utf8) ?? "[]")]
+        guard let url = components?.url else { throw ModrinthError.badURL }
+
+        struct Raw: Decodable {
+            let id: String
+            let slug: String
+            let title: String
+            let description: String
+            let icon_url: URL?
+            let downloads: Int
+            let categories: [String]
+            let followers: Int?
+        }
+        let raw = try await downloader.fetchJSON([Raw].self, from: url)
+        let bySlug = Dictionary(raw.map { ($0.slug, $0) }, uniquingKeysWith: { first, _ in first })
+        return slugs.compactMap { bySlug[$0] }.map {
+            ModrinthHit(
+                projectId: $0.id, slug: $0.slug, title: $0.title, description: $0.description, author: "",
+                iconURL: $0.icon_url, downloads: $0.downloads, categories: $0.categories, follows: $0.followers
+            )
+        }
     }
 
     public func versions(

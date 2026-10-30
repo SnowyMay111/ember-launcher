@@ -101,16 +101,16 @@ struct ModsScreen: View {
                                             mods.categories.removeAll()
                                         }
                                     }
-                                    ForEach(mods.kind.browseCategories, id: \.self) { cat in
+                                    ForEach(mods.kind.browseGroups, id: \.id) { group in
                                         FilterChip(
-                                            title: Self.prettifyCategory(cat),
-                                            isActive: mods.categories.contains(cat),
+                                            title: mods.kind == .mod || mods.kind == .modpack ? L(group.title) : Self.prettifyCategory(group.id),
+                                            isActive: mods.categories.contains(group.id),
                                             compact: true
                                         ) {
-                                            if mods.categories.contains(cat) {
-                                                mods.categories.remove(cat)
+                                            if mods.categories.contains(group.id) {
+                                                mods.categories.remove(group.id)
                                             } else {
-                                                mods.categories.insert(cat)
+                                                mods.categories.insert(group.id)
                                             }
                                         }
                                     }
@@ -206,6 +206,7 @@ struct ModsScreen: View {
     private func runSearch(delay: Int) {
         searchTask?.cancel()
         guard tab == .browse else { return }
+        if mods.kind == .modpack { Task { await mods.loadFeatured() } }
         let text = query
         searchTask = Task {
             if delay > 0 { try? await Task.sleep(for: .milliseconds(delay)) }
@@ -218,7 +219,16 @@ struct ModsScreen: View {
 
     private var installedList: some View {
         VStack(alignment: .leading, spacing: 28) {
-            if mods.canInstall {
+            if mods.canInstall, mods.installed.isEmpty, mods.contentRecords.isEmpty {
+                EmptyState(
+                    systemImage: "square.stack.3d.up",
+                    title: L("No mods yet"),
+                    message: L("Browse Modrinth and add your first mods in a couple of clicks."),
+                    actionTitle: L("Find mods")
+                ) { tab = .browse }
+                .frame(height: 360)
+            }
+            if mods.canInstall, !mods.installed.isEmpty {
                 modsSection
             }
             if !mods.contentRecords.isEmpty {
@@ -233,7 +243,7 @@ struct ModsScreen: View {
             HStack(spacing: 12) {
                 Text(verbatim: L("%d mods", mods.installed.count)).style(.eyebrow)
                 Spacer(minLength: 16)
-                SecondaryPill(title: mods.isCheckingUpdates ? "Checking…" : "Check for updates") {
+                SecondaryPill(title: mods.isCheckingUpdates ? "Checking…" : "Check for updates", height: 36) {
                     Task { await mods.checkUpdates() }
                 }
                 if !mods.updates.isEmpty {
@@ -244,12 +254,6 @@ struct ModsScreen: View {
             }
             .padding(.bottom, 4)
 
-            if mods.installed.isEmpty {
-                Text(tr: "No mods yet. Open Browse to add some.")
-                    .style(.body16)
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, 50)
-            }
             cardGrid(mods.installed) { installedCard($0) }
         }
     }
@@ -376,6 +380,11 @@ struct ModsScreen: View {
         }
     }
 
+    /// Modpacks with no search text and no category: the hand-picked list goes first.
+    private var showsBigBuilds: Bool {
+        mods.kind == .modpack && query.isEmpty && mods.categories.isEmpty && !mods.featured.isEmpty
+    }
+
     private var browseList: some View {
         let shown = mods.visibleResults
         return LazyVStack(alignment: .leading, spacing: 12) {
@@ -385,7 +394,14 @@ struct ModsScreen: View {
                 Text(tr: mods.hiddenCount > 0 ? "Nothing fits this instance. Turn on Show incompatible to see the rest." : "Nothing found.")
                     .style(.body16).frame(maxWidth: .infinity).padding(.top, 50)
             }
-            cardGrid(shown) { browseRow($0) }
+            if showsBigBuilds {
+                Text(tr: "Big builds").style(.eyebrow).padding(.bottom, 4)
+                cardGrid(mods.featured) { browseRow($0) }
+                Text(tr: "All modpacks").style(.eyebrow).padding(.top, 20).padding(.bottom, 4)
+                cardGrid(shown.filter { hit in !mods.featured.contains { $0.projectId == hit.projectId } }) { browseRow($0) }
+            } else {
+                cardGrid(shown) { browseRow($0) }
+            }
             if mods.isLoadingMore || (!mods.isSearching && mods.canLoadMore) {
                 HStack {
                     Spacer()
