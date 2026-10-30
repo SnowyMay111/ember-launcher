@@ -200,6 +200,44 @@ final class ModsController: ObservableObject {
         }
     }
 
+    /// What the one-tap install does when the instance has no Fabric: a vanilla one becomes Fabric, a Forge one gets a Fabric sibling.
+    var fabricStepLabel: String {
+        app.current?.loader == .vanilla ? L("Switch to Fabric and install") : L("New Fabric instance and install")
+    }
+
+    /// Gets the instance ready for Fabric content (switch or sibling), then installs the mod or shader with its own dependencies.
+    func installWithFabric(_ hit: ModrinthHit) async {
+        guard let instance = app.current, kind == .mod || kind == .shader else { return }
+        busy.insert(hit.projectId)
+        defer { busy.remove(hit.projectId) }
+
+        if instance.loader == .vanilla {
+            await switchToFabric()
+        } else {
+            let fabric = FabricInstaller(paths: app.paths, installer: app.versionInstaller)
+            if let supported = try? await fabric.supportedGameVersions(), !supported.contains(instance.minecraftVersion) {
+                message = L("Fabric does not support Minecraft %@.", instance.minecraftVersion)
+                return
+            }
+            do {
+                try app.createInstance(
+                    name: "\(instance.name) Fabric",
+                    minecraftVersion: instance.minecraftVersion,
+                    loader: .fabric,
+                    group: instance.group.isEmpty ? nil : instance.group,
+                    memoryMB: instance.memoryMB
+                )
+                reload()
+            } catch {
+                message = error.localizedDescription
+                return
+            }
+        }
+        guard app.current?.loader == .fabric else { return }
+        busy.remove(hit.projectId)
+        if kind == .mod { await install(hit) } else { await installContent(hit) }
+    }
+
     /// Project ids of the shaders and resource packs already in the current instance.
     var contentProjectIDs: Set<String> {
         Set(contentRecords.map(\.projectId))

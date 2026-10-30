@@ -20,12 +20,12 @@ struct ModsScreen: View {
         guard let current = app.current else { return "Pick an instance in Library first." }
         switch mods.kind {
         case .shader:
-            guard !mods.needsFabric else { return "Shaders need a Fabric instance." }
+            guard !mods.needsFabric else { return L("For %@ · %@", current.name, current.minecraftVersion) }
             return L("For %@ · %@ · Fabric + Iris", current.name, current.minecraftVersion)
         case .resourcepack:
             return L("For %@ · %@", current.name, current.minecraftVersion)
         default:
-            guard mods.canInstall else { return "Mods need a Fabric instance." }
+            guard mods.canInstall else { return L("For %@ · %@", current.name, current.minecraftVersion) }
             return L("For %@ · %@ · %@", current.name, current.minecraftVersion, current.loader.rawValue)
         }
     }

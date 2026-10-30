@@ -486,5 +486,7 @@
   "Needed by %@": "Нужен для: %@",
   "%@ is needed by %@.": "%@ нужен для: %@.",
   "Install %d of %d": "Установить %d из %d",
-  "Minecraft %@ · %@ · %d/%d selected · %@": "Minecraft %@ · %@ · выбрано %d из %d · %@"
+  "Minecraft %@ · %@ · %d/%d selected · %@": "Minecraft %@ · %@ · выбрано %d из %d · %@",
+  "Switch to Fabric and install": "Перейти на Fabric и установить",
+  "New Fabric instance and install": "Новый Fabric-профиль и установка"
 }

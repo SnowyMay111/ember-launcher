@@ -112,7 +112,7 @@ struct ModDetailPanel: View {
             if let note = ModDetailPanel.compatibilityNote(mods: mods, hit: hit) {
                 HStack(spacing: 7) {
                     Circle()
-                        .fill(Color(hex: 0x8fa370))
+                        .fill(note.isWarning ? Theme.danger.opacity(0.9) : Color(hex: 0x8fa370))
                         .frame(width: 5, height: 5)
                     Text(note.text)
                         .font(Theme.font(size: 10))
@@ -150,7 +150,9 @@ struct ModDetailPanel: View {
     @ViewBuilder private var primaryButton: some View {
             Button(action: {
                 Task {
-                    if mods.kind == .mod {
+                    if mods.needsFabric {
+                        await mods.installWithFabric(hit)
+                    } else if mods.kind == .mod {
                         await mods.install(hit)
                     } else {
                         await mods.installContent(hit)
@@ -172,6 +174,7 @@ struct ModDetailPanel: View {
             .disabled(ModDetailPanel.isPrimaryDisabled(mods: mods, hit: hit))
             .opacity(ModDetailPanel.isPrimaryDisabled(mods: mods, hit: hit) ? 0.45 : 1)
             .padding(.horizontal, 22)
+            .padding(.bottom, 8)
     }
 
     @ViewBuilder private var secondaryRow: some View {
@@ -296,7 +299,7 @@ struct ModDetailPanel: View {
     private static func isPrimaryDisabled(mods: ModsController, hit: ModrinthHit) -> Bool {
         let kind = mods.kind
         let canInstall: Bool = {
-            if mods.needsFabric { return false }
+            if mods.needsFabric { return true }
             if kind == .mod {
                 return ModsScreen.canInstall(mods.compat[hit.projectId])
             } else {
@@ -315,6 +318,9 @@ struct ModDetailPanel: View {
         }
         if mods.busy.contains(hit.projectId) {
             return L("Installing…")
+        }
+        if mods.needsFabric {
+            return mods.fabricStepLabel
         }
         if let name = mods.instanceName {
             return L("Install to %@", name)
