@@ -28,4 +28,37 @@ struct ZipArchiveTests {
     @Test func plainArchiveHasNoSymlinks() throws {
         #expect(try !ZipArchive.hasSymlinks(makeArchive(symlink: false)))
     }
+
+    /// 64 MB of zeros compress to a few dozen KB, like a zip bomb.
+    private func makeBomb() throws -> URL {
+        let fm = FileManager.default
+        let dir = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try fm.createDirectory(at: dir, withIntermediateDirectories: true)
+        try Data(count: 64 * 1024 * 1024).write(to: dir.appendingPathComponent("zeros.bin"))
+        let archive = dir.appendingPathComponent("bomb.zip")
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/zip")
+        process.arguments = ["-q", "-9", archive.path, "zeros.bin"]
+        process.currentDirectoryURL = dir
+        try process.run()
+        process.waitUntilExit()
+        return archive
+    }
+
+    @Test func extractStopsAtRealSizeLimit() throws {
+        let archive = try makeBomb()
+        let out = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: out) }
+        #expect(throws: ZipArchiveError.self) {
+            try ZipArchive.extract(archive, to: out, maxBytes: 8 * 1024 * 1024)
+        }
+    }
+
+    @Test func extractWithinLimitSucceeds() throws {
+        let archive = try makeBomb()
+        let out = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: out) }
+        try ZipArchive.extract(archive, to: out, maxBytes: 128 * 1024 * 1024)
+        #expect(FileManager.default.fileExists(atPath: out.appendingPathComponent("zeros.bin").path))
+    }
 }

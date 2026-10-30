@@ -143,7 +143,7 @@ extension ModpackManager {
         try fm.createDirectory(at: tempDir, withIntermediateDirectories: true, attributes: nil)
         defer { try? fm.removeItem(at: tempDir) }
 
-        try ZipArchive.extract(archive, to: tempDir)
+        try extractWithinLimit(archive, to: tempDir)
         try validateNoSymbolicLinks(in: tempDir)
         let (index, _, _, _) = try parseAndValidateIndex(in: tempDir)
 

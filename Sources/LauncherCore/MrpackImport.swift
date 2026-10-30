@@ -91,7 +91,7 @@ extension ModpackManager {
             try? fm.removeItem(at: tempDir)
         }
 
-        try ZipArchive.extract(archive, to: tempDir)
+        try extractWithinLimit(archive, to: tempDir)
         try validateNoSymbolicLinks(in: tempDir)
 
         let (index, minecraftVersion, loader, loaderVersion) = try parseAndValidateIndex(in: tempDir)
@@ -140,7 +140,7 @@ extension ModpackManager {
             try? fm.removeItem(at: tempDir)
         }
 
-        try ZipArchive.extract(archive, to: tempDir)
+        try extractWithinLimit(archive, to: tempDir)
         try validateNoSymbolicLinks(in: tempDir)
 
         let (index, minecraftVersion, loader, loaderVersion) = try parseAndValidateIndex(in: tempDir)
@@ -401,6 +401,17 @@ extension ModpackManager {
         return nil
     }
 
+    static let maxArchiveSize: Int64 = 4 * 1024 * 1024 * 1024
+
+    /// Unpacks while checking the real size on disk, not the header sizes, so a forged archive cannot fill the disk.
+    func extractWithinLimit(_ archive: URL, to directory: URL) throws {
+        do {
+            try ZipArchive.extract(archive, to: directory, maxBytes: Self.maxArchiveSize)
+        } catch ZipArchiveError.tooLarge(let limit) {
+            throw ModpackError.archiveTooLarge(limit)
+        }
+    }
+
     func validateArchiveBeforeExtract(_ archive: URL) throws {
         let entries = try ZipArchive.entries(of: archive)
         for entry in entries {
@@ -423,8 +434,7 @@ extension ModpackManager {
         }
 
         let uncompressedSize = try ZipArchive.uncompressedSize(of: archive)
-        let maxArchiveSize: Int64 = 4 * 1024 * 1024 * 1024
-        if uncompressedSize > maxArchiveSize {
+        if uncompressedSize > Self.maxArchiveSize {
             throw ModpackError.archiveTooLarge(uncompressedSize)
         }
     }
