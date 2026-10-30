@@ -723,3 +723,11 @@ as $$
       and s.created_at > now() - interval '2 minutes'
     order by s.id;
 $$;
+
+revoke all on function public.lobby_member_joined(uuid, uuid) from public, anon, authenticated;
+revoke all on function public.lobby_tunnel_key(uuid) from public, anon;
+revoke all on function public.post_lobby_signal(uuid, uuid, text) from public, anon;
+revoke all on function public.fetch_lobby_signals(uuid, bigint) from public, anon;
+grant execute on function public.lobby_tunnel_key(uuid) to authenticated;
+grant execute on function public.post_lobby_signal(uuid, uuid, text) to authenticated;
+grant execute on function public.fetch_lobby_signals(uuid, bigint) to authenticated;
