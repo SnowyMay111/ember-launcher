@@ -90,7 +90,7 @@ struct ProfileScreen: View {
             }
             SettingsRow(title: "Avatar", detail: "Minecraft name whose skin head is shown. Empty uses your nickname.", isLast: true) {
                 HStack(spacing: 12) {
-                    PixelAvatar(size: 38)
+                    PlayerHead(name: avatarName.isEmpty ? settings.nickname : avatarName, size: 38)
                     VoxelInput(label: "Avatar name", text: $avatarName, width: 190)
                 }
             }

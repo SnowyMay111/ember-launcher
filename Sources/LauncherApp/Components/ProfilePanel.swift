@@ -38,7 +38,7 @@ struct ProfilePanel: View {
             .padding(.bottom, 20)
 
             HStack(spacing: 16) {
-                PixelAvatar(size: 55)
+                PlayerHead(name: ember.profile?.avatarName ?? displayName, size: 55)
                 VStack(alignment: .leading, spacing: 4) {
                     Text(displayName)
                         .font(Theme.font(size: 14, weight: .semibold))
