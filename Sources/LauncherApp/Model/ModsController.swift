@@ -115,9 +115,10 @@ final class ModsController: ObservableObject {
         app.current?.loader.supportsMods ?? false
     }
 
-    /// Shaders go through Iris, which exists for Fabric only.
+    /// Shaders go through Iris, which exists for Fabric and NeoForge.
     private var canInstallShaders: Bool {
-        app.current?.loader == .fabric
+        guard let loader = app.current?.loader else { return false }
+        return ContentInstaller.supportsShaders(loader: loader.coreName)
     }
 
     var installedProjectIDs: Set<String> {

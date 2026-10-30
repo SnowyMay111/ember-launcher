@@ -311,7 +311,7 @@
   "Open Settings": "Відкрити налаштування",
   "The AI only suggests mods. You tick what to keep before anything is installed.": "ШІ лише пропонує моди. Ви відмічаєте, що залишити, до встановлення.",
   "Creates a new instance from a Modrinth pack.": "Створює нову збірку з паку з Modrinth.",
-  "Shaders need a Fabric instance.": "Для шейдерів потрібна збірка з Fabric.",
+  "Shaders need a Fabric or NeoForge instance.": "Для шейдерів потрібна збірка з Fabric або NeoForge.",
   "For %@ · %@ · Fabric + Iris": "Для %@ · %@ · Fabric + Iris",
   "For %@ · %@": "Для %@ · %@",
   "Search mods": "Пошук модів",

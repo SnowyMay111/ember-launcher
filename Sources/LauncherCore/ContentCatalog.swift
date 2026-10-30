@@ -275,8 +275,8 @@ public final class ContentInstaller: Sendable {
             return .mod(modResult)
 
         case .shader:
-            guard instance.loader.lowercased() == "fabric" else {
-                return .unsupported("Shaders require the Fabric loader with Iris, but instance uses '\(instance.loader)'")
+            guard Self.supportsShaders(loader: instance.loader) else {
+                return .unsupported("Shaders require the Fabric or NeoForge loader with Iris, but instance uses '\(instance.loader)'")
             }
 
             let installedMods = (try? modManager.list(instance: instanceName)) ?? []
@@ -317,6 +317,11 @@ public final class ContentInstaller: Sendable {
         }
     }
 
+    /// Shaders go through Iris, which exists for Fabric and NeoForge.
+    public static func supportsShaders(loader: String) -> Bool {
+        ["fabric", "neoforge"].contains(loader.lowercased())
+    }
+
     /// Iris is recognised by its Modrinth project id or by an `iris-`/`iris_` file name (not any name that merely contains "iris").
     static func hasIris(in mods: [InstalledMod]) -> Bool {
         mods.contains { mod in
@@ -328,12 +333,12 @@ public final class ContentInstaller: Sendable {
         }
     }
 
-    /// Installs Iris to provide shader support on a Fabric instance.
+    /// Installs Iris to provide shader support on a Fabric or NeoForge instance.
     @discardableResult
     public func ensureShaderSupport(into instanceName: String) async throws -> ModInstallResult {
         let instance = try store.load(name: instanceName)
-        guard instance.loader.lowercased() == "fabric" else {
-            throw ContentError.unsupported("Shader support requires loader 'fabric', but instance uses '\(instance.loader)'")
+        guard Self.supportsShaders(loader: instance.loader) else {
+            throw ContentError.unsupported("Shader support requires loader 'fabric' or 'neoforge', but instance uses '\(instance.loader)'")
         }
         return try await modManager.install(project: "iris", into: instanceName)
     }
@@ -474,8 +479,8 @@ public final class ContentInstaller: Sendable {
             }
 
         case .shader:
-            guard instance.loader.lowercased() == "fabric" else {
-                return .needsOther("Requires Fabric loader with Iris")
+            guard Self.supportsShaders(loader: instance.loader) else {
+                return .needsOther("Requires Fabric or NeoForge loader with Iris")
             }
             let installedMods = (try? modManager.list(instance: instanceName)) ?? []
             let hasIris = Self.hasIris(in: installedMods)

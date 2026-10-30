@@ -59,7 +59,7 @@ struct ModsScreen: View {
 
                 if mods.needsFabric {
                     HStack(spacing: 14) {
-                        Text(tr: mods.kind == .shader ? "Shaders need a Fabric instance." : "Mods need a Fabric instance.")
+                        Text(tr: mods.kind == .shader ? "Shaders need a Fabric or NeoForge instance." : "Mods need a Fabric instance.")
                             .style(.secondary)
                         if mods.canSwitchToFabric {
                             SecondaryPill(title: "Switch to Fabric") { Task { await mods.switchToFabric() } }
