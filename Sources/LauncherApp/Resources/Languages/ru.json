@@ -588,5 +588,18 @@
   "You already have a request or friendship with this user.": "У вас уже есть заявка или дружба с этим пользователем.",
   "That is your own tag.": "Это ваш собственный тег.",
   "Too many pending requests.": "Слишком много заявок в ожидании.",
-  "Could not reach the friends service.": "Не удалось связаться со службой друзей."
+  "Could not reach the friends service.": "Не удалось связаться со службой друзей.",
+  "Sign in to your Ember account to add friends.": "Войдите в аккаунт Ember, чтобы добавлять друзей.",
+  "Friend tag": "Тег друга",
+  "Add": "Добавить",
+  "Requests": "Заявки",
+  "Accept": "Принять",
+  "Decline": "Отклонить",
+  "Playing Minecraft": "Играет в Minecraft",
+  "Offline": "Не в сети",
+  "Remove friend": "Удалить из друзей",
+  "No friends yet. Add someone by their tag.": "Пока нет друзей. Добавьте кого-нибудь по тегу.",
+  "Sent": "Отправленные",
+  "%d online": "В сети: %d",
+  "Friends, %d online": "Друзья, в сети: %d"
 }

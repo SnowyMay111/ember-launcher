@@ -2,22 +2,8 @@ import SwiftUI
 
 struct SocialScreen: View {
     @EnvironmentObject var app: AppState
+    @EnvironmentObject var store: FriendsStore
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    struct FriendItem: Identifiable {
-        let id: String
-        let name: String
-        let status: String
-        let isOnline: Bool
-        let color: Color
-    }
-
-    private let friends: [FriendItem] = [
-        FriendItem(id: "1", name: "Mossy", status: "Building in 1.21.4", isOnline: true, color: Color(red: 101/255, green: 73/255, blue: 56/255)),
-        FriendItem(id: "2", name: "Luna", status: "In the main menu", isOnline: true, color: Color(red: 77/255, green: 89/255, blue: 68/255)),
-        FriendItem(id: "3", name: "North", status: "Exploring Ember Valley", isOnline: true, color: Color(red: 89/255, green: 71/255, blue: 92/255)),
-        FriendItem(id: "4", name: "Rowan", status: "Offline · 2h ago", isOnline: false, color: Color(red: 77/255, green: 73/255, blue: 68/255)),
-    ]
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
@@ -69,14 +55,18 @@ struct SocialScreen: View {
 
                     lobbiesPanel
                         .frame(maxWidth: .infinity * 1.4)
+                        .soonPreview()
 
                     invitesPanel
                         .frame(maxWidth: .infinity)
+                        .soonPreview()
                 }
-                .soonPreview()
             }
             .padding(.horizontal, 56)
             .padding(.bottom, 48)
+        }
+        .task {
+            await FriendsStore.shared.refresh()
         }
     }
 
@@ -85,13 +75,14 @@ struct SocialScreen: View {
     private var friendsPanel: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text(verbatim: "FRIENDS")
-                    .font(Theme.font(size: 10, weight: .medium, mono: true))
-                    .tracking(1.4)
-                    .foregroundColor(Color(red: 143/255, green: 109/255, blue: 89/255))
+                Text(verbatim: L("Friends"))
+                    .font(Theme.font(size: 13, weight: .semibold))
+                    .foregroundColor(Theme.text)
+
                 Spacer()
-                Text(verbatim: "3 online")
-                    .font(Theme.font(size: 11, weight: .medium))
+
+                Text(verbatim: L("%d online", store.onlineCount))
+                    .font(Theme.font(size: 12, weight: .regular))
                     .foregroundColor(Theme.textSecondary)
             }
             .padding(.horizontal, 16)
@@ -100,57 +91,10 @@ struct SocialScreen: View {
                 Rectangle().fill(Theme.border).frame(height: 1)
             }
 
-            VStack(spacing: 4) {
-                ForEach(friends) { friend in
-                    HStack(spacing: 12) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 7)
-                                .fill(friend.color)
-                                .frame(width: 34, height: 34)
-                            Text(String(friend.name.prefix(1)))
-                                .font(Theme.font(size: 12, weight: .bold))
-                                .foregroundColor(Color(red: 234/255, green: 223/255, blue: 212/255))
-                        }
-
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(verbatim: friend.name)
-                                .font(Theme.font(size: 13, weight: .semibold))
-                                .foregroundColor(Theme.text)
-                            Text(verbatim: friend.status)
-                                .font(Theme.font(size: 11, weight: .regular))
-                                .foregroundColor(Theme.textSecondary)
-                                .lineLimit(1)
-                        }
-
-                        Spacer()
-
-                        Circle()
-                            .fill(friend.isOnline ? Theme.success : Color(red: 77/255, green: 73/255, blue: 68/255))
-                            .frame(width: 7, height: 7)
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .contentShape(Rectangle())
-                }
+            ScrollView(.vertical, showsIndicators: false) {
+                FriendsList(compact: false)
+                    .padding(14)
             }
-            .padding(.vertical, 8)
-
-            Spacer(minLength: 8)
-
-            Button {
-                // View all friends
-            } label: {
-                Text(verbatim: "View all friends →")
-                    .font(Theme.font(size: 11, weight: .medium))
-                    .foregroundColor(Theme.textSecondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 16)
-                    .frame(height: 42)
-                    .overlay(alignment: .top) {
-                        Rectangle().fill(Theme.border).frame(height: 1)
-                    }
-            }
-            .buttonStyle(.plain)
         }
         .background(Color(red: 17/255, green: 16/255, blue: 14/255))
         .cornerRadius(12)
