@@ -125,7 +125,7 @@ final class EmberAccountStore: ObservableObject {
     }
 
     /// The session, refreshed when it is about to expire. A failed refresh signs out.
-    private func validSession() async -> EmberSession? {
+    func validSession() async -> EmberSession? {
         guard var current = session else { return nil }
         if current.isExpired {
             do {

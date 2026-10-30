@@ -580,5 +580,13 @@
   "Offline nickname": "Офлайн-ник",
   "Online": "В сети",
   "The pack has %d mods that do not come from Modrinth. Install packs only from people you trust.": "В сборке %d модов не с Modrinth. Устанавливайте сборки только от тех, кому доверяете.",
-  "An exported pack includes mod configs. They can hold tokens or passwords, so check them before sharing the file.": "Экспортированная сборка включает конфиги модов. В них бывают токены и пароли, поэтому проверьте их, прежде чем делиться файлом."
+  "An exported pack includes mod configs. They can hold tokens or passwords, so check them before sharing the file.": "Экспортированная сборка включает конфиги модов. В них бывают токены и пароли, поэтому проверьте их, прежде чем делиться файлом.",
+  "Request sent.": "Заявка отправлена.",
+  "You are now friends.": "Теперь вы друзья.",
+  "No Ember user with that tag.": "Нет пользователя Ember с таким тегом.",
+  "This user does not accept requests.": "Этот пользователь не принимает заявки.",
+  "You already have a request or friendship with this user.": "У вас уже есть заявка или дружба с этим пользователем.",
+  "That is your own tag.": "Это ваш собственный тег.",
+  "Too many pending requests.": "Слишком много заявок в ожидании.",
+  "Could not reach the friends service.": "Не удалось связаться со службой друзей."
 }

@@ -54,12 +54,16 @@ struct RootView: View {
         .environmentObject(settings)
         .environmentObject(AccountStore.shared)
         .environmentObject(EmberAccountStore.shared)
+        .environmentObject(FriendsStore.shared)
         .environmentObject(player)
         .environmentObject(updates)
         .environmentObject(toasts)
         .environmentObject(dropdowns)
         .environment(\.backgroundAnimations, settings.backgroundAnimations)
-        .onAppear { updates.start() }
+        .onAppear {
+            updates.start()
+            FriendsStore.shared.start { player.state == .running ? "playing" : nil }
+        }
         .onChange(of: player.isBusy) { _, busy in updates.gameIsBusy = busy }
         .onChange(of: settings.autoUpdate) { _, isOn in
             if isOn { updates.autoUpdateEnabled() }
