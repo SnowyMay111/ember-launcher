@@ -320,7 +320,7 @@ struct ModsScreen: View {
             if let update {
                 ModActionButton(title: "Update") { Task { await mods.apply(update) } }.frame(width: 76)
             }
-            VoxelToggle(label: "Enable", isOn: toggle)
+            EmberToggle(label: "Enable", isOn: toggle)
             removeButton(mod.fileName)
         })
     }
@@ -463,7 +463,7 @@ struct ModsScreen: View {
 
     private var sortMenu: some View {
         let value = mods.sort?.title ?? "Best match"
-        return VoxelMenu(label: "Sort", value: L(value), listWidth: 200, alignTrailing: true, compact: true) {
+        return EmberMenu(label: "Sort", value: L(value), listWidth: 200, alignTrailing: true, compact: true) {
             Button(L("Best match")) { mods.sort = nil }
             ForEach(BrowseSort.allCases, id: \.rawValue) { sort in
                 Button(L(sort.title)) { mods.sort = sort }
@@ -494,7 +494,7 @@ struct ModsScreen: View {
 
     private var modpackLoaderMenu: some View {
         let value = mods.modpackLoader.map { LoaderKind(coreName: $0).rawValue } ?? L("Any loader")
-        return VoxelMenu(label: "Loader", value: value, minWidth: 130) {
+        return EmberMenu(label: "Loader", value: value, minWidth: 130) {
             Button(L("Any loader")) { mods.modpackLoader = nil }
             ForEach(ContentInstaller.packLoaders, id: \.self) { loader in
                 Button(LoaderKind(coreName: loader).rawValue) { mods.modpackLoader = loader }
@@ -505,7 +505,7 @@ struct ModsScreen: View {
     private var modpackVersionMenu: some View {
         let choice = mods.modpackVersionChoice
         let value = choice == ModsController.anyVersion ? L("Any version") : (mods.modpackGameVersion ?? L("Any version"))
-        return VoxelMenu(label: "Minecraft version", value: value, minWidth: 150) {
+        return EmberMenu(label: "Minecraft version", value: value, minWidth: 150) {
             Button(L("Current instance")) { mods.modpackVersionChoice = nil }
             Button(L("Any version")) { mods.modpackVersionChoice = ModsController.anyVersion }
             ForEach(app.launchableVersions(includeSnapshots: false).prefix(40), id: \.id) { entry in

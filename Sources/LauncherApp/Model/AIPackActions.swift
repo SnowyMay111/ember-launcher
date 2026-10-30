@@ -7,7 +7,7 @@ extension AppState {
     func planPack(description: String, minecraftVersion: String, settings: SettingsStore) async throws -> ModpackPlan {
         #if DEBUG
         // Test hook for debug builds: a saved reply from this file replaces the provider call.
-        if let path = ProcessInfo.processInfo.environment["VOXEL_AI_ANSWER_FILE"],
+        if let path = ProcessInfo.processInfo.environment["EMBER_AI_ANSWER_FILE"],
            let text = try? String(contentsOfFile: path, encoding: .utf8) {
             return try await ModpackPlanner(client: SavedAnswerClient(text: text)).plan(description: description, minecraftVersion: minecraftVersion)
         }

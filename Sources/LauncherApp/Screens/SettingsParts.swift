@@ -328,7 +328,7 @@ struct AIKeyField: View {
             }
         } else {
             HStack(spacing: 10) {
-                VoxelSecureInput(label: "API key", text: $draft, width: 200, placeholder: "sk-…")
+                EmberSecureInput(label: "API key", text: $draft, width: 200, placeholder: "sk-…")
                 SecondaryPill(title: "Save") {
                     settings.saveAIKey(draft)
                     draft = ""

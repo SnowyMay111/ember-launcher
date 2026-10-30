@@ -80,18 +80,18 @@ struct ProfileScreen: View {
     private var profileGroup: some View {
         SettingsGroup(title: "PROFILE") {
             SettingsRow(title: "Display name", detail: "The name friends see.") {
-                VoxelInput(label: "Display name", text: $displayName, width: 240)
+                EmberInput(label: "Display name", text: $displayName, width: 240)
             }
             SettingsRow(title: "Tag", detail: tagNote ?? "Unique, 3-16 letters, digits or underscore. Friends find you by it.") {
-                VoxelInput(label: "Tag", text: $tag, width: 240)
+                EmberInput(label: "Tag", text: $tag, width: 240)
             }
             SettingsRow(title: "About", detail: "Up to 200 characters.") {
-                VoxelInput(label: "About", text: $bio, width: 240)
+                EmberInput(label: "About", text: $bio, width: 240)
             }
             SettingsRow(title: "Avatar", detail: "Minecraft name whose skin head is shown. Empty uses your nickname.", isLast: true) {
                 HStack(spacing: 12) {
                     PlayerHead(name: avatarName.isEmpty ? settings.nickname : avatarName, size: 38)
-                    VoxelInput(label: "Avatar name", text: $avatarName, width: 190)
+                    EmberInput(label: "Avatar name", text: $avatarName, width: 190)
                 }
             }
             if isDirty {
@@ -109,7 +109,7 @@ struct ProfileScreen: View {
     private var privacyGroup: some View {
         SettingsGroup(title: "PRIVACY") {
             SettingsRow(title: "Show when I'm playing", detail: "Friends see your online status and the game you are in.") {
-                VoxelToggle(label: "Show online status", isOn: binding(\.showOnlineStatus, { EmberProfileUpdate(showOnlineStatus: $0) }))
+                EmberToggle(label: "Show online status", isOn: binding(\.showOnlineStatus, { EmberProfileUpdate(showOnlineStatus: $0) }))
             }
             SettingsRow(title: "Friend requests", detail: "Who can send you a request.") {
                 choice(["everyone": "Everyone", "nobody": "Nobody"], value: profile?.friendRequests ?? "everyone") {
@@ -122,7 +122,7 @@ struct ProfileScreen: View {
                 }
             }
             SettingsRow(title: "Show statistics", detail: "Play time and pack counts on your profile.", isLast: true) {
-                VoxelToggle(label: "Show statistics", isOn: binding(\.showStats, { EmberProfileUpdate(showStats: $0) }))
+                EmberToggle(label: "Show statistics", isOn: binding(\.showStats, { EmberProfileUpdate(showStats: $0) }))
             }
         }
     }

@@ -32,7 +32,7 @@ struct SessionDiagnosticsView: View {
     }
 
     var body: some View {
-        VoxelModal(title: "Session health", width: 680) {
+        EmberModal(title: "Session health", width: 680) {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 14) {
                     headerRing

@@ -512,7 +512,7 @@ struct SkinsScreen: View {
                     // Secondary Actions: Rename & Remove
                     if isRenaming {
                         VStack(alignment: .leading, spacing: 8) {
-                            VoxelInput(label: "Skin name", text: $renameText, width: width - 44, placeholder: "Skin name")
+                            EmberInput(label: "Skin name", text: $renameText, width: width - 44, placeholder: "Skin name")
 
                             HStack(spacing: 8) {
                                 Button {

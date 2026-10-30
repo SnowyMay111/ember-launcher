@@ -125,7 +125,7 @@ struct WideSearchField: View {
 }
 
 /// Text input: elevated fill, border, ember focus ring.
-struct VoxelInput: View {
+struct EmberInput: View {
     let label: String
     @Binding var text: String
     var width: CGFloat? = nil
@@ -166,7 +166,7 @@ struct VoxelInput: View {
 }
 
 /// Switch with ember gradient track when on, elevated fill when off, and smooth motion.
-struct VoxelToggle: View {
+struct EmberToggle: View {
     let label: String
     @Binding var isOn: Bool
 
@@ -211,7 +211,7 @@ struct VoxelToggle: View {
 }
 
 /// Native slider with ember tint and mono value readout.
-struct VoxelSlider: View {
+struct EmberSlider: View {
     let label: String
     @Binding var value: Double
     let range: ClosedRange<Double>
@@ -236,7 +236,7 @@ struct VoxelSlider: View {
 }
 
 /// Secure input with elevated fill, border, and ember focus ring.
-struct VoxelSecureInput: View {
+struct EmberSecureInput: View {
     let label: String
     @Binding var text: String
     var width: CGFloat? = nil
@@ -275,7 +275,7 @@ struct VoxelSecureInput: View {
 }
 
 /// Multi-line text editor with elevated fill, border, and ember focus ring.
-struct VoxelTextArea: View {
+struct EmberTextArea: View {
     let label: String
     @Binding var text: String
     var placeholder = ""
@@ -333,7 +333,7 @@ private struct CheckMark: Shape {
 }
 
 /// Square check box: ember fill when on, elevated outline when off, min 40x40 hit target.
-struct VoxelCheckbox: View {
+struct EmberCheckbox: View {
     let label: String
     @Binding var isOn: Bool
 

@@ -31,8 +31,6 @@ English · [Русский](README.ru.md) · [Українська](README.uk.md
 <a id="whats-new"></a>
 ## What's new
 
-**0.2.1: Voxel is now Ember.** The launcher has a new name. The app is `Ember.app`, the download is `Ember-mac-arm64.zip`, and your instances, worlds, settings and Keychain key stay exactly where they were. If you already have 0.1.0 or 0.2.0, the built-in updater brings you to Ember by itself; the first update keeps the old `Voxel.app` file name, and you can rename it in Finder if you like.
-
 **0.2.0: a new look and a lot more under the hood.**
 
 - The warm dark **Ember** interface with a hero Play screen and an animated backdrop that can be turned off.
@@ -150,12 +148,6 @@ It is stored in the macOS Keychain, kept out of logs, and sent only to the provi
 <summary><b>I already have a modpack. Can I use it?</b></summary>
 
 Yes. Import any Modrinth `.mrpack` file in **New instance**, Forge and NeoForge packs included. You can export your own instances the same way.
-</details>
-
-<details>
-<summary><b>Why was it called Voxel before?</b></summary>
-
-Releases up to 0.2.0 were published as Voxel. From 0.2.1 the project is Ember. The built-in updater takes care of the switch, and the old download names still work for installed copies.
 </details>
 
 <details>

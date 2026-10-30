@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to Ember. Releases up to 0.2.0 were published under the name Voxel.
+All notable changes to Ember.
 Versions follow [Semantic Versioning](https://semver.org); downloads are on the [Releases](https://github.com/SnowyMay111/ember-launcher/releases) page.
 
 ## [Unreleased]
@@ -9,7 +9,7 @@ Versions follow [Semantic Versioning](https://semver.org); downloads are on the 
 - Instance names are validated in `InstanceStore` (no `..`, separators, leading dot); a crafted `.mrpack` name can no longer point outside `instances/`.
 - `.mrpack` archives with symbolic links are rejected before extraction; files without both `sha1` and `sha512` hashes are refused.
 - File names from the Modrinth API must be a single plain path component.
-- `VOXEL_UPDATE_URL` is read only in debug builds.
+- `EMBER_UPDATE_URL` (renamed from the old project's variable) is read only in debug builds.
 
 ### Fixed
 - The updater no longer gets stuck when its temporary download was cleaned up.
@@ -20,7 +20,9 @@ Versions follow [Semantic Versioning](https://semver.org); downloads are on the 
 - Iris detection no longer matches any file name containing "iris".
 - The account pill says "Offline nickname" unless a Microsoft account is signed in.
 - Imported mods keep their real Modrinth version numbers.
-- `Voxel-mac-arm64.zip` is built and uploaded again, so launchers older than 0.2.1 can still update.
+
+### Changed
+- The updater no longer carries the legacy archive name or app-folder fallback, and the internal UI components and debug variables are named Ember.
 
 ### Added
 - Warning when an imported pack bundles `.jar` mods that do not come from Modrinth, and a note about secrets in exported configs.
@@ -55,9 +57,8 @@ The launcher is now called **Ember**.
 
 ### Changed
 - The app is `Ember.app` and the download is `Ember-mac-arm64.zip`. The bundle identifier, the data folder (`~/Library/Application Support/mc-launcher`) and the Keychain entry are unchanged, so instances, worlds, settings and your AI key carry over.
-- The self-updater understands both names. Copies of 0.1.0 and 0.2.0 look for `Voxel-mac-arm64.zip`, so each release also ships that file (the same build inside `Voxel.app`); from 0.2.1 on the updater prefers `Ember-mac-arm64.zip`.
 - Messages, Settings text and the Russian and Ukrainian translations say Ember.
-- `scripts/build-app.sh` builds `build/Ember.app`; `scripts/package-app.sh` writes `dist/Ember-mac-arm64.zip` and the legacy `dist/Voxel-mac-arm64.zip`.
+- `scripts/build-app.sh` builds `build/Ember.app`; `scripts/package-app.sh` writes `dist/Ember-mac-arm64.zip`.
 
 ### Docs
 - New README in English, Russian and Ukrainian: banner, "What's new", architecture diagram, FAQ.

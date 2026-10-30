@@ -291,7 +291,7 @@ private struct VersionMenu: View {
     let item: LibraryInstance
     
     var body: some View {
-        VoxelMenu(label: "Version", value: item.minecraftVersion, isPill: true) {
+        EmberMenu(label: "Version", value: item.minecraftVersion, isPill: true) {
             if let latest = app.manifest?.latest {
                 Button(L("Latest release") + " · " + latest.release) { use(snapshot: false) }
                 Button(L("Latest snapshot") + " · " + latest.snapshot) { use(snapshot: true) }

@@ -33,11 +33,11 @@ struct EmberAuthPanel: View {
                     Text(tr: "or with email").font(Theme.font(size: 11)).foregroundColor(Theme.textMuted)
                     Rectangle().fill(Theme.border).frame(height: 1)
                 }
-                VoxelInput(label: "Email", text: $email, placeholder: L("Email"))
-                VoxelSecureInput(label: "Password", text: $password, placeholder: L("Password"))
+                EmberInput(label: "Email", text: $email, placeholder: L("Email"))
+                EmberSecureInput(label: "Password", text: $password, placeholder: L("Password"))
                 if mode == .signUp {
-                    VoxelInput(label: "Tag", text: $tag, placeholder: L("Unique tag, e.g. kotiki"))
-                    VoxelInput(label: "Display name", text: $displayName, placeholder: L("Display name"))
+                    EmberInput(label: "Tag", text: $tag, placeholder: L("Unique tag, e.g. kotiki"))
+                    EmberInput(label: "Display name", text: $displayName, placeholder: L("Display name"))
                 }
                 submitButton
                 HStack {

@@ -47,7 +47,7 @@ struct OptimizationModal: View {
     }
 
     var body: some View {
-        VoxelModal(title: "Optimize", width: 560) {
+        EmberModal(title: "Optimize", width: 560) {
             VStack(alignment: .leading, spacing: 18) {
                 Text(verbatim: instance.versionLine).style(.secondary)
 
@@ -57,7 +57,7 @@ struct OptimizationModal: View {
                     Text(tr: "Close the game first.").style(.secondary)
                 } else {
                     ModalField(label: "Preset") {
-                        VoxelMenu(label: "Preset", value: presetTitle(preset), minWidth: 200) {
+                        EmberMenu(label: "Preset", value: presetTitle(preset), minWidth: 200) {
                             ForEach(OptimizationPreset.allCases, id: \.self) { item in
                                 Button(presetTitle(item)) {
                                     preset = item
@@ -69,7 +69,7 @@ struct OptimizationModal: View {
 
                     HStack(spacing: 20) {
                         ModalField(label: "Shaders") {
-                            VoxelToggle(label: "Shaders", isOn: Binding(
+                            EmberToggle(label: "Shaders", isOn: Binding(
                                 get: { enableShaders },
                                 set: {
                                     enableShaders = $0
@@ -78,7 +78,7 @@ struct OptimizationModal: View {
                             ))
                         }
                         ModalField(label: "Distant chunks (LoD)") {
-                            VoxelToggle(label: "Distant chunks (LoD)", isOn: Binding(
+                            EmberToggle(label: "Distant chunks (LoD)", isOn: Binding(
                                 get: { enableLoD },
                                 set: {
                                     enableLoD = $0
@@ -88,7 +88,7 @@ struct OptimizationModal: View {
                         }
                         ModalField(label: "Frame generation") {
                             VStack(alignment: .leading, spacing: 4) {
-                                VoxelToggle(label: "Frame generation", isOn: Binding(
+                                EmberToggle(label: "Frame generation", isOn: Binding(
                                     get: { enableFrameGen },
                                     set: {
                                         enableFrameGen = $0
@@ -105,7 +105,7 @@ struct OptimizationModal: View {
                     }
 
                     ModalField(label: "Lock FPS to the screen refresh rate") {
-                        VoxelToggle(label: "Lock FPS to the screen refresh rate", isOn: Binding(
+                        EmberToggle(label: "Lock FPS to the screen refresh rate", isOn: Binding(
                             get: { lockFps },
                             set: { newValue in
                                 lockFps = newValue

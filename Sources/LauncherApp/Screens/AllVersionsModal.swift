@@ -40,7 +40,7 @@ struct AllVersionsModal: View {
         let list = versions
         let existing = Set(app.instances.map(\.name))
         let cutoff = app.manifest?.versions.first { $0.id == "1.13" }?.releaseTime ?? Self.fallbackCutoff
-        return VoxelModal(title: "All versions", width: 640) {
+        return EmberModal(title: "All versions", width: 640) {
             VStack(alignment: .leading, spacing: 16) {
                 SearchField(placeholder: "Search versions", text: $query)
 

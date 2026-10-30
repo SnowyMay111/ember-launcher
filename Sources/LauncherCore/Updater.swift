@@ -116,12 +116,10 @@ private struct GitHubRelease: Decodable {
 public enum UpdateChecker {
     public static let repository = "SnowyMay111/ember-launcher"
     public static let assetName = "Ember-mac-arm64.zip"
-    /// The project was called Voxel before 0.2.1; releases keep a zip under the old name so older launchers can still update.
-    static let assetNames = [assetName, "Voxel-mac-arm64.zip"]
-    /// Folder names the unpacked update may use, newest name first.
-    static let appNames = ["Ember.app", "Voxel.app"]
+    /// Folder name of the app inside the unpacked update.
+    static let appName = "Ember.app"
     /// Points the check at another URL that returns a GitHub-style "latest release" JSON (local tests use a static file).
-    public static let overrideVariable = "VOXEL_UPDATE_URL"
+    public static let overrideVariable = "EMBER_UPDATE_URL"
 
     private static let session = URLSession(configuration: .ephemeral)
 
@@ -183,7 +181,7 @@ public enum UpdateChecker {
         var version = release.tagName.trimmingCharacters(in: .whitespaces)
         if version.hasPrefix("v") || version.hasPrefix("V") { version.removeFirst() }
         guard UpdateVersion.isNewer(version, than: currentVersion) else { return nil }
-        guard let asset = assetNames.lazy.compactMap({ name in release.assets.first(where: { $0.name == name }) }).first,
+        guard let asset = release.assets.first(where: { $0.name == assetName }),
               let url = URL(string: asset.browserDownloadURL) else { return nil }
         var digest: String?
         if let raw = asset.digest?.lowercased(), raw.hasPrefix("sha256:") {
@@ -280,12 +278,12 @@ private final class FileDownload: NSObject, URLSessionDownloadDelegate, @uncheck
 public enum UpdateInstaller {
     public static let bundleIdentifier = "dev.mclauncher.voxel"
 
-    /// Downloads and unpacks the release into a fresh temp folder. Returns the URL of the unpacked app (Ember.app, or Voxel.app in the legacy zip).
+    /// Downloads and unpacks the release into a fresh temp folder. Returns the URL of the unpacked app (Ember.app).
     public static func download(_ info: UpdateInfo, progress: @escaping @Sendable (Double) -> Void) async throws -> URL {
         guard info.assetURL.scheme == "https" || UpdateChecker.isOverridden else { throw UpdateError.insecureDownload }
 
         let fileManager = FileManager.default
-        let workDir = fileManager.temporaryDirectory.appendingPathComponent("voxel-update-\(UUID().uuidString)", isDirectory: true)
+        let workDir = fileManager.temporaryDirectory.appendingPathComponent("ember-update-\(UUID().uuidString)", isDirectory: true)
         let unpackDir = workDir.appendingPathComponent("app", isDirectory: true)
         let zipURL = workDir.appendingPathComponent(UpdateChecker.assetName)
         do {
@@ -294,8 +292,7 @@ public enum UpdateInstaller {
             guard await run("/usr/bin/ditto", ["-x", "-k", zipURL.path, unpackDir.path]).status == 0 else { throw UpdateError.unpackFailed }
             try? fileManager.removeItem(at: zipURL)
 
-            let candidates = UpdateChecker.appNames.map { unpackDir.appendingPathComponent($0, isDirectory: true) }
-            let app = candidates.first { fileManager.fileExists(atPath: $0.path) } ?? candidates[0]
+            let app = unpackDir.appendingPathComponent(UpdateChecker.appName, isDirectory: true)
             guard fileManager.isExecutableFile(atPath: app.appendingPathComponent("Contents/MacOS/LauncherApp").path) else {
                 throw UpdateError.missingApp
             }
@@ -363,7 +360,7 @@ public enum UpdateInstaller {
         let backupName = "Ember \(currentVersion) \(stamp.string(from: Date())).app"
 
         let logDirectory = LauncherPaths().root
-        let scriptURL = fileManager.temporaryDirectory.appendingPathComponent("voxel-update-\(UUID().uuidString).sh")
+        let scriptURL = fileManager.temporaryDirectory.appendingPathComponent("ember-update-\(UUID().uuidString).sh")
         do {
             try fileManager.createDirectory(at: logDirectory, withIntermediateDirectories: true, attributes: nil)
             try swapScript.write(to: scriptURL, atomically: true, encoding: .utf8)
@@ -438,7 +435,7 @@ public enum UpdateInstaller {
 
     echo "updated, old app is at $BACKUP"
     case "$(basename "$STAGE")" in
-        voxel-update-*) rmdir "$(dirname "$NEW")" "$STAGE" 2>/dev/null ;;
+        ember-update-*) rmdir "$(dirname "$NEW")" "$STAGE" 2>/dev/null ;;
     esac
     /usr/bin/open "$OLD"
     """#

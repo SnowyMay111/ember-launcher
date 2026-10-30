@@ -83,7 +83,7 @@ struct NewInstanceModal: View {
 
     private var versionMenu: some View {
         ModalField(label: "Minecraft version") {
-            VoxelMenu(label: "Minecraft version", value: version.isEmpty ? "…" : version, minWidth: 170) {
+            EmberMenu(label: "Minecraft version", value: version.isEmpty ? "…" : version, minWidth: 170) {
                 ForEach(versions, id: \.id) { entry in
                     Button(title(for: entry)) { version = entry.id }
                 }
@@ -100,7 +100,7 @@ struct NewInstanceModal: View {
     }
 
     var body: some View {
-        VoxelModal(title: wizardTitle, eyebrow: "NEW INSTANCE") {
+        EmberModal(title: wizardTitle, eyebrow: "NEW INSTANCE") {
             if isWorking {
                 FlowInstallState(title: installTitle, detail: isImporting ? importProgress : buildProgress, fraction: installFraction)
             } else {
@@ -126,7 +126,7 @@ struct NewInstanceModal: View {
 
                     if mode == .custom && step == 1 {
                         ModalField(label: "Instance name") {
-                            VoxelInput(label: "Name", text: $name, placeholder: namePlaceholder)
+                            EmberInput(label: "Name", text: $name, placeholder: namePlaceholder)
                         }
                         NamePreviewCard(name: displayName)
                     }
@@ -156,7 +156,7 @@ struct NewInstanceModal: View {
 
                     if !isWizard && showsNameAndGroup {
                         ModalField(label: "Name") {
-                            VoxelInput(label: "Name", text: $name, placeholder: mode == .mrpack ? (pack?.name ?? "") : (mode == .ai ? (plan?.name ?? "") : namePlaceholder))
+                            EmberInput(label: "Name", text: $name, placeholder: mode == .mrpack ? (pack?.name ?? "") : (mode == .ai ? (plan?.name ?? "") : namePlaceholder))
                         }
                     }
 
@@ -241,7 +241,7 @@ struct NewInstanceModal: View {
                 VStack(spacing: 0) {
                     ForEach(plan.mods) { mod in
                         HStack(alignment: .top, spacing: 14) {
-                            VoxelCheckbox(label: mod.title, isOn: Binding(
+                            EmberCheckbox(label: mod.title, isOn: Binding(
                                 get: { picked.contains(mod.projectId) },
                                 set: { isOn in
                                     if isOn { picked.insert(mod.projectId) } else { picked.remove(mod.projectId) }
@@ -274,7 +274,7 @@ struct NewInstanceModal: View {
             }
         } else {
             ModalField(label: "Describe your pack") {
-                VoxelTextArea(
+                EmberTextArea(
                     label: "Describe your pack",
                     text: $aiText,
                     placeholder: L("A cozy survival pack with better graphics, a minimap and some farming mods")

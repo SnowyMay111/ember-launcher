@@ -30,7 +30,7 @@ jobs:
           VERSION="$(sed -n 's/.*version = "\([^"]*\)".*/\1/p' Sources/LauncherCore/LauncherInfo.swift | head -n 1)"
           TAG="v${VERSION}-build.${GITHUB_RUN_NUMBER}"
           SHORT="${GITHUB_SHA::7}"
-          gh release create "$TAG" dist/Ember-mac-arm64.zip dist/Voxel-mac-arm64.zip \
+          gh release create "$TAG" dist/Ember-mac-arm64.zip \
             --target "$GITHUB_SHA" \
             --prerelease \
             --title "Ember ${VERSION} build ${GITHUB_RUN_NUMBER} (${SHORT})" \
