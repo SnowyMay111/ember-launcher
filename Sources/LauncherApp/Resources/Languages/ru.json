@@ -571,5 +571,7 @@
   "Needed for online servers and your own skin. Offline play needs nothing.": "Нужен для онлайн-серверов и своего скина. Для офлайн-игры не нужен.",
   "This tag is taken or not allowed.": "Этот тег занят или не подходит.",
   "%d min": "%d мин",
-  "The AI answer was cut off. Try a shorter description.": "Ответ ИИ оборвался. Попробуйте описание покороче."
+  "The AI answer was cut off. Try a shorter description.": "Ответ ИИ оборвался. Попробуйте описание покороче.",
+  "Offline nickname": "Офлайн-ник",
+  "Online": "В сети"
 }

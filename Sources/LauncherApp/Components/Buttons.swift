@@ -368,6 +368,8 @@ struct PixelAvatar: View {
 /// Account button in the top bar: pixel avatar, name with status line, chevron. Flat until hovered.
 struct AccountPill: View {
     let name: String
+    /// A Microsoft account is signed in; otherwise the player is on an offline nickname and is not "online" anywhere.
+    var isSignedIn: Bool = false
     var action: () -> Void = {}
 
     @Local private var isHovered = false
@@ -380,7 +382,7 @@ struct AccountPill: View {
                 PixelAvatar(isHovered: isHovered)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(verbatim: name).style(.init(size: 13, weight: .semibold, color: Theme.text))
-                    Text(tr: "Online").style(.init(size: 9, weight: .regular, mono: true, color: Color(red: 0x81/255, green: 0x7d/255, blue: 0x76/255)))
+                    Text(tr: isSignedIn ? "Online" : "Offline nickname").style(.init(size: 9, weight: .regular, mono: true, color: Color(red: 0x81/255, green: 0x7d/255, blue: 0x76/255)))
                 }
                 .frame(minWidth: 72, alignment: .leading)
                 Image(systemName: "chevron.down")

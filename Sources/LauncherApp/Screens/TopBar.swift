@@ -49,7 +49,7 @@ struct TopBar: View {
                         app.friendsDrawerOpen.toggle()
                     }
                 }
-                AccountPill(name: accounts.session?.name ?? settings.nickname) { app.modal = .profile }
+                AccountPill(name: accounts.session?.name ?? settings.nickname, isSignedIn: accounts.session != nil) { app.modal = .profile }
             }
         }
         .padding(.horizontal, 71)
