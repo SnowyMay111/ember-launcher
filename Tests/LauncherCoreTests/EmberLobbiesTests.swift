@@ -109,4 +109,42 @@ struct EmberLobbiesTests {
             try EmberLobbies.decodeJoin(Data(json.utf8))
         }
     }
+
+    @Test func decodesTunnelKeyPresent() throws {
+        let key = try EmberLobbies.decodeTunnelKey(Data("\"k1\"".utf8))
+        #expect(key == "k1")
+    }
+
+    @Test func decodesTunnelKeyNull() throws {
+        let key = try EmberLobbies.decodeTunnelKey(Data("null".utf8))
+        #expect(key == nil)
+    }
+
+    @Test func decodesTunnelKeyEmpty() throws {
+        let key = try EmberLobbies.decodeTunnelKey(Data("\"\"".utf8))
+        #expect(key == nil)
+    }
+
+    @Test func decodesSignalsRows() throws {
+        let json = """
+        [
+          { "id": 12, "from_user": "user-1", "payload": "offer-data" },
+          { "id": 13, "from_user": "user-2", "payload": "answer-data" }
+        ]
+        """
+
+        let signals = try EmberLobbies.decodeSignals(Data(json.utf8))
+        #expect(signals.count == 2)
+        #expect(signals[0].id == 12)
+        #expect(signals[0].from == "user-1")
+        #expect(signals[0].payload == "offer-data")
+        #expect(signals[1].id == 13)
+        #expect(signals[1].from == "user-2")
+        #expect(signals[1].payload == "answer-data")
+    }
+
+    @Test func decodesSignalsEmpty() throws {
+        let signals = try EmberLobbies.decodeSignals(Data("[]".utf8))
+        #expect(signals.isEmpty)
+    }
 }

@@ -229,6 +229,25 @@ public struct VisibleLobby: Codable, Sendable, Identifiable, Equatable {
     }
 }
 
+/// A single pending WebRTC signaling message for the tunnel handshake.
+public struct TunnelSignal: Codable, Sendable, Equatable, Identifiable {
+    public let id: Int
+    public let from: String
+    public let payload: String
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case from = "from_user"
+        case payload
+    }
+
+    public init(id: Int, from: String, payload: String) {
+        self.id = id
+        self.from = from
+        self.payload = payload
+    }
+}
+
 /// Client for the Ember lobby system: hosting, joining, roster, discovery.
 public struct EmberLobbies: Sendable {
     private let auth: EmberAuth
@@ -343,6 +362,38 @@ public struct EmberLobbies: Sendable {
         return try Self.decodeVisible(data)
     }
 
+    public func tunnelKey(lobby: String, session: EmberSession) async throws -> String? {
+        let data = try await auth.perform(
+            path: "rest/v1/rpc/lobby_tunnel_key",
+            method: "POST",
+            body: try JSONEncoder().encode(LobbyBody(lobby: lobby)),
+            session: session,
+            prefer: nil
+        )
+        return try Self.decodeTunnelKey(data)
+    }
+
+    public func postSignal(lobby: String, to user: String, payload: String, session: EmberSession) async throws {
+        _ = try await auth.perform(
+            path: "rest/v1/rpc/post_lobby_signal",
+            method: "POST",
+            body: try JSONEncoder().encode(PostSignalBody(lobby: lobby, to: user, payload: payload)),
+            session: session,
+            prefer: nil
+        )
+    }
+
+    public func fetchSignals(lobby: String, after: Int, session: EmberSession) async throws -> [TunnelSignal] {
+        let data = try await auth.perform(
+            path: "rest/v1/rpc/fetch_lobby_signals",
+            method: "POST",
+            body: try JSONEncoder().encode(FetchSignalsBody(lobby: lobby, after: after)),
+            session: session,
+            prefer: nil
+        )
+        return try Self.decodeSignals(data)
+    }
+
     // MARK: - Decoding helpers (public so tests can call them directly)
 
     /// Decodes a create_lobby response: an array with a single {lobby_id, code} row.
@@ -408,6 +459,29 @@ public struct EmberLobbies: Sendable {
             throw EmberAuthError.invalidResponse
         }
     }
+
+    /// Decodes a lobby_tunnel_key response: a bare JSON string, or null when not allowed.
+    public static func decodeTunnelKey(_ data: Data) throws -> String? {
+        let decoded: String?
+        do {
+            decoded = try JSONDecoder().decode(String?.self, from: data)
+        } catch {
+            throw EmberAuthError.invalidResponse
+        }
+        guard let key = decoded, !key.isEmpty else {
+            return nil
+        }
+        return key
+    }
+
+    /// Decodes a fetch_lobby_signals response.
+    public static func decodeSignals(_ data: Data) throws -> [TunnelSignal] {
+        do {
+            return try JSONDecoder().decode([TunnelSignal].self, from: data)
+        } catch {
+            throw EmberAuthError.invalidResponse
+        }
+    }
 }
 
 private struct LobbyBody: Encodable, Sendable {
@@ -463,5 +537,27 @@ private struct JoinLobbyBody: Encodable, Sendable {
             try container.encodeNil(forKey: .lobby)
         }
         try container.encode(nick, forKey: .nick)
+    }
+}
+
+private struct PostSignalBody: Encodable, Sendable {
+    let lobby: String
+    let to: String
+    let payload: String
+
+    private enum CodingKeys: String, CodingKey {
+        case lobby = "p_lobby"
+        case to = "p_to"
+        case payload = "p_payload"
+    }
+}
+
+private struct FetchSignalsBody: Encodable, Sendable {
+    let lobby: String
+    let after: Int
+
+    private enum CodingKeys: String, CodingKey {
+        case lobby = "p_lobby"
+        case after = "p_after"
     }
 }
