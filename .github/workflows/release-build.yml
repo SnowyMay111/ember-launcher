@@ -1,0 +1,37 @@
+# Every push to main builds Ember.app and publishes it as a pre-release (v<version>-build.<run>).
+# Pre-releases are skipped by "latest", so the in-app updater keeps following the manual stable releases.
+name: Release build
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+# One build per commit: queue instead of cancelling.
+concurrency:
+  group: release-build
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and zip
+        run: scripts/package-app.sh
+
+      - name: Publish pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="$(sed -n 's/.*version = "\([^"]*\)".*/\1/p' Sources/LauncherCore/LauncherInfo.swift | head -n 1)"
+          TAG="v${VERSION}-build.${GITHUB_RUN_NUMBER}"
+          SHORT="${GITHUB_SHA::7}"
+          gh release create "$TAG" dist/Ember-mac-arm64.zip \
+            --target "$GITHUB_SHA" \
+            --prerelease \
+            --title "Ember ${VERSION} build ${GITHUB_RUN_NUMBER} (${SHORT})" \
+            --notes "Automatic build of commit ${SHORT}. Not a stable release: for everyday use take the [latest release](https://github.com/${GITHUB_REPOSITORY}/releases/latest). Not notarized: run \`xattr -dr com.apple.quarantine /Applications/Ember.app\` once."
