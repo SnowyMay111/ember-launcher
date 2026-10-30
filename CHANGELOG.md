@@ -5,6 +5,19 @@ Versions follow [Semantic Versioning](https://semver.org); downloads are on the 
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-10-30
+
+### Added
+- Friends: live friend list, requests, add by tag, online status in the top bar and the Social screen.
+- Lobbies: create a room, share the code, friends join with one button. The host runs a local Fabric server and friends connect through an encrypted tunnel (no port forwarding).
+- Shared content list for a lobby (mods, shaders, resource packs) with authors and edit rights; guests get the host's content installed automatically.
+- Servers screen: saved lobby servers with console, players, world settings and mods.
+- Pick the AI model from a per-provider list or type an id.
+- Delete your Ember account from the profile.
+- Shaders are allowed on NeoForge instances.
+- Warning when an imported pack bundles `.jar` mods that do not come from Modrinth, and a note about secrets in exported configs.
+- Unit tests (`scripts/test.sh`) and one User-Agent for all requests.
+
 ### Security
 - Instance names are validated in `InstanceStore` (no `..`, separators, leading dot); a crafted `.mrpack` name can no longer point outside `instances/`.
 - `.mrpack` archives with symbolic links are rejected before extraction; files without both `sha1` and `sha512` hashes are refused.
@@ -20,13 +33,10 @@ Versions follow [Semantic Versioning](https://semver.org); downloads are on the 
 - Iris detection no longer matches any file name containing "iris".
 - The account pill says "Offline nickname" unless a Microsoft account is signed in.
 - Imported mods keep their real Modrinth version numbers.
+- A lobby server no longer reloads its whitelist (and spams the in-game chat) every few seconds; it reloads only when the player list changes.
 
 ### Changed
 - The updater no longer carries the legacy archive name or app-folder fallback, and the internal UI components and debug variables are named Ember.
-
-### Added
-- Warning when an imported pack bundles `.jar` mods that do not come from Modrinth, and a note about secrets in exported configs.
-- Unit tests (`scripts/test.sh`) and one User-Agent for all requests.
 
 ## [0.2.2] - 2026-10-28
 
