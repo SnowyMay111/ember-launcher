@@ -674,6 +674,7 @@ struct ModIcon: View {
                     } placeholder: {
                         Color.clear
                     }
+                    .frame(width: 36, height: 36)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
             }
