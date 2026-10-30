@@ -11,7 +11,7 @@ English · [Русский](README.ru.md) · [Українська](README.uk.md
 [![Latest release](https://img.shields.io/github/v/release/SnowyMay111/ember-launcher?style=for-the-badge&label=download&color=ee8a56)](https://github.com/SnowyMay111/ember-launcher/releases/latest)
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-black?style=for-the-badge&logo=apple)
 ![Apple Silicon](https://img.shields.io/badge/Apple%20Silicon-native-blue?style=for-the-badge)
-![Swift 6](https://img.shields.io/badge/Swift-6%20%C2%B7%20SwiftUI-F05138?style=for-the-badge&logo=swift&logoColor=white)
+![Swift 6 toolchain](https://img.shields.io/badge/Swift%206%20toolchain%20%C2%B7%20SwiftUI-F05138?style=for-the-badge&logo=swift&logoColor=white)
 [![MIT](https://img.shields.io/badge/license-MIT-lightgrey?style=for-the-badge)](LICENSE)
 
 [Download](https://github.com/SnowyMay111/ember-launcher/releases/latest) · [What's new](#whats-new) · [Features](#features) · [Screenshots](#screenshots) · [How it works](#how-it-works) · [Install](#install) · [FAQ](#faq) · [Roadmap](#roadmap)
@@ -167,7 +167,7 @@ Windows is on the roadmap. The core is portable; the SwiftUI interface is not, s
 <a id="build-from-source"></a>
 ## Build from source
 
-Xcode is not required, only the Command Line Tools and Swift 6.
+Xcode is not required, only the Command Line Tools and a Swift 6 toolchain.
 
 ```bash
 git clone https://github.com/SnowyMay111/ember-launcher.git

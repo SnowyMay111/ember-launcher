@@ -3,6 +3,29 @@
 All notable changes to Ember. Releases up to 0.2.0 were published under the name Voxel.
 Versions follow [Semantic Versioning](https://semver.org); downloads are on the [Releases](https://github.com/SnowyMay111/ember-launcher/releases) page.
 
+## [Unreleased]
+
+### Security
+- Instance names are validated in `InstanceStore` (no `..`, separators, leading dot); a crafted `.mrpack` name can no longer point outside `instances/`.
+- `.mrpack` archives with symbolic links are rejected before extraction; files without both `sha1` and `sha512` hashes are refused.
+- File names from the Modrinth API must be a single plain path component.
+- `VOXEL_UPDATE_URL` is read only in debug builds.
+
+### Fixed
+- The updater no longer gets stuck when its temporary download was cleaned up.
+- The natives `.extracted` marker is written only after a successful unpack and is tied to the native libraries; a forced reinstall clears it.
+- Cancelling a `.mrpack` import removes the half-made instance instead of keeping a pack without mods.
+- Long AI answers are no longer cut off silently (limits raised to 8192 tokens; a truncated answer is reported).
+- Data race on the update download failure; a failed `codesign` now stops release builds.
+- Iris detection no longer matches any file name containing "iris".
+- The account pill says "Offline nickname" unless a Microsoft account is signed in.
+- Imported mods keep their real Modrinth version numbers.
+- `Voxel-mac-arm64.zip` is built and uploaded again, so launchers older than 0.2.1 can still update.
+
+### Added
+- Warning when an imported pack bundles `.jar` mods that do not come from Modrinth, and a note about secrets in exported configs.
+- Unit tests (`scripts/test.sh`) and one User-Agent for all requests.
+
 ## [0.2.2] - 2026-10-28
 
 ### Added
@@ -11,7 +34,7 @@ Versions follow [Semantic Versioning](https://semver.org); downloads are on the 
 
 ### Performance
 - **Faster game launch**: Cached native libraries extraction via `.extracted` marker in `GameLauncher`, avoiding repeated `/usr/bin/unzip` process invocations and recursive permission updates on every start (saving 0.5–1.5 seconds per launch).
-- **Asset verification fast path**: Added instant size check before running SHA-1 hash calculation on existing assets in `Downloader`, significantly reducing disk I/O when verifying Minecraft assets.
+- **Asset verification fast path**: Existing assets with a different size are now re-downloaded without computing a SHA-1 first; a file of the right size is still verified by SHA-1, so disk I/O is only saved for files that are plainly broken.
 - **Zero-allocation hex encoding**: Replaced intermediate String array allocations in `sha1Hex`, `sha256Hex`, and `sha512Hex` with a fast in-place byte lookup table.
 - **Network concurrency**: Increased `URLSession` maximum connections per host from 8 to 16 to utilize all parallel download worker tasks.
 - **Reduced background GPU/CPU usage**: Lowered particle & dust animation rate in `AmbientBackdrop` from 30 FPS to 15 FPS without visible difference.
