@@ -141,15 +141,15 @@ public struct EmberFriends: Sendable {
         return try decodeResult(from: data)
     }
 
-    public func respond(userID: String, accept: Bool, session: EmberSession) async throws -> FriendRequestResult {
-        let data = try await auth.perform(
+    /// The RPC returns void, so the body is ignored.
+    public func respond(userID: String, accept: Bool, session: EmberSession) async throws {
+        _ = try await auth.perform(
             path: "rest/v1/rpc/respond_friend_request",
             method: "POST",
             body: try JSONEncoder().encode(RespondBody(user: userID, accept: accept)),
             session: session,
             prefer: nil
         )
-        return try decodeResult(from: data)
     }
 
     public func remove(userID: String, session: EmberSession) async throws {

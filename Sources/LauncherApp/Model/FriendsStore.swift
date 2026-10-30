@@ -100,7 +100,7 @@ final class FriendsStore: ObservableObject {
         Task {
             guard let session = await EmberAccountStore.shared.validSession() else { return }
             do {
-                _ = try await friends.respond(userID: entry.userID, accept: true, session: session)
+                try await friends.respond(userID: entry.userID, accept: true, session: session)
             } catch {
                 message = L("Could not reach the friends service.")
             }
@@ -112,7 +112,7 @@ final class FriendsStore: ObservableObject {
         Task {
             guard let session = await EmberAccountStore.shared.validSession() else { return }
             do {
-                _ = try await friends.respond(userID: entry.userID, accept: false, session: session)
+                try await friends.respond(userID: entry.userID, accept: false, session: session)
             } catch {
                 message = L("Could not reach the friends service.")
             }
