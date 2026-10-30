@@ -63,7 +63,7 @@ guard args.count >= 2 else {
     print("  catalog search <mod|modpack|shader|resourcepack> <query> [--game-version V]")
     print("  catalog install <kind> <slug> <instance>")
     print("  catalog modpack <slug> [name]")
-    print("  update check          Look for a newer launcher on GitHub Releases (VOXEL_UPDATE_URL overrides the address)")
+    print("  update check          Look for a newer launcher on GitHub Releases (debug builds: VOXEL_UPDATE_URL overrides the address)")
     exit(1)
 }
 

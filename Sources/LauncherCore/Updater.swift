@@ -125,14 +125,21 @@ public enum UpdateChecker {
 
     private static let session = URLSession(configuration: .ephemeral)
 
+    /// The override exists only in debug builds: a release must never take its update address from the environment.
     static var isOverridden: Bool {
-        ProcessInfo.processInfo.environment[overrideVariable].flatMap { URL(string: $0) } != nil
+        #if DEBUG
+        return ProcessInfo.processInfo.environment[overrideVariable].flatMap { URL(string: $0) } != nil
+        #else
+        return false
+        #endif
     }
 
     private static var endpoint: URL {
+        #if DEBUG
         if let text = ProcessInfo.processInfo.environment[overrideVariable], let url = URL(string: text) {
             return url
         }
+        #endif
         return URL(string: "https://api.github.com/repos/\(repository)/releases/latest")!
     }
 
