@@ -13,6 +13,16 @@ public enum AIProviderKind: String, Codable, CaseIterable, Sendable {
         }
     }
 
+    /// Models offered in the settings list; any other id can still be typed in by hand.
+    public var suggestedModels: [String] {
+        switch self {
+        case .claude:
+            return ["claude-sonnet-5-5", "claude-opus-5-5", "claude-haiku-5-5"]
+        case .gemini:
+            return ["gemini-2.5-flash", "gemini-2.5-pro"]
+        }
+    }
+
     public var displayName: String {
         switch self {
         case .claude:

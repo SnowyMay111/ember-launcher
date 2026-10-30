@@ -299,8 +299,16 @@ struct SettingsScreen: View {
                 SettingsRow(title: "API key", detail: "Your own key. Kept safely in the macOS Keychain.") {
                     AIKeyField()
                 }
-                SettingsRow(title: "AI model", detail: "Leave empty to use the default.", isLast: true) {
-                    EmberInput(label: "AI model", text: $settings.aiModel, width: 220, placeholder: settings.aiProvider.defaultModel)
+                SettingsRow(title: "AI model", detail: "Pick one from the list.") {
+                    EmberMenu(label: "AI model", value: settings.aiModel.isEmpty ? L("Default") : settings.aiModel, minWidth: 220) {
+                        Button(L("Default")) { settings.aiModel = "" }
+                        ForEach(settings.aiProvider.suggestedModels, id: \.self) { model in
+                            Button(model) { settings.aiModel = model }
+                        }
+                    }
+                }
+                SettingsRow(title: "Custom model ID", detail: "Any model id your provider offers. Leave empty to use the default.", isLast: true) {
+                    EmberInput(label: "Custom model ID", text: $settings.aiModel, width: 220, placeholder: settings.aiProvider.defaultModel)
                 }
             }
 
