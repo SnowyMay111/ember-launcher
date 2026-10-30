@@ -245,23 +245,30 @@ private final class FileDownload: NSObject, URLSessionDownloadDelegate, @uncheck
 
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
         if let http = downloadTask.response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
-            failure = UpdateError.downloadFailed
+            setFailure(UpdateError.downloadFailed)
             return
         }
         do {
             try? FileManager.default.removeItem(at: destination)
             try FileManager.default.moveItem(at: location, to: destination)
         } catch {
-            failure = UpdateError.downloadFailed
+            setFailure(UpdateError.downloadFailed)
         }
+    }
+
+    private func setFailure(_ error: Error) {
+        lock.lock()
+        failure = error
+        lock.unlock()
     }
 
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         lock.lock()
         let continuation = self.continuation
         self.continuation = nil
+        let storedFailure = failure
         lock.unlock()
-        if let error = error ?? failure {
+        if let error = error ?? storedFailure {
             continuation?.resume(throwing: error)
         } else {
             continuation?.resume()
