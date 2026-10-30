@@ -1,4 +1,5 @@
 import Foundation
+import LauncherCore
 import SwiftUI
 
 struct FriendsList: View {

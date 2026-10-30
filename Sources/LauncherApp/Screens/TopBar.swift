@@ -1,3 +1,4 @@
+import LauncherCore
 import SwiftUI
 
 /// Top bar on every screen: greeting eyebrow and title on the left, Java runtime badge and account on the right.
