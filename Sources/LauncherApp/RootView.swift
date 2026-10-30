@@ -53,6 +53,7 @@ struct RootView: View {
         .environmentObject(app)
         .environmentObject(settings)
         .environmentObject(AccountStore.shared)
+        .environmentObject(EmberAccountStore.shared)
         .environmentObject(player)
         .environmentObject(updates)
         .environmentObject(toasts)
@@ -102,6 +103,8 @@ struct RootView: View {
                     AllVersionsModal()
                 case .profile:
                     ProfilePanel()
+                case .emberSignIn:
+                    EmberAuthPanel()
                 case .modProject(let hit):
                     if let mods = app.activeMods {
                         ModDetailPanel(hit: hit, mods: mods).id(hit.projectId)
@@ -126,6 +129,7 @@ struct RootView: View {
         case .settings: SettingsScreen()
         case .mods: ModsScreen(app: app)
         case .skins: SkinsScreen()
+        case .profile: ProfileScreen()
         }
     }
 }

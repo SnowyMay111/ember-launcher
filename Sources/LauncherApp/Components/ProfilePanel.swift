@@ -4,6 +4,7 @@ struct ProfilePanel: View {
     @EnvironmentObject var app: AppState
     @EnvironmentObject var settings: SettingsStore
     @EnvironmentObject var accounts: AccountStore
+    @EnvironmentObject var ember: EmberAccountStore
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Local private var isAppeared = false
 
@@ -62,8 +63,14 @@ struct ProfilePanel: View {
             .padding(.bottom, 25)
 
             VStack(spacing: 7) {
-                profileRow(text: "Manage account", isDisabled: false) {
-                    app.screen = .settings
+                profileRow(text: "Open profile", isDisabled: false) {
+                    app.modal = nil
+                    app.screen = .profile
+                }
+                if !ember.isSignedIn {
+                    profileRow(text: "Sign in to Ember", isDisabled: false) {
+                        app.modal = .emberSignIn
+                    }
                 }
                 if accounts.isSignedIn {
                     profileRow(text: "Sign out of Microsoft", isDisabled: false) {
@@ -105,7 +112,7 @@ struct ProfilePanel: View {
         .accessibilityLabel(L("Your Profile"))
     }
 
-    private var displayName: String { accounts.session?.name ?? settings.nickname }
+    private var displayName: String { accounts.session?.name ?? ember.profile?.displayName ?? settings.nickname }
 
     private var isWaitingForCode: Bool {
         if case .waitingForCode = accounts.phase { return true }

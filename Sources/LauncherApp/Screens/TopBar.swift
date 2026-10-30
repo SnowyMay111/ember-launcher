@@ -20,6 +20,8 @@ struct TopBar: View {
             return L("Skins")
         case .settings:
             return L("Settings")
+        case .profile:
+            return L("Profile")
         }
     }
 
