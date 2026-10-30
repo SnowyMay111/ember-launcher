@@ -157,7 +157,7 @@ public enum UpdateChecker {
     public static func checkReportingErrors(currentVersion: String) async throws -> UpdateInfo? {
         var request = URLRequest(url: endpoint, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 10)
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
-        request.setValue("mc-launcher/\(LauncherInfo.version)", forHTTPHeaderField: "User-Agent")
+        request.setValue(LauncherInfo.userAgent, forHTTPHeaderField: "User-Agent")
 
         let data: Data
         let response: URLResponse
@@ -316,7 +316,7 @@ public enum UpdateInstaller {
 
     private static func fetch(_ info: UpdateInfo, to zipURL: URL, progress: @escaping @Sendable (Double) -> Void) async throws {
         var request = URLRequest(url: info.assetURL, timeoutInterval: 60)
-        request.setValue("mc-launcher/\(LauncherInfo.version)", forHTTPHeaderField: "User-Agent")
+        request.setValue(LauncherInfo.userAgent, forHTTPHeaderField: "User-Agent")
         do {
             try await FileDownload(destination: zipURL, expectedBytes: Int64(info.size), onProgress: progress).run(request)
         } catch let error as UpdateError {

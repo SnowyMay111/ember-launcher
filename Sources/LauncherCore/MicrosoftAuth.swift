@@ -234,7 +234,7 @@ public struct MicrosoftAuth: Sendable {
         var request = URLRequest(url: try endpoint("https://login.microsoftonline.com/consumers/oauth2/v2.0/token"))
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        request.setValue("Ember-Launcher", forHTTPHeaderField: "User-Agent")
+        request.setValue(LauncherInfo.userAgent, forHTTPHeaderField: "User-Agent")
         request.httpBody = Data((components.percentEncodedQuery ?? "").utf8)
 
         let (data, response) = try await session.data(for: request)
@@ -419,7 +419,7 @@ public struct MicrosoftAuth: Sendable {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        request.setValue("Ember-Launcher", forHTTPHeaderField: "User-Agent")
+        request.setValue(LauncherInfo.userAgent, forHTTPHeaderField: "User-Agent")
         request.httpBody = Data(body.utf8)
 
         let (data, response) = try await session.data(for: request)
@@ -432,7 +432,7 @@ public struct MicrosoftAuth: Sendable {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.setValue("Ember-Launcher", forHTTPHeaderField: "User-Agent")
+        request.setValue(LauncherInfo.userAgent, forHTTPHeaderField: "User-Agent")
         request.httpBody = try JSONSerialization.data(withJSONObject: json)
 
         let (data, response) = try await session.data(for: request)
@@ -445,7 +445,7 @@ public struct MicrosoftAuth: Sendable {
         request.httpMethod = "GET"
         request.setValue("Bearer \(bearer)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.setValue("Ember-Launcher", forHTTPHeaderField: "User-Agent")
+        request.setValue(LauncherInfo.userAgent, forHTTPHeaderField: "User-Agent")
 
         let (data, response) = try await session.data(for: request)
         try Self.checkStatus(response, data: data)
