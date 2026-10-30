@@ -203,7 +203,7 @@ public final class GameLauncher: Sendable {
     /// Makes sure Mojang's Java for this version is present, then builds the command.
     public func makeCommand(
         instance: Instance,
-        account: OfflineAccount,
+        account: MinecraftAccount,
         progress: (@Sendable (DownloadProgress) -> Void)? = nil
     ) async throws -> LaunchCommand {
         let java = try await ensureJava(for: instance, progress: progress)
@@ -229,7 +229,7 @@ public final class GameLauncher: Sendable {
         )
     }
 
-    public func buildCommand(instance: Instance, account: OfflineAccount, javaExecutable: URL) throws -> LaunchCommand {
+    public func buildCommand(instance: Instance, account: MinecraftAccount, javaExecutable: URL) throws -> LaunchCommand {
         let version = try resolveInstalled(instance)
         guard let mainClass = version.mainClass else {
             throw GameLauncherError.missingMainClass(version.id)
@@ -339,12 +339,12 @@ public final class GameLauncher: Sendable {
 
         let variables: [String: String] = [
             "auth_player_name": account.name,
-            "auth_session": "token:0:0",
+            "auth_session": "token:\(account.accessToken):\(account.uuid.replacingOccurrences(of: "-", with: ""))",
             "auth_uuid": account.uuid.replacingOccurrences(of: "-", with: ""),
-            "auth_access_token": "0",
+            "auth_access_token": account.accessToken,
             "auth_xuid": "0",
             "clientid": "0",
-            "user_type": "legacy",
+            "user_type": account.userType,
             "user_properties": "{}",
             // Forge's `-DignoreList` names `${version_name}.jar`; the client jar on the classpath is the parent's, so that name must match it.
             "version_name": ForgeLoaderKind(instanceLoader: instance.loader) == nil ? version.id : version.clientJarID,

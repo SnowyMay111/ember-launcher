@@ -224,7 +224,7 @@ final class PlayController: ObservableObject {
 
     private func run(_ item: LibraryInstance, nickname: String, hideLauncher: Bool, app: AppState) async {
         do {
-            let account = try OfflineAccount(name: nickname)
+            let account = try await AccountStore.shared.launchAccount(offlineName: nickname).account
             try paths.ensureDirectories()
             let command = try await prepareCommand(item.name, account: account)
             let process = try launcher.launch(command)
@@ -302,7 +302,7 @@ final class PlayController: ObservableObject {
     }
 
     /// Builds the launch command; installs the game files first when they are missing, and once more if the build still reports a gap.
-    private func prepareCommand(_ name: String, account: OfflineAccount) async throws -> LaunchCommand {
+    private func prepareCommand(_ name: String, account: MinecraftAccount) async throws -> LaunchCommand {
         let relay = ProgressRelay { [weak self] phase, percent in
             Task { @MainActor in self?.showDownload(phase: phase, percent: percent) }
         }

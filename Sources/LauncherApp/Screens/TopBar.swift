@@ -4,6 +4,7 @@ import SwiftUI
 struct TopBar: View {
     @EnvironmentObject var app: AppState
     @EnvironmentObject var settings: SettingsStore
+    @EnvironmentObject var accounts: AccountStore
 
     private var pageTitle: String {
         switch app.screen {
@@ -46,7 +47,7 @@ struct TopBar: View {
                         app.friendsDrawerOpen.toggle()
                     }
                 }
-                AccountPill(name: settings.nickname) { app.modal = .profile }
+                AccountPill(name: accounts.session?.name ?? settings.nickname) { app.modal = .profile }
             }
         }
         .padding(.horizontal, 71)

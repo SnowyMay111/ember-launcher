@@ -194,7 +194,7 @@ do {
         let launcher = GameLauncher(paths: paths, downloader: downloader)
         let instance = try launcher.prepareInstance(name: instanceName, minecraftVersion: mc, fabric: useFabric)
         let printer = ProgressPrinter()
-        let launchCommand = try await launcher.makeCommand(instance: instance, account: account) { progress in
+        let launchCommand = try await launcher.makeCommand(instance: instance, account: MinecraftAccount(offline: account)) { progress in
             printer.update(phase: "runtime", progress: progress)
         }
 

@@ -490,5 +490,14 @@
   "Install %d of %d": "Установить %d из %d",
   "Minecraft %@ · %@ · %d/%d selected · %@": "Minecraft %@ · %@ · выбрано %d из %d · %@",
   "Switch to Fabric and install": "Перейти на Fabric и установить",
-  "New Fabric instance and install": "Новый Fabric-профиль и установка"
+  "New Fabric instance and install": "Новый Fabric-профиль и установка",
+  "Microsoft account": "Аккаунт Microsoft",
+  "Offline profile": "Офлайн-профиль",
+  "Sign out of Microsoft": "Выйти из Microsoft",
+  "Sign in with Microsoft": "Войти через Microsoft",
+  "Signed in. Online servers and your own skin are available.": "Вход выполнен. Доступны онлайн-серверы и ваш скин.",
+  "Without an account you play offline with the nickname from settings.": "Без аккаунта вы играете офлайн с ником из настроек.",
+  "Open the page and enter this code:": "Откройте страницу и введите код:",
+  "Open Microsoft page": "Открыть страницу Microsoft",
+  "Microsoft sign-in expired: %@. Playing offline.": "Вход Microsoft истёк: %@. Играем офлайн."
 }

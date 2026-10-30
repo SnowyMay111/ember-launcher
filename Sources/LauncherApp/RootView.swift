@@ -52,6 +52,7 @@ struct RootView: View {
         .overlay { EmberDropdownLayer() }
         .environmentObject(app)
         .environmentObject(settings)
+        .environmentObject(AccountStore.shared)
         .environmentObject(player)
         .environmentObject(updates)
         .environmentObject(toasts)
