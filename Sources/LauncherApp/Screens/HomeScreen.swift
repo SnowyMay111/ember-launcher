@@ -204,7 +204,7 @@ struct HomeScreen: View {
                             )
                             .frame(width: width)
                             
-                            if !statusText.isEmpty || player.hasReport(for: item.name) {
+                            if !statusText.isEmpty || player.hasReport(for: item.name) || player.launchNotice != nil {
                                 Spacer().frame(height: 14)
                                 HStack(spacing: 12) {
                                     statusView
@@ -216,6 +216,14 @@ struct HomeScreen: View {
                                     }
                                 }
                                 .frame(maxWidth: width)
+                                if let notice = player.launchNotice {
+                                    Text(verbatim: notice)
+                                        .font(Theme.font(size: 12, weight: .regular, mono: false))
+                                        .foregroundColor(Theme.danger)
+                                        .multilineTextAlignment(.center)
+                                        .lineLimit(2)
+                                        .padding(.top, 6)
+                                }
                             }
                             
                         }

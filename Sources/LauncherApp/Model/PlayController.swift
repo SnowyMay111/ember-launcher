@@ -127,6 +127,8 @@ final class PlayController: ObservableObject {
     @Published private(set) var fixLabel: String = ""
     @Published private(set) var lastFixReport: AutoFixReport?
     @Published private(set) var fixError: String?
+    /// Warning from the last launch attempt (e.g. Microsoft sign-in expired, playing offline), if any.
+    @Published private(set) var launchNotice: String?
 
     private let paths = LauncherPaths()
     private let launcher: GameLauncher
@@ -217,6 +219,7 @@ final class PlayController: ObservableObject {
         }
         refreshRateBox.value = NSScreen.main?.maximumFramesPerSecond
         state = .preparing(L("Preparing…"))
+        launchNotice = nil
         let nickname = settings.nickname
         let hideLauncher = settings.closeOnStart
         Task { await run(item, nickname: nickname, hideLauncher: hideLauncher, app: app) }
@@ -224,7 +227,10 @@ final class PlayController: ObservableObject {
 
     private func run(_ item: LibraryInstance, nickname: String, hideLauncher: Bool, app: AppState) async {
         do {
-            let account = try await AccountStore.shared.launchAccount(offlineName: nickname).account
+            let (account, warning) = try await AccountStore.shared.launchAccount(offlineName: nickname)
+            if let warning {
+                launchNotice = warning
+            }
             try paths.ensureDirectories()
             let command = try await prepareCommand(item.name, account: account)
             let process = try launcher.launch(command)
