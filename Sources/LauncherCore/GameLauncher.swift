@@ -210,10 +210,11 @@ public final class GameLauncher: Sendable {
     public func makeCommand(
         instance: Instance,
         account: MinecraftAccount,
+        quickPlayServer: String? = nil,
         progress: (@Sendable (DownloadProgress) -> Void)? = nil
     ) async throws -> LaunchCommand {
         let java = try await ensureJava(for: instance, progress: progress)
-        return try buildCommand(instance: instance, account: account, javaExecutable: java)
+        return try buildCommand(instance: instance, account: account, javaExecutable: java, quickPlayServer: quickPlayServer)
     }
 
     /// Downloads Mojang's Java for the installed version if it is missing and returns its `java` executable.
@@ -235,7 +236,13 @@ public final class GameLauncher: Sendable {
         )
     }
 
-    public func buildCommand(instance: Instance, account: MinecraftAccount, javaExecutable: URL) throws -> LaunchCommand {
+    /// `quickPlayServer` ("host:port") makes the game join that server straight after the main menu loads.
+    public func buildCommand(
+        instance: Instance,
+        account: MinecraftAccount,
+        javaExecutable: URL,
+        quickPlayServer: String? = nil
+    ) throws -> LaunchCommand {
         let version = try resolveInstalled(instance)
         guard let mainClass = version.mainClass else {
             throw GameLauncherError.missingMainClass(version.id)
@@ -440,7 +447,16 @@ public final class GameLauncher: Sendable {
             javaMajor: effectiveJavaMajor,
             userArguments: instance.extraJVMArgs
         )
-        let all = memory + diagnosticArgs + instance.extraJVMArgs + jvmArguments + [mainClass] + gameArguments
+        var quickPlayArguments: [String] = []
+        if let server = quickPlayServer, !server.isEmpty {
+            if version.arguments != nil {
+                quickPlayArguments = ["--quickPlayMultiplayer", server]
+            } else {
+                let parts = server.split(separator: ":", maxSplits: 1).map(String.init)
+                quickPlayArguments = ["--server", parts[0]] + (parts.count > 1 ? ["--port", parts[1]] : [])
+            }
+        }
+        let all = memory + diagnosticArgs + instance.extraJVMArgs + jvmArguments + [mainClass] + gameArguments + quickPlayArguments
 
         return LaunchCommand(
             executable: javaExecutable,
