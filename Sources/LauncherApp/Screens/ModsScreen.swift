@@ -114,6 +114,7 @@ struct ModsScreen: View {
         .onChange(of: mods.sort) { _, _ in runSearch(delay: 0) }
         .onChange(of: mods.categories) { _, _ in runSearch(delay: 0) }
         .onChange(of: mods.modpackVersionChoice) { _, _ in runSearch(delay: 0) }
+        .onChange(of: mods.modpackLoader) { _, _ in runSearch(delay: 0) }
     }
 
     @Environment(\.openURL) private var openURL
@@ -401,7 +402,10 @@ struct ModsScreen: View {
                     if mods.hiddenCount > 0 {
                         Text(verbatim: L("%d hidden", mods.hiddenCount)).style(.init(size: 12, color: Theme.textMuted))
                     }
-                    if mods.kind == .modpack { modpackVersionMenu }
+                    if mods.kind == .modpack {
+                        modpackLoaderMenu
+                        modpackVersionMenu
+                    }
                 }
                 HStack(spacing: 10) {
                     SearchField(placeholder: searchPlaceholder, text: $query, compact: true)
@@ -467,6 +471,14 @@ struct ModsScreen: View {
         }
     }
 
+    /// "Fabric, NeoForge": the installable loaders a modpack lists among its categories.
+    static func packLoaderNames(_ hit: ModrinthHit) -> String {
+        ContentInstaller.packLoaders
+            .filter { hit.categories.contains($0) }
+            .map { LoaderKind(coreName: $0).rawValue }
+            .joined(separator: ", ")
+    }
+
     /// Modrinth lists loaders among a project's categories; they say nothing about what the mod does.
     static let loaderSlugs: Set<String> = [
         "fabric", "forge", "neoforge", "quilt", "liteloader", "modloader", "rift",
@@ -478,6 +490,16 @@ struct ModsScreen: View {
         let spaced = slug.replacingOccurrences(of: "-", with: " ")
         guard let first = spaced.first else { return slug }
         return first.uppercased() + String(spaced.dropFirst())
+    }
+
+    private var modpackLoaderMenu: some View {
+        let value = mods.modpackLoader.map { LoaderKind(coreName: $0).rawValue } ?? L("Any loader")
+        return VoxelMenu(label: "Loader", value: value, minWidth: 130) {
+            Button(L("Any loader")) { mods.modpackLoader = nil }
+            ForEach(ContentInstaller.packLoaders, id: \.self) { loader in
+                Button(LoaderKind(coreName: loader).rawValue) { mods.modpackLoader = loader }
+            }
+        }
     }
 
     private var modpackVersionMenu: some View {
@@ -579,10 +601,20 @@ struct ModsScreen: View {
                     Text(verbatim: hit.author).style(.init(size: 12, color: Theme.textMuted)).lineLimit(1)
                 }
                 Text(verbatim: hit.description).style(.init(size: 13, color: Theme.textSecondary)).lineLimit(1)
-                if let note, !isInstalled {
-                    Text(verbatim: note.text)
-                        .style(.init(size: 12, color: note.isWarning ? Theme.danger : Theme.success))
-                        .lineLimit(1)
+                let loaderNames = kind == .modpack ? Self.packLoaderNames(hit) : ""
+                if (note != nil && !isInstalled) || !loaderNames.isEmpty {
+                    HStack(spacing: 6) {
+                        if let note, !isInstalled {
+                            Text(verbatim: note.text)
+                                .style(.init(size: 12, color: note.isWarning ? Theme.danger : Theme.success))
+                                .lineLimit(1)
+                        }
+                        if !loaderNames.isEmpty {
+                            Text(verbatim: (note != nil && !isInstalled ? "· " : "") + loaderNames)
+                                .style(.init(size: 12, color: Theme.textMuted))
+                                .lineLimit(1)
+                        }
+                    }
                 }
             }
             Spacer(minLength: 8)

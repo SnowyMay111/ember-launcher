@@ -362,6 +362,7 @@
   "Show incompatible": "Показати несумісні",
   "%d hidden": "Приховано: %d",
   "Any version": "Будь-яка версія",
+  "Any loader": "Будь-який завантажувач",
   "Current instance": "Як у збірки",
   "Checking compatibility…": "Перевіряю сумісність…",
   "Nothing fits this instance. Turn on Show incompatible to see the rest.": "Нічого не підходить цій збірці. Увімкніть «Показати несумісні», щоб побачити решту.",

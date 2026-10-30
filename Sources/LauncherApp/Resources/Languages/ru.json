@@ -362,6 +362,7 @@
   "Show incompatible": "Показать несовместимые",
   "%d hidden": "Скрыто: %d",
   "Any version": "Любая версия",
+  "Any loader": "Любой загрузчик",
   "Current instance": "Как у сборки",
   "Checking compatibility…": "Проверяю совместимость…",
   "Nothing fits this instance. Turn on Show incompatible to see the rest.": "Ничего не подходит этой сборке. Включите «Показать несовместимые», чтобы увидеть остальное.",

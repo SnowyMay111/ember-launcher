@@ -80,7 +80,15 @@ final class ModsController: ObservableObject {
     /// True while the compatibility of the current results is still being checked.
     @Published var isChecking = false
     /// Minecraft version the modpack list is limited to: nil follows the current instance, `anyVersion` lifts the limit.
-    @Published var modpackVersionChoice: String?
+    @Published var modpackVersionChoice: String? {
+        didSet { UserDefaults.standard.set(modpackVersionChoice, forKey: Self.modpackVersionKey) }
+    }
+    private static let modpackVersionKey = "modpackVersionChoice"
+    /// Loader the modpack list is limited to: nil lists packs for every loader the launcher can install.
+    @Published var modpackLoader: String? {
+        didSet { UserDefaults.standard.set(modpackLoader, forKey: Self.modpackLoaderKey) }
+    }
+    private static let modpackLoaderKey = "modpackLoader"
     static let anyVersion = "*"
     /// Installed shaders and resource packs of the current instance.
     @Published var contentRecords: [ContentRecord] = []
@@ -94,6 +102,8 @@ final class ModsController: ObservableObject {
         self.app = app
         self.manager = ModManager(store: app.store)
         self.content = ContentInstaller(store: app.store)
+        self.modpackVersionChoice = UserDefaults.standard.string(forKey: Self.modpackVersionKey)
+        self.modpackLoader = UserDefaults.standard.string(forKey: Self.modpackLoaderKey)
         reload()
     }
 
@@ -124,6 +134,10 @@ final class ModsController: ObservableObject {
 
     var canLoadMore: Bool {
         canBrowse && results.count < totalHits
+    }
+
+    private var packLoaderFilter: [String] {
+        modpackLoader.map { [$0] } ?? ContentInstaller.packLoaders
     }
 
     /// The Minecraft version modpacks are searched for; nil lists them all.
@@ -370,7 +384,7 @@ final class ModsController: ObservableObject {
                 query: query,
                 projectType: kind.projectType,
                 gameVersion: kind == .modpack ? modpackGameVersion : app.current?.minecraftVersion,
-                loaders: kind == .modpack ? ContentInstaller.packLoaders : [],
+                loaders: kind == .modpack ? packLoaderFilter : [],
                 categoryGroups: selectedCategoryGroups,
                 sortBy: sort?.rawValue
             )
@@ -431,7 +445,7 @@ final class ModsController: ObservableObject {
                     query: query,
                     projectType: currentKind.projectType,
                     gameVersion: currentKind == .modpack ? modpackGameVersion : app.current?.minecraftVersion,
-                    loaders: currentKind == .modpack ? ContentInstaller.packLoaders : [],
+                    loaders: currentKind == .modpack ? packLoaderFilter : [],
                     categoryGroups: selectedCategoryGroups,
                     sortBy: sort?.rawValue,
                     limit: limit,
@@ -470,12 +484,13 @@ final class ModsController: ObservableObject {
         guard let name = instanceName else { return }
         let content = self.content
         let modpackVersion = modpackGameVersion
+        let packLoader = modpackLoader
         var index = 0
         while index < hits.count, searchCounter == searchID {
             let batch = hits[index..<min(index + 5, hits.count)]
             let found = await withTaskGroup(of: (String, ContentCompatibility?).self) { group in
                 for hit in batch {
-                    group.addTask { (hit.projectId, try? await content.compatibility(project: hit.projectId, kind: kind, instance: name, modpackGameVersion: modpackVersion)) }
+                    group.addTask { (hit.projectId, try? await content.compatibility(project: hit.projectId, kind: kind, instance: name, modpackGameVersion: modpackVersion, modpackLoader: packLoader)) }
                 }
                 var pairs: [String: ContentCompatibility] = [:]
                 for await (id, value) in group {
@@ -511,11 +526,11 @@ final class ModsController: ObservableObject {
                 let result = try await content.install(project: hit.projectId, kind: .resourcepack, into: name)
                 finishInstall(result, title: hit.title, withIris: false)
             case .modpack:
-                let report = try await content.createInstance(fromModpack: hit.projectId, gameVersion: modpackGameVersion)
+                let report = try await content.createInstance(fromModpack: hit.projectId, gameVersion: modpackGameVersion, loader: modpackLoader)
                 app.reload()
                 app.currentID = report.instanceName
                 app.screen = .play
-                let loader = report.loader.lowercased() == "fabric" ? "Fabric" : "Vanilla"
+                let loader = LoaderKind(coreName: report.loader).rawValue
                 message = ([L("Created %@ (Minecraft %@, %@)", report.instanceName, report.minecraftVersion, loader)] + report.warnings)
                     .joined(separator: " ")
             case .mod:
@@ -536,7 +551,7 @@ final class ModsController: ObservableObject {
         previewHit = hit
         isLoadingPreview = true
         do {
-            let loaded = try await content.previewModpack(hit.projectId, gameVersion: modpackGameVersion)
+            let loaded = try await content.previewModpack(hit.projectId, gameVersion: modpackGameVersion, loader: modpackLoader)
             guard token == previewCounter else {
                 content.discardPreview(loaded)
                 return
@@ -598,7 +613,7 @@ final class ModsController: ObservableObject {
             app.reload()
             app.currentID = report.instanceName
             app.screen = .play
-            let loader = report.loader.lowercased() == "fabric" ? "Fabric" : "Vanilla"
+            let loader = LoaderKind(coreName: report.loader).rawValue
             message = ([L("Created %@ (Minecraft %@, %@)", report.instanceName, report.minecraftVersion, loader)] + report.warnings)
                 .joined(separator: " ")
         } catch {
