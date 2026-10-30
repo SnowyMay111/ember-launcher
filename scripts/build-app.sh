@@ -39,5 +39,12 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 PLIST
 
 # Локальная подпись, чтобы приложение запускалось на Apple Silicon. Подпись для публики и нотаризация позже.
-codesign --force --sign - "$APP" >/dev/null 2>&1 || echo "warning: codesign failed (приложение может не запуститься)"
+if ! codesign --force --sign - "$APP" >/dev/null 2>&1; then
+    # Релиз без подписи не запустится на Apple Silicon, поэтому для него это ошибка; для debug хватает предупреждения.
+    if [ "$CONFIG" = "release" ]; then
+        echo "error: codesign failed (релизная сборка без подписи не запустится)"
+        exit 1
+    fi
+    echo "warning: codesign failed (приложение может не запуститься)"
+fi
 echo "Готово: $PWD/$APP"
