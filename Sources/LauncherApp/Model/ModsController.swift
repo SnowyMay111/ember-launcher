@@ -298,7 +298,7 @@ final class ModsController: ObservableObject {
             let page = try await manager.client.searchPage(
                 query: query,
                 gameVersion: instance.minecraftVersion,
-                loader: instance.loader.supportsMods ? instance.loader.coreName : "fabric",
+                loader: instance.loader.supportsMods ? instance.loader.modrinthLoader : "fabric",
                 categoryGroups: selectedCategoryGroups,
                 sortBy: sort?.rawValue
             )
@@ -433,7 +433,7 @@ final class ModsController: ObservableObject {
                 page = try await manager.client.searchPage(
                     query: query,
                     gameVersion: instance.minecraftVersion,
-                    loader: instance.loader.supportsMods ? instance.loader.coreName : "fabric",
+                    loader: instance.loader.supportsMods ? instance.loader.modrinthLoader : "fabric",
                     categoryGroups: selectedCategoryGroups,
                     sortBy: sort?.rawValue,
                     limit: limit,

@@ -12,7 +12,7 @@ extension ModManager {
         let candidates = try await client.versions(
             project: idOrSlug,
             gameVersion: instance.minecraftVersion,
-            loader: instance.loader.lowercased()
+            loader: ModManager.modrinthLoader(for: instance.loader)
         )
         for candidate in Self.byReleaseType(candidates) {
             if await fits(candidate, instance: instance, installed: installed) {
@@ -26,7 +26,7 @@ extension ModManager {
     /// game version and loader and agree with the installed copy; also false when it is marked incompatible
     /// with an installed mod.
     func fits(_ version: ModrinthVersion, instance: Instance, installed: [ModRecord]) async -> Bool {
-        let loader = instance.loader.lowercased()
+        let loader = ModManager.modrinthLoader(for: instance.loader)
         for dependency in version.dependencies {
             guard let projectId = dependency.projectId, !projectId.isEmpty else { continue }
             let present = installed.first { $0.projectId == projectId }

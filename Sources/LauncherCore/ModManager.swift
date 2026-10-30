@@ -109,7 +109,7 @@ public enum ModManagerError: Error, LocalizedError, Sendable, Equatable {
     public var errorDescription: String? {
         switch self {
         case .unsupportedLoader(let loader):
-            return "Mods can be installed for Fabric, Forge and NeoForge, but this instance uses '\(loader)'"
+            return "Mods can be installed for Fabric, Quilt, Forge and NeoForge, but this instance uses '\(loader)'"
         case .notFound(let item):
             return "Mod not found: \(item)"
         case .incompatible(let reason):
@@ -120,7 +120,13 @@ public enum ModManagerError: Error, LocalizedError, Sendable, Equatable {
 
 public final class ModManager: Sendable {
     /// Loaders Modrinth mods can be installed for.
-    public static let supportedLoaders: Set<String> = ["fabric", "forge", "neoforge"]
+    public static let supportedLoaders: Set<String> = ["fabric", "quilt", "forge", "neoforge"]
+
+    /// The loader to ask Modrinth for: Quilt runs Fabric mods, and few mods are published for Quilt alone.
+    public static func modrinthLoader(for instanceLoader: String) -> String {
+        let lower = instanceLoader.lowercased()
+        return lower == "quilt" ? "fabric" : lower
+    }
 
     public let store: InstanceStore
     public let client: ModrinthClient
@@ -269,10 +275,10 @@ public final class ModManager: Sendable {
 
     public func install(project idOrSlug: String, into name: String) async throws -> ModInstallResult {
         let instance = try store.load(name: name)
-        let loader = instance.loader.lowercased()
-        guard ModManager.supportedLoaders.contains(loader) else {
+        guard ModManager.supportedLoaders.contains(instance.loader.lowercased()) else {
             throw ModManagerError.unsupportedLoader(instance.loader)
         }
+        let loader = ModManager.modrinthLoader(for: instance.loader)
 
         var currentRecords = loadRecords(instance: name)
         guard let version = try await resolveVersion(project: idOrSlug, instance: instance, installed: currentRecords) else {
@@ -491,7 +497,7 @@ public final class ModManager: Sendable {
         var results: [ModUpgradeCheck] = []
         for record in records {
             do {
-                let best = try await client.bestVersion(project: record.projectId, gameVersion: gameVersion, loader: instance.loader)
+                let best = try await client.bestVersion(project: record.projectId, gameVersion: gameVersion, loader: ModManager.modrinthLoader(for: instance.loader))
                 results.append(ModUpgradeCheck(record: record, targetVersion: best))
             } catch {
                 results.append(ModUpgradeCheck(record: record, targetVersion: nil))

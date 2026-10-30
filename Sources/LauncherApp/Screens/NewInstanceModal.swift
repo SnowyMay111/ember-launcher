@@ -10,6 +10,7 @@ struct NewInstanceModal: View {
     @Local private var loader: LoaderKind = .vanilla
     @Local private var group = GroupName.vanilla
     @Local private var fabricVersions: Set<String>?
+    @Local private var quiltVersions: Set<String>?
     @Local private var forgeVersions: [LoaderKind: Set<String>] = [:]
     @Local private var errorText = ""
     @Local private var mode = Mode.custom
@@ -40,6 +41,7 @@ struct NewInstanceModal: View {
         switch activeLoader {
         case .vanilla: supported = nil
         case .fabric: supported = fabricVersions
+        case .quilt: supported = quiltVersions
         case .forge, .neoforge: supported = forgeVersions[activeLoader]
         }
         guard let supported else { return all }
@@ -74,6 +76,7 @@ struct NewInstanceModal: View {
     private static let loaderNotes: [LoaderKind: String] = [
         .vanilla: "The original experience",
         .fabric: "Lightweight and mod-friendly",
+        .quilt: "Fabric-compatible community loader",
         .forge: "Built for expansive modpacks",
         .neoforge: "Modern community loader"
     ]
@@ -439,10 +442,13 @@ struct NewInstanceModal: View {
         let fabric = FabricInstaller(paths: app.paths, installer: app.versionInstaller)
         let forge = ForgeInstaller(paths: app.paths, installer: app.versionInstaller, runtimeManager: JavaRuntimeManager(paths: app.paths))
         let candidates = app.launchableVersions(includeSnapshots: true).map(\.id)
+        let quilt = QuiltInstaller(paths: app.paths, installer: app.versionInstaller)
         async let fabricSet = try? fabric.supportedGameVersions()
+        async let quiltSet = try? quilt.supportedGameVersions()
         async let forgeSet = try? forge.supportedGameVersions(loader: .forge, among: candidates)
         async let neoForgeSet = try? forge.supportedGameVersions(loader: .neoforge, among: candidates)
         fabricVersions = await fabricSet
+        quiltVersions = await quiltSet
         if let found = await forgeSet { forgeVersions[.forge] = found }
         if let found = await neoForgeSet { forgeVersions[.neoforge] = found }
         chooseVersion()

@@ -334,7 +334,7 @@ public final class ContentInstaller: Sendable {
     }
 
     /// Loaders a modpack can ask for that the launcher can install.
-    public static let packLoaders = ["fabric", "forge", "neoforge"]
+    public static let packLoaders = ["fabric", "quilt", "forge", "neoforge"]
 
     /// Versions the launcher can run; with `loader` set, only those built for that loader.
     static func runnablePackVersions(_ versions: [ModrinthVersion], loader: String? = nil) -> [ModrinthVersion] {

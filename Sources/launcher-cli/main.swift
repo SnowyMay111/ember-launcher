@@ -28,6 +28,8 @@ guard args.count >= 2 else {
     print("Commands:")
     print("  versions              List latest and recent release versions")
     print("  install <versionId>   Install a Minecraft version and its Java runtime")
+    print("  install-quilt <mc> [--loader <version>]")
+    print("                        Install Quilt for an installed Minecraft version")
     print("  install-fabric <mc> [--loader <version>]")
     print("                        Install Fabric for an installed Minecraft version")
     print("  launch <mc> [--fabric] [--name <nick>] [--instance <name>] [--dry-run]")
@@ -142,6 +144,21 @@ do {
             printer.update(phase: phase, progress: progress)
         }
         print("\nFabric installed: \(profileId)")
+
+    case "install-quilt":
+        guard args.count >= 3 else {
+            print("Error: Missing Minecraft version. Usage: launcher-cli install-quilt <mc> [--loader <version>]")
+            exit(1)
+        }
+        let quiltMC = args[2]
+        print("Installing Quilt for \(quiltMC)...")
+        let quiltVersions = VersionInstaller(paths: paths, downloader: downloader)
+        let quilt = QuiltInstaller(paths: paths, installer: quiltVersions, downloader: downloader)
+        let quiltPrinter = ProgressPrinter()
+        let quiltId = try await quilt.install(minecraftVersion: quiltMC, loaderVersion: option("--loader")) { phase, progress in
+            quiltPrinter.update(phase: phase, progress: progress)
+        }
+        print("\nQuilt installed: \(quiltId)")
 
     case "install-forge":
         guard args.count >= 3 else {

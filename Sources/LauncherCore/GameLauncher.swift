@@ -149,6 +149,26 @@ public final class GameLauncher: Sendable {
                 }
             }
             return updated
+        } else if instance.loader == "quilt" {
+            let needsInstall = force
+                || instance.versionId.isEmpty
+                || !fm.fileExists(atPath: paths.versionJSON(instance.versionId).path)
+                || !fm.fileExists(atPath: paths.versionJSON(instance.minecraftVersion).path)
+            if needsInstall {
+                let quiltInstaller = QuiltInstaller(paths: paths, installer: installer)
+                let profileId = try await quiltInstaller.install(
+                    minecraftVersion: instance.minecraftVersion,
+                    loaderVersion: instance.loaderVersion,
+                    progress: progress
+                )
+                let suffix = "-\(instance.minecraftVersion)"
+                updated.versionId = profileId
+                updated.loaderVersion = String(profileId.dropFirst(QuiltInstaller.profilePrefix.count).dropLast(suffix.count))
+                if updated != instance {
+                    try store.save(updated)
+                }
+            }
+            return updated
         } else if let kind = ForgeLoaderKind(instanceLoader: instance.loader) {
             let needsInstall = force
                 || instance.versionId.isEmpty

@@ -168,7 +168,7 @@ public final class ModpackManager: Sendable {
 
         let loaderLower = instance.loader.lowercased()
         let forgeKind = ForgeLoaderKind(instanceLoader: loaderLower)
-        guard loaderLower == "fabric" || loaderLower == "vanilla" || forgeKind != nil else {
+        guard loaderLower == "fabric" || loaderLower == "quilt" || loaderLower == "vanilla" || forgeKind != nil else {
             throw ModpackError.unsupportedLoader(instance.loader)
         }
 
@@ -193,6 +193,23 @@ public final class ModpackManager: Sendable {
                     dependencies["fabric-loader"] = try await fabricInstaller.latestStableLoader(for: instance.minecraftVersion)
                 } catch {
                     throw ModpackError.missingDependency("fabric-loader")
+                }
+            }
+        }
+
+        if loaderLower == "quilt" {
+            if let loaderVersion = instance.loaderVersion, !loaderVersion.isEmpty {
+                dependencies["quilt-loader"] = loaderVersion
+            } else if instance.versionId.hasPrefix(QuiltInstaller.profilePrefix) {
+                let remainder = String(instance.versionId.dropFirst(QuiltInstaller.profilePrefix.count))
+                dependencies["quilt-loader"] = remainder.lastIndex(of: "-").map { String(remainder[..<$0]) } ?? remainder
+            } else {
+                let versionInstaller = VersionInstaller(paths: store.paths, downloader: downloader)
+                let quiltInstaller = QuiltInstaller(paths: store.paths, installer: versionInstaller, downloader: downloader)
+                do {
+                    dependencies["quilt-loader"] = try await quiltInstaller.latestStableLoader(for: instance.minecraftVersion)
+                } catch {
+                    throw ModpackError.missingDependency("quilt-loader")
                 }
             }
         }
