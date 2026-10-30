@@ -4,6 +4,7 @@ import SwiftUI
 /// Workbench: this build on the left, Modrinth search on the right, a basket to install several at once.
 struct ModsScreen: View {
     @EnvironmentObject var app: AppState
+    @ObservedObject private var lobbyRoom = LobbyRoom.shared
     @StateObject private var mods: ModsController
     @Local private var query = ""
     @Local private var confirmingRemove: String?
@@ -55,6 +56,15 @@ struct ModsScreen: View {
                     PageHeader(eyebrow: "Discover", title: "Mods", subtitle: subtitle, alignment: .leading)
                     Spacer(minLength: 16)
                     kindSwitch
+                }
+
+                if lobbyRoom.instanceName != nil, lobbyRoom.instanceName == app.currentID {
+                    HStack(spacing: 14) {
+                        Text(tr: "Everything you add here goes into the lobby and syncs with your friends.")
+                            .style(.secondary)
+                        SecondaryPill(title: "Back to the lobby") { app.modal = .lobby }
+                    }
+                    .padding(.top, 12)
                 }
 
                 if mods.needsFabric {

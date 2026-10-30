@@ -1,92 +1,117 @@
+import Combine
 import Foundation
 import LauncherCore
 
-/// One-button joining: joins the lobby, opens the tunnel to the host and starts the game on it.
+/// Joining a lobby only gets you into the room: you see the shared content list
+/// and press Play once the host's server is running. LobbyRoom keeps your local
+/// instance in sync with that list; LobbyStore polls the lobby and opens the
+/// guest tunnel on its own once the lobby is open.
 @MainActor
 final class LobbyGuestController: ObservableObject {
     static let shared = LobbyGuestController()
 
     @Published private(set) var state: LobbyHostState = .idle
+    @Published private(set) var roomInstance: String?
+    @Published private(set) var errorMessage: String?
 
-    private let modManager = ModManager(store: GameLauncher(paths: LauncherPaths()).store)
+    private var lobbyWatch: AnyCancellable?
 
-    private init() {}
+    private init() {
+        lobbyWatch = LobbyStore.shared.$current
+            .dropFirst()
+            .sink { [weak self] current in
+                guard let self, current == nil else { return }
+                LobbyRoom.shared.detach()
+                self.roomInstance = nil
+                self.state = .idle
+            }
+    }
 
     var isBusy: Bool {
         if case .preparing = state { return true }
         return false
     }
 
-    func join(code: String?, lobbyID: String?, settings: SettingsStore, app: AppState, play: PlayController) {
-        guard !isBusy, !play.isBusy else { return }
+    func join(code: String?, lobbyID: String?, settings: SettingsStore, app: AppState) {
+        guard !isBusy else { return }
+        errorMessage = nil
         state = .preparing(L("Joining the lobby…"))
-        Task { await run(code: code, lobbyID: lobbyID, settings: settings, app: app, play: play) }
+        Task { await run(code: code, lobbyID: lobbyID, settings: settings, app: app) }
     }
 
-    private func run(code: String?, lobbyID: String?, settings: SettingsStore, app: AppState, play: PlayController) async {
+    private func run(code: String?, lobbyID: String?, settings: SettingsStore, app: AppState) async {
         let lobbies = LobbyStore.shared
         guard await lobbies.join(code: code, lobbyID: lobbyID, nick: settings.nickname),
-              let lobby = lobbies.current, let port = lobbies.tunnelPort
+              let lobby = lobbies.current
         else {
             state = .failed(lobbies.message ?? L("Could not reach the lobby service."))
             if lobbies.current != nil { lobbies.leave() }
             return
         }
         do {
-            let mods = LobbyModList(packURL: lobby.packURL, packSHA1: lobby.packSHA1)
-            let item = try instance(for: lobby, app: app, dedicated: mods != nil)
-            if let mods {
-                try await installMods(mods, into: item.name)
-            }
-            state = .running
-            app.modal = nil
-            play.play(item, settings: settings, app: app, quickPlayServer: "127.0.0.1:\(port)")
+            let item = try instance(for: lobby, app: app)
+            roomInstance = item.name
+            LobbyRoom.shared.attach(instance: item.name)
+            app.modal = .lobby
+            state = .room
         } catch {
             lobbies.leave()
             state = .failed(error.localizedDescription)
         }
     }
 
-    /// Puts the host's mods into the lobby's own instance; the player's other instances stay as they are.
-    private func installMods(_ mods: LobbyModList, into instance: String) async throws {
-        state = .preparing(L("Installing the host's mods…"))
-        let syncer = LobbySyncer(manager: modManager)
-        let relay = ModProgressRelay { [weak self] done, total in
-            Task { @MainActor in self?.state = .preparing(L("Installing the host's mods %d/%d", done, total)) }
-        }
-        _ = try await syncer.sync(mods, into: instance) { relay.report($0, $1) }
-    }
-
-    /// An instance on the lobby's Minecraft version, preferring Fabric; made when the player has none.
-    /// With `dedicated` the lobby gets its own "Lobby <version>" instance so synced mods never touch the player's own.
-    private func instance(for lobby: ActiveLobby, app: AppState, dedicated: Bool) throws -> LibraryInstance {
-        if dedicated {
-            let name = "Lobby \(lobby.mcVersion)"
-            if let existing = app.instances.first(where: { $0.id == name && $0.loader == .fabric }) {
-                return existing
+    /// Installs the lobby's current content list and launches the game against
+    /// the host's server, once it is up and the guest tunnel is open.
+    func play(settings: SettingsStore, app: AppState, play: PlayController) {
+        guard case .room = state, !play.isBusy,
+              LobbyStore.shared.current?.isRunning == true,
+              let port = LobbyStore.shared.tunnelPort,
+              let roomInstance
+        else { return }
+        errorMessage = nil
+        state = .preparing(L("Installing the lobby's content…"))
+        Task {
+            do {
+                try await LobbyRoom.shared.pull(final: true)
+                guard let item = app.instances.first(where: { $0.id == roomInstance }) else {
+                    throw LobbyGuestError.instanceMissing
+                }
+                app.modal = nil
+                play.play(item, settings: settings, app: app, quickPlayServer: "127.0.0.1:\(port)")
+                state = .room
+            } catch {
+                errorMessage = error.localizedDescription
+                state = .room
             }
         }
-        let sameVersion = app.instances.filter { $0.minecraftVersion == lobby.mcVersion }
-        if !dedicated, let found = sameVersion.first(where: { $0.loader == .fabric }) ?? sameVersion.first(where: { $0.loader == .vanilla }) {
-            return found
+    }
+
+    func leave() {
+        LobbyStore.shared.leave()
+        LobbyRoom.shared.detach()
+        roomInstance = nil
+        state = .idle
+    }
+
+    /// An instance on the lobby's Minecraft version, Fabric, dedicated to this
+    /// lobby so the synced content list never touches the player's own
+    /// instances; created when the player doesn't already have one.
+    private func instance(for lobby: ActiveLobby, app: AppState) throws -> LibraryInstance {
+        let name = "Lobby \(lobby.mcVersion)"
+        if let existing = app.instances.first(where: { $0.id == name && $0.loader == .fabric }) {
+            return existing
         }
-        let name = try app.createInstance(
-            name: "Lobby \(lobby.mcVersion)",
+        let created = try app.createInstance(
+            name: name,
             minecraftVersion: lobby.mcVersion,
             loader: .fabric,
             group: nil,
             memoryMB: 4096
         )
-        guard let created = app.instances.first(where: { $0.id == name }) else {
+        guard let item = app.instances.first(where: { $0.id == created }) else {
             throw LobbyGuestError.instanceMissing
         }
-        return created
-    }
-
-    private final class ModProgressRelay: @unchecked Sendable {
-        private let handler: @Sendable (Int, Int) -> Void
-        init(_ handler: @escaping @Sendable (Int, Int) -> Void) { self.handler = handler }
-        func report(_ done: Int, _ total: Int) { handler(done, total) }
+        return item
     }
 
     private enum LobbyGuestError: LocalizedError {

@@ -202,7 +202,7 @@ struct SocialScreen: View {
                 .foregroundColor(Theme.textSecondary)
 
             Button {
-                guest.join(code: nil, lobbyID: lobby.lobbyID, settings: settings, app: app, play: play)
+                guest.join(code: nil, lobbyID: lobby.lobbyID, settings: settings, app: app)
                 app.modal = .lobby
             } label: {
                 Text(verbatim: L("Join lobby"))

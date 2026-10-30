@@ -79,6 +79,7 @@ public final class LobbySyncer: Sendable {
     public func sync(
         _ list: LobbyModList,
         into instance: String,
+        switchOffExtras: Bool = true,
         progress: (@Sendable (_ done: Int, _ total: Int) -> Void)? = nil
     ) async throws -> LobbyModSyncResult {
         var result = LobbyModSyncResult()
@@ -129,7 +130,7 @@ public final class LobbySyncer: Sendable {
         }
         try manager.saveRecords(records, instance: instance)
 
-        for mod in try manager.list(instance: instance) where mod.isEnabled && !wanted.contains(mod.fileName) {
+        for mod in try manager.list(instance: instance) where switchOffExtras && mod.isEnabled && !wanted.contains(mod.fileName) {
             try manager.setEnabled(instance: instance, fileName: mod.fileName, enabled: false)
             result.switchedOff += 1
         }

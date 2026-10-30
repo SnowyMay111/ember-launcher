@@ -64,11 +64,14 @@ public struct LobbyContentSyncOptions: Sendable, Equatable {
     public var syncShaders: Bool
     public var syncResourcePacks: Bool
     public var activate: Bool
+    /// Mods the lobby does not use are switched off; false while the list is still being built (only installs).
+    public var switchOffExtraMods: Bool
 
-    public init(syncShaders: Bool = false, syncResourcePacks: Bool = true, activate: Bool = true) {
+    public init(syncShaders: Bool = false, syncResourcePacks: Bool = true, activate: Bool = true, switchOffExtraMods: Bool = true) {
         self.syncShaders = syncShaders
         self.syncResourcePacks = syncResourcePacks
         self.activate = activate
+        self.switchOffExtraMods = switchOffExtraMods
     }
 }
 
@@ -114,6 +117,7 @@ public final class LobbyContentSyncer: Sendable {
         let modResult = try await modSyncer.sync(
             LobbyModList(versionIDs: modIDs),
             into: instance,
+            switchOffExtras: options.switchOffExtraMods,
             progress: { done, _ in
                 progress?(done, total)
             }

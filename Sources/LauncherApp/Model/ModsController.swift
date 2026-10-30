@@ -350,6 +350,7 @@ final class ModsController: ObservableObject {
             let result = try await manager.install(project: hit.projectId, into: name)
             reload()
             app.reload()
+            publishToLobby(instance: name)
             if !result.warnings.isEmpty {
                 let joined = result.warnings.joined(separator: "; ")
                 message = "\(L("Installed %@.", hit.title)) \(joined)"
@@ -506,6 +507,12 @@ final class ModsController: ObservableObject {
     }
 
     /// The one Install button for shaders, resource packs and modpacks.
+    /// Content installed into the lobby's room instance joins the shared list, so friends get it too.
+    private func publishToLobby(instance name: String) {
+        guard LobbyRoom.shared.instanceName == name else { return }
+        Task { await LobbyRoom.shared.publishNewContent() }
+    }
+
     func installContent(_ hit: ModrinthHit) async {
         busy.insert(hit.projectId)
         defer { busy.remove(hit.projectId) }
@@ -522,10 +529,12 @@ final class ModsController: ObservableObject {
                     result = try await content.install(project: hit.projectId, kind: .shader, into: name)
                 }
                 finishInstall(result, title: hit.title, withIris: withIris)
+                publishToLobby(instance: name)
             case .resourcepack:
                 guard let name = instanceName else { return }
                 let result = try await content.install(project: hit.projectId, kind: .resourcepack, into: name)
                 finishInstall(result, title: hit.title, withIris: false)
+                publishToLobby(instance: name)
             case .modpack:
                 let report = try await content.createInstance(fromModpack: hit.projectId, gameVersion: modpackGameVersion, loader: modpackLoader)
                 app.reload()

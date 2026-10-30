@@ -188,7 +188,7 @@ struct ServersScreen: View {
             }
             Spacer()
             if running {
-                SecondaryPill(title: L("Stop"), height: 36) { host.close() }
+                SecondaryPill(title: L("Stop"), height: 36) { host.stopRunningServer() }
             } else {
                 PrimaryPill(title: L("Start"), height: 36, isDisabled: !canStart(profile)) { start(profile) }
             }
@@ -213,8 +213,17 @@ struct ServersScreen: View {
 
     private func start(_ profile: ServerProfile) {
         guard let item = instance(for: profile) else { return }
-        host.host(item, name: profile.name, privacy: .friends, maxPlayers: profile.maxPlayers,
-                  settings: settings, app: app, play: play)
+        host.createRoom(
+            base: item,
+            reuseBase: true,
+            mcVersion: item.minecraftVersion,
+            name: profile.name,
+            privacy: .friends,
+            maxPlayers: profile.maxPlayers,
+            settings: settings,
+            app: app,
+            startImmediately: true
+        )
     }
 
     private func statsRow(_ profile: ServerProfile, running: Bool) -> some View {
