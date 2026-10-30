@@ -254,6 +254,7 @@ private struct DropdownRow: View {
 
     var body: some View {
         configuration.label
+            .lineLimit(1)
             .font(Theme.font(size: 14, weight: .regular))
             .foregroundColor(Theme.text)
             .frame(maxWidth: .infinity, alignment: .leading)

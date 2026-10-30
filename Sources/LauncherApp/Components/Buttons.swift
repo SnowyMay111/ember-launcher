@@ -125,22 +125,27 @@ struct FilterChip: View {
     var isDisabled = false
     /// Toolbar look of the prototype's `.filter-row button`: 10 pt text, no fill until active.
     var compact = false
+    /// Compact chip that stays a visible button when not active (own fill and border, 12 pt text).
+    var outlined = false
     var action: () -> Void
 
     @Local private var isHovered = false
     @FocusState private var isFocused: Bool
 
     private var textColor: Color {
+        if outlined { return isActive ? Theme.ember : (isHovered ? Theme.text : Theme.textSecondary) }
         if compact { return isActive ? Color(hex: 0xe8e2db) : (isHovered ? Color(hex: 0xb2aca4) : Color(hex: 0x68645e)) }
         return isActive ? Theme.ember : (isHovered ? Theme.text : Theme.textSecondary)
     }
 
     private var fillColor: Color {
+        if outlined { return isActive ? Theme.ember.opacity(0.14) : (isHovered ? Theme.elevated : Theme.elevated.opacity(0.6)) }
         if compact { return isActive ? Color(hex: 0x171513) : .clear }
         return isActive ? Theme.ember.opacity(0.14) : Theme.elevated
     }
 
     private var strokeColor: Color {
+        if outlined { return isActive ? Theme.ember.opacity(0.45) : (isHovered ? Theme.lineStrong : Theme.border) }
         if compact { return isActive ? Color(hex: 0x37322f) : .clear }
         return isActive ? Theme.ember.opacity(0.4) : (isHovered ? Theme.lineStrong : Theme.border)
     }
@@ -148,7 +153,7 @@ struct FilterChip: View {
     var body: some View {
         Button(action: action) {
             Text(tr: title)
-                .style(.init(size: compact ? 10 : 14, weight: .medium, color: textColor))
+                .style(.init(size: outlined ? 12 : (compact ? 10 : 14), weight: .medium, color: textColor))
                 .lineLimit(1)
                 .fixedSize()
                 .padding(.horizontal, compact ? 13 : 16)

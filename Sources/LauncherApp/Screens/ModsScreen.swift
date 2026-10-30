@@ -407,7 +407,7 @@ struct ModsScreen: View {
                     SearchField(placeholder: searchPlaceholder, text: $query, compact: true)
                     Spacer(minLength: 8)
                     sortMenu
-                    FilterChip(title: "Show incompatible", isActive: mods.showIncompatible, compact: true) { mods.showIncompatible.toggle() }
+                    FilterChip(title: "Show incompatible", isActive: mods.showIncompatible, compact: true, outlined: true) { mods.showIncompatible.toggle() }
                 }
                 if !mods.needsFabric, !mods.kind.browseCategories.isEmpty { categoryChips }
             }
@@ -422,14 +422,13 @@ struct ModsScreen: View {
     private var categoryChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                if !mods.categories.isEmpty {
-                    FilterChip(title: "Clear", isActive: false, compact: true) { mods.categories.removeAll() }
-                }
+                if !mods.categories.isEmpty { clearCategoriesButton }
                 ForEach(mods.kind.browseGroups, id: \.id) { group in
                     FilterChip(
                         title: mods.kind == .mod || mods.kind == .modpack ? L(group.title) : Self.prettifyCategory(group.id),
                         isActive: mods.categories.contains(group.id),
-                        compact: true
+                        compact: true,
+                        outlined: true
                     ) {
                         if mods.categories.contains(group.id) {
                             mods.categories.remove(group.id)
@@ -443,9 +442,24 @@ struct ModsScreen: View {
         }
     }
 
+    private var clearCategoriesButton: some View {
+        Button { mods.categories.removeAll() } label: {
+            CloseIcon()
+                .stroke(Theme.textSecondary, style: StrokeStyle(lineWidth: 1.6, lineCap: .round))
+                .frame(width: 12, height: 12)
+                .frame(width: 32, height: 32)
+                .background(Circle().fill(Theme.elevated))
+                .overlay(Circle().strokeBorder(Theme.lineStrong, lineWidth: 1))
+                .contentShape(Circle())
+        }
+        .buttonStyle(PressDimStyle())
+        .accessibilityLabel(L("Clear"))
+        .help(L("Clear"))
+    }
+
     private var sortMenu: some View {
         let value = mods.sort?.title ?? "Best match"
-        return VoxelMenu(label: "Sort", value: L(value), compact: true) {
+        return VoxelMenu(label: "Sort", value: L(value), listWidth: 200, alignTrailing: true, compact: true) {
             Button(L("Best match")) { mods.sort = nil }
             ForEach(BrowseSort.allCases, id: \.rawValue) { sort in
                 Button(L(sort.title)) { mods.sort = sort }

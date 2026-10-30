@@ -132,13 +132,16 @@ struct VoxelMenu<Content: View>: View {
     let value: String
     var isPill = false
     var minWidth: CGFloat? = nil
+    /// Width of the open list when it should be wider than the label.
+    var listWidth: CGFloat? = nil
+    var alignTrailing = false
     var compact = false
     @ViewBuilder var content: () -> Content
     @Local private var isHovered = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        EmberDropdown(minWidth: minWidth, content: content) { isOpen in
+        EmberDropdown(minWidth: listWidth ?? minWidth, alignTrailing: alignTrailing, content: content) { isOpen in
             pill(isOpen: isOpen)
         }
         .onHover { isHovered = $0 }
