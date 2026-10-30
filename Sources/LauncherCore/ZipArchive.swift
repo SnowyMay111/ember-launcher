@@ -31,6 +31,16 @@ public enum ZipArchive: Sendable {
         #endif
     }
 
+    /// True if any entry is a symbolic link (permissions column of `unzip -Z` starts with `l`).
+    public static func hasSymlinks(_ archive: URL) throws -> Bool {
+        #if os(macOS)
+        let output = try run(executable: "/usr/bin/unzip", arguments: ["-Z", archive.path]).stdout
+        return output.components(separatedBy: .newlines).contains { $0.hasPrefix("l") && $0.count > 10 }
+        #else
+        throw ZipArchiveError.unsupportedPlatform
+        #endif
+    }
+
     /// Parses uncompressed size in bytes from the summary line of `unzip -Zt`.
     public static func uncompressedSize(of archive: URL) throws -> Int64 {
         #if os(macOS)

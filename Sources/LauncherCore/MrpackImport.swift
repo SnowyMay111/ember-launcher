@@ -386,6 +386,10 @@ extension ModpackManager {
             }
         }
 
+        if try ZipArchive.hasSymlinks(archive) {
+            throw ModpackError.invalidArchive("symbolic links are not allowed")
+        }
+
         guard entries.contains("modrinth.index.json") else {
             throw ModpackError.invalidArchive("modrinth.index.json is missing")
         }
