@@ -93,6 +93,8 @@ struct InstanceSettingsModal: View {
                             SecondaryPill(title: isExporting ? "Exporting…" : "Export .mrpack", action: exportPack)
                             SecondaryPill(title: "Delete") { confirmingDelete = true }
                         }
+                        Text(tr: "An exported pack includes mod configs. They can hold tokens or passwords, so check them before sharing the file.")
+                            .style(.secondary)
                     }
                 }
 
