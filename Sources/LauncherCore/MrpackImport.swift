@@ -291,6 +291,19 @@ extension ModpackManager {
                     warnings.append("Could not fetch project metadata: \(error.localizedDescription)")
                 }
 
+                // Real version numbers come from Modrinth; the file name stays as the fallback when they cannot be fetched.
+                var versionMap: [String: ModrinthVersion] = [:]
+                do {
+                    let uniqueVersionIds = Array(Set(candidates.map { $0.versionId }))
+                    for chunk in stride(from: 0, to: uniqueVersionIds.count, by: 100).map({ Array(uniqueVersionIds[$0..<min($0 + 100, uniqueVersionIds.count)]) }) {
+                        for version in try await client.versions(ids: chunk) {
+                            versionMap[version.id] = version
+                        }
+                    }
+                } catch {
+                    warnings.append("Could not fetch version metadata: \(error.localizedDescription)")
+                }
+
                 var records: [ModRecord] = []
                 for candidate in candidates {
                     let project = projectMap[candidate.projectId]
@@ -301,7 +314,7 @@ extension ModpackManager {
                         projectId: candidate.projectId,
                         versionId: candidate.versionId,
                         title: title,
-                        versionNumber: candidate.versionNumber,
+                        versionNumber: versionMap[candidate.versionId]?.versionNumber ?? candidate.versionNumber,
                         iconURL: iconURL,
                         isDependency: false,
                         installedFor: nil
