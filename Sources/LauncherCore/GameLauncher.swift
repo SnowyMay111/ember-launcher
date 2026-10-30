@@ -125,6 +125,12 @@ public final class GameLauncher: Sendable {
     ) async throws -> Instance {
         var updated = instance
         let fm = FileManager.default
+        if force {
+            // A forced reinstall may bring new libraries: drop the unpacked natives (and their marker) so the next launch unpacks them again.
+            for id in Set([instance.versionId, instance.minecraftVersion]) where !id.isEmpty {
+                try? fm.removeItem(at: paths.versionDir(id).appendingPathComponent("natives", isDirectory: true))
+            }
+        }
         if instance.loader == "fabric" {
             let needsInstall = force
                 || instance.versionId.isEmpty
@@ -263,7 +269,14 @@ public final class GameLauncher: Sendable {
         var classpath: [String] = []
         var seen = Set<String>()
         let nativesMarker = nativesDir.appendingPathComponent(".extracted")
-        let needsNativesExtract = !fm.fileExists(atPath: nativesMarker.path)
+        // The marker holds a stamp of the native libraries it was made from, so changed libraries are unpacked again.
+        let nativesStamp = version.libraries
+            .filter { RuleEvaluator.isAllowed(rules: $0.rules) && ($0.nativeClassifier != nil || $0.extract != nil) }
+            .compactMap { $0.resolvedArtifact.map { "\($0.path):\($0.sha1 ?? "")" } }
+            .sorted()
+            .joined(separator: "\n")
+        let needsNativesExtract = (try? String(contentsOf: nativesMarker, encoding: .utf8)) != nativesStamp
+        var nativesOK = true
 
         for library in version.libraries {
             guard RuleEvaluator.isAllowed(rules: library.rules),
@@ -272,7 +285,11 @@ public final class GameLauncher: Sendable {
 
             if needsNativesExtract, library.nativeClassifier != nil || library.extract != nil {
                 if fm.fileExists(atPath: file.path) {
-                    try? ZipArchive.extract(file, to: nativesDir)
+                    do {
+                        try ZipArchive.extract(file, to: nativesDir)
+                    } catch {
+                        nativesOK = false
+                    }
                     if let excludes = library.extract?.exclude {
                         for pattern in excludes {
                             let clean = pattern.hasSuffix("/") ? String(pattern.dropLast()) : pattern
@@ -280,6 +297,8 @@ public final class GameLauncher: Sendable {
                             try? fm.removeItem(at: target)
                         }
                     }
+                } else {
+                    nativesOK = false
                 }
             }
 
@@ -289,8 +308,8 @@ public final class GameLauncher: Sendable {
             }
             classpath.append(file.path)
         }
-        if needsNativesExtract {
-            fm.createFile(atPath: nativesMarker.path, contents: nil)
+        if needsNativesExtract && nativesOK {
+            try? Data(nativesStamp.utf8).write(to: nativesMarker)
         }
         let clientJar = paths.versionJAR(version.clientJarID)
         guard fm.fileExists(atPath: clientJar.path) else {
