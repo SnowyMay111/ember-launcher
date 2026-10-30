@@ -2,7 +2,7 @@ import SwiftUI
 import AppKit
 
 final class WindowConfiguratorView: NSView {
-    private var observers: [NSObjectProtocol] = []
+    nonisolated(unsafe) private var observers: [NSObjectProtocol] = []
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()

@@ -6,7 +6,7 @@ import CoreText
 extension Theme {
 
     private static let cacheLock = NSLock()
-    private static var fontCache: [String: Font] = [:]
+    nonisolated(unsafe) private static var fontCache: [String: Font] = [:]
 
     /// CSS-style numeric weight for a SwiftUI weight.
     static func cssWeight(_ weight: Font.Weight) -> Int {

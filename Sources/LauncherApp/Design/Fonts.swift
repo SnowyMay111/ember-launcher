@@ -2,9 +2,12 @@ import Foundation
 import CoreText
 
 public enum FontLoader {
-    private static var isRegistered = false
+    private static let registrationLock = NSLock()
+    nonisolated(unsafe) private static var isRegistered = false
 
     public static func registerAll() {
+        registrationLock.lock()
+        defer { registrationLock.unlock() }
         guard !isRegistered else { return }
         isRegistered = true
 

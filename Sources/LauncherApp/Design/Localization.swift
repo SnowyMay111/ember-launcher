@@ -1,7 +1,7 @@
 import SwiftUI
 import LauncherCore
 
-public let localizer = Localizer(
+nonisolated(unsafe) public let localizer = Localizer(
     directory: Bundle.module.url(forResource: "Languages", withExtension: nil),
     preferredLanguages: Locale.preferredLanguages
 )

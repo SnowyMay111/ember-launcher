@@ -27,6 +27,7 @@ struct AlignedTick: TimelineSchedule {
 /// One timer for all decorative animations. `TimelineView` stops while a system menu, a dialog or an
 /// open/save panel is on screen (the main run loop leaves its default mode), so the ticks come from a timer
 /// in the common modes instead. It runs only while a `TickView` is on screen and the app is visible.
+@MainActor
 final class TickClock {
     static let shared = TickClock()
 
@@ -44,8 +45,10 @@ final class TickClock {
         NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeOcclusionStateNotification, object: nil, queue: .main
         ) { [weak self] _ in
-            self?.isVisible = NSApp.occlusionState.contains(.visible)
-            self?.refresh()
+            MainActor.assumeIsolated {
+                self?.isVisible = NSApp.occlusionState.contains(.visible)
+                self?.refresh()
+            }
         }
     }
 
@@ -63,7 +66,9 @@ final class TickClock {
     private func refresh() {
         let shouldRun = viewers > 0 && isVisible
         if shouldRun, timer == nil {
-            let timer = Timer(timeInterval: 1 / AlignedTick.baseFramesPerSecond, repeats: true) { [weak self] _ in self?.tick() }
+            let timer = Timer(timeInterval: 1 / AlignedTick.baseFramesPerSecond, repeats: true) { [weak self] _ in
+                MainActor.assumeIsolated { self?.tick() }
+            }
             RunLoop.main.add(timer, forMode: .common)
             self.timer = timer
         } else if !shouldRun, let timer {

@@ -2,10 +2,10 @@ import LauncherCore
 import SwiftUI
 
 private enum OptimizationSession {
-    static var preset: OptimizationPreset = .maxFPS_PvP
-    static var enableShaders = false
-    static var enableLoD = false
-    static var enableFrameGen = false
+    nonisolated(unsafe) static var preset: OptimizationPreset = .maxFPS_PvP
+    nonisolated(unsafe) static var enableShaders = false
+    nonisolated(unsafe) static var enableLoD = false
+    nonisolated(unsafe) static var enableFrameGen = false
 }
 
 struct OptimizationModal: View {

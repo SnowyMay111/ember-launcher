@@ -11,7 +11,7 @@ let package = Package(
     ],
     targets: [
         // Вся логика: только Foundation, без AppKit/SwiftUI (чтобы потом переиспользовать на Windows).
-        .target(name: "LauncherCore", swiftSettings: [.swiftLanguageMode(.v6)]),
+        .target(name: "LauncherCore"),
         // Консольный запуск ядра без интерфейса, для проверок.
         .executableTarget(name: "launcher-cli", dependencies: ["LauncherCore"]),
         // Интерфейс macOS.
@@ -27,5 +27,5 @@ let package = Package(
         ),
         .testTarget(name: "LauncherCoreTests", dependencies: ["LauncherCore"]),
     ],
-    swiftLanguageModes: [.v5]
+    swiftLanguageModes: [.v6]
 )

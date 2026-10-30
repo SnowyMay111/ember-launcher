@@ -68,7 +68,7 @@ public enum Theme {
     public static let glassBorder = border
 
     // Typography
-    public struct TextStyle {
+    public struct TextStyle: Sendable {
         public var size: CGFloat
         public var weight: Font.Weight
         public var mono: Bool
