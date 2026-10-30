@@ -573,5 +573,6 @@
   "%d min": "%d мин",
   "The AI answer was cut off. Try a shorter description.": "Ответ ИИ оборвался. Попробуйте описание покороче.",
   "Offline nickname": "Офлайн-ник",
-  "Online": "В сети"
+  "Online": "В сети",
+  "The pack has %d mods that do not come from Modrinth. Install packs only from people you trust.": "В сборке %d модов не с Modrinth. Устанавливайте сборки только от тех, кому доверяете."
 }

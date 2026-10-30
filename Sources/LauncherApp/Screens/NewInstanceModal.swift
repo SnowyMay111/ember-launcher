@@ -353,6 +353,11 @@ struct NewInstanceModal: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text(verbatim: pack.name).style(.row)
                 Text(verbatim: packDetails(pack)).style(.secondary)
+                if pack.overrideJarCount > 0 {
+                    Text(verbatim: L("The pack has %d mods that do not come from Modrinth. Install packs only from people you trust.", pack.overrideJarCount))
+                        .style(.secondary)
+                        .foregroundColor(Theme.danger)
+                }
             }
         } else {
             Text(tr: "Packs from Modrinth and other launchers work. Forge packs are not supported yet.").style(.secondary)

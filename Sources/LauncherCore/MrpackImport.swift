@@ -9,6 +9,8 @@ public struct MrpackSummary: Sendable, Equatable {
     public var loaderVersion: String?
     public var fileCount: Int
     public var overrideFileCount: Int
+    /// `.jar` files bundled in `overrides/mods` and `client-overrides/mods`: mods that do not come from Modrinth.
+    public var overrideJarCount: Int
     public var downloadBytes: Int64
 
     public init(
@@ -20,6 +22,7 @@ public struct MrpackSummary: Sendable, Equatable {
         loaderVersion: String? = nil,
         fileCount: Int,
         overrideFileCount: Int,
+        overrideJarCount: Int = 0,
         downloadBytes: Int64
     ) {
         self.name = name
@@ -30,6 +33,7 @@ public struct MrpackSummary: Sendable, Equatable {
         self.loaderVersion = loaderVersion
         self.fileCount = fileCount
         self.overrideFileCount = overrideFileCount
+        self.overrideJarCount = overrideJarCount
         self.downloadBytes = downloadBytes
     }
 }
@@ -101,6 +105,7 @@ extension ModpackManager {
 
         let downloadBytes = clientFiles.reduce(Int64(0)) { $0 + Int64($1.fileSize) }
         let overrideFileCount = countOverrideFiles(in: tempDir)
+        let overrideJarCount = countOverrideJars(in: tempDir)
 
         return MrpackSummary(
             name: index.name,
@@ -111,6 +116,7 @@ extension ModpackManager {
             loaderVersion: loaderVersion,
             fileCount: clientFiles.count,
             overrideFileCount: overrideFileCount,
+            overrideJarCount: overrideJarCount,
             downloadBytes: downloadBytes
         )
     }
@@ -590,6 +596,21 @@ extension ModpackManager {
                     continue
                 }
                 count += 1
+            }
+        }
+        return count
+    }
+    private func countOverrideJars(in directory: URL) -> Int {
+        let fm = FileManager.default
+        var count = 0
+        for folder in ["overrides/mods", "client-overrides/mods"] {
+            let folderURL = directory.appendingPathComponent(folder, isDirectory: true)
+            guard let enumerator = fm.enumerator(at: folderURL, includingPropertiesForKeys: [.isRegularFileKey], options: []) else {
+                continue
+            }
+            for case let fileURL as URL in enumerator where fileURL.pathExtension.lowercased() == "jar" {
+                let values = try? fileURL.resourceValues(forKeys: [.isRegularFileKey])
+                if values?.isRegularFile == true { count += 1 }
             }
         }
         return count
