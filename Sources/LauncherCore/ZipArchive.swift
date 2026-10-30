@@ -132,6 +132,16 @@ public enum ZipArchive: Sendable {
         return total
     }
 
+    /// Output of one pipe, filled by a reader thread and read after the group has finished.
+    private final class DataBox: @unchecked Sendable {
+        private let lock = NSLock()
+        private var stored = Data()
+        var data: Data {
+            get { lock.lock(); defer { lock.unlock() }; return stored }
+            set { lock.lock(); stored = newValue; lock.unlock() }
+        }
+    }
+
     @discardableResult
     private static func run(
         executable: String,
@@ -151,19 +161,19 @@ public enum ZipArchive: Sendable {
         process.standardOutput = stdoutPipe
         process.standardError = stderrPipe
 
-        var stdoutData = Data()
-        var stderrData = Data()
+        let stdoutBox = DataBox()
+        let stderrBox = DataBox()
         let group = DispatchGroup()
 
         group.enter()
         DispatchQueue.global().async {
-            stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
+            stdoutBox.data = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
             group.leave()
         }
 
         group.enter()
         DispatchQueue.global().async {
-            stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
+            stderrBox.data = stderrPipe.fileHandleForReading.readDataToEndOfFile()
             group.leave()
         }
 
@@ -186,6 +196,8 @@ public enum ZipArchive: Sendable {
         }
         process.waitUntilExit()
         group.wait()
+        let stdoutData = stdoutBox.data
+        let stderrData = stderrBox.data
 
         if aborted { return ("", "", true) }
         if process.terminationStatus != 0 {
