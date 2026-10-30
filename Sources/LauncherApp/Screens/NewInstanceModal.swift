@@ -303,7 +303,7 @@ struct NewInstanceModal: View {
                 plan = result
                 picked = Set(result.mods.map(\.projectId))
             } catch {
-                errorText = error.localizedDescription
+                errorText = L(error.localizedDescription)
             }
             isPlanning = false
         }

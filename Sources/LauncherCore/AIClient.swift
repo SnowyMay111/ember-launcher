@@ -28,6 +28,7 @@ public enum AIError: Error, LocalizedError, Sendable, Equatable {
     case http(status: Int, message: String)
     case badResponse
     case badPlan(String)
+    case truncated
 
     public var errorDescription: String? {
         switch self {
@@ -49,6 +50,8 @@ public enum AIError: Error, LocalizedError, Sendable, Equatable {
             return "Invalid response from AI provider"
         case .badPlan(let message):
             return message
+        case .truncated:
+            return "The AI answer was cut off. Try a shorter description."
         }
     }
 }
@@ -80,7 +83,7 @@ public struct ClaudeClient: AIChatClient {
 
         let payload: [String: Any] = [
             "model": model,
-            "max_tokens": 2048,
+            "max_tokens": 8192,
             "system": system,
             "messages": [
                 ["role": "user", "content": user]
@@ -105,6 +108,10 @@ public struct ClaudeClient: AIChatClient {
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let content = json["content"] as? [[String: Any]] else {
             throw AIError.badResponse
+        }
+
+        if (json["stop_reason"] as? String) == "max_tokens" {
+            throw AIError.truncated
         }
 
         let answer = content
@@ -152,7 +159,8 @@ public struct GeminiClient: AIChatClient {
             ],
             "generationConfig": [
                 "responseMimeType": "application/json",
-                "maxOutputTokens": 2048
+                "maxOutputTokens": 8192,
+                "thinkingConfig": ["thinkingBudget": 0]
             ]
         ]
         request.httpBody = try JSONSerialization.data(withJSONObject: payload)
@@ -177,6 +185,10 @@ public struct GeminiClient: AIChatClient {
               let content = firstCandidate["content"] as? [String: Any],
               let parts = content["parts"] as? [[String: Any]] else {
             throw AIError.badResponse
+        }
+
+        if (firstCandidate["finishReason"] as? String) == "MAX_TOKENS" {
+            throw AIError.truncated
         }
 
         let answer = parts.compactMap { $0["text"] as? String }.joined()
