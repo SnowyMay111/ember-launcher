@@ -123,56 +123,70 @@ struct UpdateNotice: View {
     }
 }
 
+/// Friends button in the top bar: stacked avatars with a presence dot, online count, chevron. Flat until hovered or open.
 private struct SocialTopButton: View {
+    @EnvironmentObject var app: AppState
     let action: () -> Void
+
+    @Local private var isHovered = false
+    @FocusState private var isFocused: Bool
+    @Environment(\.isEnabled) private var isEnabled
+
+    private var isActive: Bool { isHovered || app.friendsDrawerOpen }
+    private var fill: Color { isActive ? Color(red: 0x14/255, green: 0x14/255, blue: 0x13/255) : Theme.bg }
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 8) {
-                HStack(spacing: -6) {
-                    avatarCircle("M", bg: Color(red: 102/255, green: 75/255, blue: 60/255))
-                    avatarCircle("L", bg: Color(red: 83/255, green: 94/255, blue: 71/255))
-                    avatarCircle("N", bg: Color(red: 93/255, green: 72/255, blue: 94/255))
+            HStack(spacing: 12) {
+                HStack(spacing: -8) {
+                    avatar("M", Color(red: 102/255, green: 75/255, blue: 60/255))
+                    avatar("L", Color(red: 83/255, green: 94/255, blue: 71/255))
+                    avatar("N", Color(red: 93/255, green: 72/255, blue: 94/255))
                 }
-                .padding(.leading, 2)
+                .overlay(alignment: .bottomTrailing) {
+                    Circle()
+                        .fill(Theme.success)
+                        .frame(width: 8, height: 8)
+                        .overlay(Circle().strokeBorder(fill, lineWidth: 2))
+                        .offset(x: 2, y: 2)
+                }
 
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(verbatim: "3 online")
-                        .font(Theme.font(size: 10, weight: .bold))
-                        .foregroundColor(Color(red: 216/255, green: 208/255, blue: 198/255))
-                    Text(verbatim: "Friends")
-                        .font(Theme.font(size: 9, weight: .regular))
-                        .foregroundColor(Color(red: 142/255, green: 136/255, blue: 128/255))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(verbatim: L("3 online")).style(.init(size: 13, weight: .semibold, color: Theme.text))
+                    Text(verbatim: L("Friends")).style(.init(size: 12, weight: .regular, color: Theme.textSecondary))
                 }
 
                 Image(systemName: "chevron.down")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundColor(Color(red: 142/255, green: 136/255, blue: 128/255))
-                    .padding(.trailing, 2)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(Theme.textSecondary)
+                    .rotationEffect(.degrees(app.friendsDrawerOpen ? 180 : 0))
+                    .frame(width: 17, height: 17)
+                    .accessibilityHidden(true)
             }
-            .padding(.horizontal, 8)
-            .frame(height: 38)
-            .background(Color(red: 17/255, green: 16/255, blue: 14/255))
-            .cornerRadius(8)
+            .padding(8)
+            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(isActive ? fill : Color.clear))
             .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(Color(red: 41/255, green: 38/255, blue: 34/255), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .strokeBorder(Theme.ember.opacity(0.6), lineWidth: 1.5)
+                    .opacity(isFocused ? 1 : 0)
             )
+            .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressDimStyle())
+        .focused($isFocused)
+        .onHover { isHovered = $0 }
+        .opacity(isEnabled ? 1.0 : 0.45)
+        .animation(.easeInOut(duration: 0.18), value: isActive)
+        .animation(.easeInOut(duration: 0.22), value: app.friendsDrawerOpen)
+        .accessibilityLabel(L("Friends, 3 online"))
     }
 
-    private func avatarCircle(_ letter: String, bg: Color) -> some View {
-        ZStack {
-            Circle()
-                .fill(bg)
-                .frame(width: 22, height: 22)
-                .overlay(Circle().stroke(Color(red: 17/255, green: 16/255, blue: 14/255), lineWidth: 2))
-            Text(letter)
-                .font(Theme.font(size: 8, weight: .bold))
-                .foregroundColor(.white)
-        }
+    private func avatar(_ letter: String, _ bg: Color) -> some View {
+        Text(verbatim: letter)
+            .font(Theme.font(size: 12, weight: .semibold))
+            .foregroundColor(Theme.text)
+            .frame(width: 28, height: 28)
+            .background(Circle().fill(bg))
+            .overlay(Circle().strokeBorder(fill, lineWidth: 2))
     }
 }
-
-
