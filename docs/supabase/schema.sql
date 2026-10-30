@@ -156,3 +156,171 @@ $$;
 
 revoke all on function public.delete_own_account() from public, anon;
 grant execute on function public.delete_own_account() to authenticated;
+
+-- 7. Friends and presence ---------------------------------------------------
+-- Tables have RLS enabled and NO policies: the app reads and writes only through
+-- the security definer functions below, so nothing else is exposed.
+
+create table if not exists public.friendships (
+    requester uuid not null references auth.users(id) on delete cascade,
+    addressee uuid not null references auth.users(id) on delete cascade,
+    status text not null default 'pending' check (status in ('pending', 'accepted')),
+    created_at timestamptz not null default now(),
+    primary key (requester, addressee),
+    check (requester <> addressee)
+);
+
+-- One row per pair, whichever side asked first.
+create unique index if not exists friendships_pair_idx
+    on public.friendships (least(requester, addressee), greatest(requester, addressee));
+create index if not exists friendships_addressee_idx on public.friendships (addressee);
+
+create table if not exists public.presence (
+    user_id uuid primary key references auth.users(id) on delete cascade,
+    last_seen_at timestamptz not null default now(),
+    activity text check (char_length(activity) <= 80)
+);
+
+alter table public.friendships enable row level security;
+alter table public.presence enable row level security;
+
+-- Heartbeat: the app calls this every ~30 s while open. activity = null means "just online".
+create or replace function public.set_presence(p_activity text default null)
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+    insert into public.presence (user_id, last_seen_at, activity)
+    values (auth.uid(), now(), nullif(left(trim(coalesce(p_activity, '')), 80), ''))
+    on conflict (user_id) do update
+        set last_seen_at = now(), activity = excluded.activity;
+$$;
+
+-- Friends, incoming and outgoing requests in one call.
+-- Presence is shown only for accepted friends and only if they allow it.
+create or replace function public.friends_overview()
+returns table (
+    user_id uuid,
+    tag text,
+    display_name text,
+    avatar_name text,
+    relation text,
+    online boolean,
+    activity text,
+    last_seen_at timestamptz
+)
+language sql
+security definer
+stable
+set search_path = public
+as $$
+    select
+        p.id,
+        p.tag,
+        p.display_name,
+        p.avatar_name,
+        case
+            when f.status = 'accepted' then 'friend'
+            when f.addressee = auth.uid() then 'incoming'
+            else 'outgoing'
+        end,
+        (f.status = 'accepted' and p.show_online_status and pr.last_seen_at > now() - interval '90 seconds'),
+        case when f.status = 'accepted' and p.show_online_status
+                  and pr.last_seen_at > now() - interval '90 seconds' then pr.activity end,
+        case when f.status = 'accepted' and p.show_online_status then pr.last_seen_at end
+    from public.friendships f
+    join public.profiles p
+        on p.id = case when f.requester = auth.uid() then f.addressee else f.requester end
+    left join public.presence pr on pr.user_id = p.id
+    where auth.uid() in (f.requester, f.addressee);
+$$;
+
+-- Send a request by tag. If the other person already asked us, accept instead.
+-- Returns: 'sent', 'accepted', 'not_found', 'closed', 'exists', 'self', 'limit'.
+create or replace function public.send_friend_request(p_tag text)
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    me uuid := auth.uid();
+    target public.profiles%rowtype;
+    existing public.friendships%rowtype;
+begin
+    if me is null then
+        return 'not_found';
+    end if;
+    select * into target from public.profiles where tag = lower(trim(p_tag));
+    if not found then
+        return 'not_found';
+    end if;
+    if target.id = me then
+        return 'self';
+    end if;
+
+    select * into existing from public.friendships
+    where (requester = me and addressee = target.id) or (requester = target.id and addressee = me);
+
+    if found then
+        if existing.status = 'pending' and existing.addressee = me then
+            update public.friendships set status = 'accepted'
+            where requester = existing.requester and addressee = existing.addressee;
+            return 'accepted';
+        end if;
+        return 'exists';
+    end if;
+
+    if target.friend_requests = 'nobody' then
+        return 'closed';
+    end if;
+    if (select count(*) from public.friendships where requester = me and status = 'pending') >= 50 then
+        return 'limit';
+    end if;
+
+    insert into public.friendships (requester, addressee) values (me, target.id);
+    return 'sent';
+end;
+$$;
+
+-- Answer an incoming request: accept keeps it, decline deletes it.
+create or replace function public.respond_friend_request(p_user uuid, p_accept boolean)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+    if p_accept then
+        update public.friendships set status = 'accepted'
+        where requester = p_user and addressee = auth.uid() and status = 'pending';
+    else
+        delete from public.friendships
+        where requester = p_user and addressee = auth.uid() and status = 'pending';
+    end if;
+end;
+$$;
+
+-- Remove a friend, cancel an outgoing request, or drop any row with that person.
+create or replace function public.remove_friend(p_user uuid)
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+    delete from public.friendships
+    where (requester = auth.uid() and addressee = p_user)
+       or (requester = p_user and addressee = auth.uid());
+$$;
+
+revoke all on function public.set_presence(text) from public, anon;
+revoke all on function public.friends_overview() from public, anon;
+revoke all on function public.send_friend_request(text) from public, anon;
+revoke all on function public.respond_friend_request(uuid, boolean) from public, anon;
+revoke all on function public.remove_friend(uuid) from public, anon;
+grant execute on function public.set_presence(text) to authenticated;
+grant execute on function public.friends_overview() to authenticated;
+grant execute on function public.send_friend_request(text) to authenticated;
+grant execute on function public.respond_friend_request(uuid, boolean) to authenticated;
+grant execute on function public.remove_friend(uuid) to authenticated;
