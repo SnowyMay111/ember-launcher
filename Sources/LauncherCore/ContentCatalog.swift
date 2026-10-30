@@ -280,13 +280,7 @@ public final class ContentInstaller: Sendable {
             }
 
             let installedMods = (try? modManager.list(instance: instanceName)) ?? []
-            let hasIris = installedMods.contains { mod in
-                if mod.record?.projectId.lowercased() == "iris" || mod.record?.projectId == "YL57xq9U" {
-                    return true
-                }
-                let lower = mod.fileName.lowercased()
-                return lower.hasPrefix("iris-") || lower.hasPrefix("iris_") || lower.contains("iris")
-            }
+            let hasIris = Self.hasIris(in: installedMods)
             guard hasIris else {
                 return .needsShaderLoader
             }
@@ -320,6 +314,17 @@ public final class ContentInstaller: Sendable {
 
         case .modpack:
             return .unsupported("Modpacks create new instances; use createInstance(fromModpack:)")
+        }
+    }
+
+    /// Iris is recognised by its Modrinth project id or by an `iris-`/`iris_` file name (not any name that merely contains "iris").
+    static func hasIris(in mods: [InstalledMod]) -> Bool {
+        mods.contains { mod in
+            if mod.record?.projectId.lowercased() == "iris" || mod.record?.projectId == "YL57xq9U" {
+                return true
+            }
+            let lower = mod.fileName.lowercased()
+            return lower.hasPrefix("iris-") || lower.hasPrefix("iris_")
         }
     }
 
@@ -473,13 +478,7 @@ public final class ContentInstaller: Sendable {
                 return .needsOther("Requires Fabric loader with Iris")
             }
             let installedMods = (try? modManager.list(instance: instanceName)) ?? []
-            let hasIris = installedMods.contains { mod in
-                if mod.record?.projectId.lowercased() == "iris" || mod.record?.projectId == "YL57xq9U" {
-                    return true
-                }
-                let lower = mod.fileName.lowercased()
-                return lower.hasPrefix("iris-") || lower.hasPrefix("iris_") || lower.contains("iris")
-            }
+            let hasIris = Self.hasIris(in: installedMods)
             if !hasIris {
                 return .needsOther("needsShaderLoader")
             }
