@@ -55,8 +55,25 @@ final class ModsController: ObservableObject {
             compat = [:]
             contentCompat = [:]
             isChecking = false
+            closePreview()
         }
     }
+    // Modpack preview: the pack's files with a checkbox each.
+    @Published var previewHit: ModrinthHit?
+    @Published var preview: ModpackPreview?
+    @Published var isLoadingPreview = false
+    /// Paths of the files the user switched off.
+    @Published var excludedPaths: Set<String> = []
+    /// Set when the user switches off a file other checked files need; the panel asks before it goes through.
+    @Published var dependencyWarning: DependencyWarning?
+    private var previewCounter = 0
+
+    struct DependencyWarning: Equatable {
+        let path: String
+        let title: String
+        let dependents: [String]
+    }
+
     @Published var contentCompat: [String: ContentCompatibility] = [:]
     /// Browse lists only what fits the current instance; this brings the rest back, greyed out and not installable.
     @Published var showIncompatible = false
@@ -466,6 +483,86 @@ final class ModsController: ObservableObject {
             case .mod:
                 break
             }
+        } catch {
+            message = error.localizedDescription
+        }
+    }
+
+    // MARK: - Modpack preview
+
+    /// Downloads the pack and shows what is in it; the Browse panel switches to the list.
+    func openPreview(_ hit: ModrinthHit) async {
+        closePreview()
+        previewCounter += 1
+        let token = previewCounter
+        previewHit = hit
+        isLoadingPreview = true
+        do {
+            let loaded = try await content.previewModpack(hit.projectId, gameVersion: modpackGameVersion)
+            guard token == previewCounter else {
+                content.discardPreview(loaded)
+                return
+            }
+            preview = loaded
+        } catch {
+            guard token == previewCounter else { return }
+            previewHit = nil
+            message = error.localizedDescription
+        }
+        if token == previewCounter { isLoadingPreview = false }
+    }
+
+    func closePreview() {
+        previewCounter += 1
+        if let preview { content.discardPreview(preview) }
+        preview = nil
+        previewHit = nil
+        isLoadingPreview = false
+        excludedPaths = []
+        dependencyWarning = nil
+    }
+
+    func isSelected(_ entry: ModpackPreviewEntry) -> Bool { !excludedPaths.contains(entry.path) }
+
+    var selectedEntryCount: Int { (preview?.entries ?? []).filter(isSelected).count }
+    var selectedEntryBytes: Int64 { (preview?.entries ?? []).filter(isSelected).reduce(0) { $0 + $1.size } }
+
+    /// Switches a file on or off. Switching off a file that checked files need asks first (`dependencyWarning`).
+    func toggle(_ entry: ModpackPreviewEntry) {
+        dependencyWarning = nil
+        if excludedPaths.contains(entry.path) {
+            excludedPaths.remove(entry.path)
+            return
+        }
+        let checkedTitles = Set((preview?.entries ?? []).filter(isSelected).map(\.title))
+        let dependents = entry.requiredBy.filter { checkedTitles.contains($0) }
+        if dependents.isEmpty {
+            excludedPaths.insert(entry.path)
+        } else {
+            dependencyWarning = DependencyWarning(path: entry.path, title: entry.title, dependents: dependents)
+        }
+    }
+
+    func confirmDependencyWarning() {
+        if let warning = dependencyWarning { excludedPaths.insert(warning.path) }
+        dependencyWarning = nil
+    }
+
+    /// Creates the instance from the previewed pack without the switched-off files.
+    func installPreview() async {
+        guard let preview, let hit = previewHit else { return }
+        busy.insert(hit.projectId)
+        defer { busy.remove(hit.projectId) }
+        do {
+            let report = try await content.createInstance(fromPreview: preview, excludedPaths: excludedPaths)
+            self.preview = nil
+            closePreview()
+            app.reload()
+            app.currentID = report.instanceName
+            app.screen = .play
+            let loader = report.loader.lowercased() == "fabric" ? "Fabric" : "Vanilla"
+            message = ([L("Created %@ (Minecraft %@, %@)", report.instanceName, report.minecraftVersion, loader)] + report.warnings)
+                .joined(separator: " ")
         } catch {
             message = error.localizedDescription
         }

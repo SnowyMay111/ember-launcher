@@ -380,7 +380,16 @@ struct ModsScreen: View {
 
     // MARK: - Find
 
+    @ViewBuilder
     private var findPanel: some View {
+        if mods.kind == .modpack, mods.previewHit != nil {
+            panel { ModpackPreviewPanel(mods: mods) }
+        } else {
+            browsePanel
+        }
+    }
+
+    private var browsePanel: some View {
         panel {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 10) {
@@ -582,7 +591,9 @@ struct ModsScreen: View {
         .opacity(canInstall || isInstalled || mods.needsFabric ? 1 : 0.55)
         .overlay(alignment: .top) { hairline }
         .contentShape(Rectangle())
-        .onTapGesture { app.modal = .modProject(hit) }
+        .onTapGesture {
+            if kind == .modpack { Task { await mods.openPreview(hit) } } else { app.modal = .modProject(hit) }
+        }
     }
 
     /// The line under the download count; nothing while the check is still running or failed.
@@ -635,7 +646,7 @@ struct ModsScreen: View {
 }
 
 /// 36 pt rounded square with the mod's icon, or an empty frame while it loads or when there is none.
-private struct ModIcon: View {
+struct ModIcon: View {
     let url: URL?
 
     var body: some View {

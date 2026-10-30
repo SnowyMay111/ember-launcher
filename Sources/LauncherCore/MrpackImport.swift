@@ -120,6 +120,7 @@ extension ModpackManager {
         name: String? = nil,
         group: String? = nil,
         memoryMB: Int = 4096,
+        excludedPaths: Set<String> = [],
         progress: @escaping @Sendable (String, Double) -> Void = { _, _ in }
     ) async throws -> MrpackImportReport {
         progress("Reading the pack", 0.0)
@@ -138,7 +139,7 @@ extension ModpackManager {
 
         let (index, minecraftVersion, loader, loaderVersion) = try parseAndValidateIndex(in: tempDir)
 
-        let clientFiles = index.files.filter { $0.env?.client != "unsupported" }
+        let clientFiles = index.files.filter { $0.env?.client != "unsupported" && !excludedPaths.contains($0.path) }
 
         let finalName = store.uniqueName(base: name ?? index.name)
         let gameDir = store.gameDirectory(for: finalName)
@@ -372,7 +373,7 @@ extension ModpackManager {
         return nil
     }
 
-    private func validateArchiveBeforeExtract(_ archive: URL) throws {
+    func validateArchiveBeforeExtract(_ archive: URL) throws {
         let entries = try ZipArchive.entries(of: archive)
         for entry in entries {
             if entry.isEmpty
@@ -396,7 +397,7 @@ extension ModpackManager {
         }
     }
 
-    private func validateNoSymbolicLinks(in directory: URL) throws {
+    func validateNoSymbolicLinks(in directory: URL) throws {
         let fm = FileManager.default
         guard let enumerator = fm.enumerator(
             at: directory,
@@ -417,7 +418,7 @@ extension ModpackManager {
         }
     }
 
-    private func parseAndValidateIndex(
+    func parseAndValidateIndex(
         in directory: URL
     ) throws -> (index: MrpackIndex, minecraftVersion: String, loader: String, loaderVersion: String?) {
         let indexURL = directory.appendingPathComponent("modrinth.index.json")
@@ -469,7 +470,7 @@ extension ModpackManager {
         return (index, minecraftVersion, loader, loaderVersion)
     }
 
-    private func isSafeRelativePath(_ path: String, relativeTo baseDir: URL) -> Bool {
+    func isSafeRelativePath(_ path: String, relativeTo baseDir: URL) -> Bool {
         if path.isEmpty
             || path.hasPrefix("/")
             || path.hasPrefix("~")
@@ -491,7 +492,7 @@ extension ModpackManager {
     }
 
     /// Copies `overrides/` and then `client-overrides/` into the game directory (sync: directory enumeration is not allowed in async code).
-    private func copyOverrides(from tempDir: URL, to gameDir: URL) throws -> (count: Int, warnings: [String]) {
+    func copyOverrides(from tempDir: URL, to gameDir: URL) throws -> (count: Int, warnings: [String]) {
         let fm = FileManager.default
         var overrideFiles = 0
         var warnings: [String] = []

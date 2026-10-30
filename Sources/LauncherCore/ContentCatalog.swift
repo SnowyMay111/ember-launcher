@@ -395,6 +395,53 @@ public final class ContentInstaller: Sendable {
         )
     }
 
+    /// Downloads a modpack and lists its files so the user can pick which to install.
+    /// Finish with `createInstance(fromPreview:excludedPaths:)` or `discardPreview(_:)`.
+    public func previewModpack(_ projectIdOrSlug: String, gameVersion: String? = nil) async throws -> ModpackPreview {
+        let versions = Self.runnablePackVersions(try await client.versions(project: projectIdOrSlug, gameVersion: gameVersion))
+        guard !versions.isEmpty else {
+            throw ContentError.notFound("No version of modpack '\(projectIdOrSlug)' for \(gameVersion ?? "any Minecraft version") that this launcher can run")
+        }
+        let chosenVersion = versions.first(where: { $0.versionType.lowercased() == "release" }) ?? versions[0]
+        guard let primaryFile = chosenVersion.primaryFile else {
+            throw ContentError.notFound("No file found in version '\(chosenVersion.name)'")
+        }
+
+        let workDir = FileManager.default.temporaryDirectory.appendingPathComponent("ember-pack-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: workDir, withIntermediateDirectories: true, attributes: nil)
+        do {
+            let archive = workDir.appendingPathComponent(primaryFile.filename)
+            try await downloader.download(url: primaryFile.url, to: archive, sha1: primaryFile.sha1, size: primaryFile.size)
+            return try await modpackManager.preview(archive: archive, workDir: workDir)
+        } catch {
+            try? FileManager.default.removeItem(at: workDir)
+            throw error
+        }
+    }
+
+    /// Creates the instance from a previewed pack, leaving out the files at `excludedPaths`.
+    public func createInstance(
+        fromPreview preview: ModpackPreview,
+        excludedPaths: Set<String>,
+        name: String? = nil
+    ) async throws -> ModpackCreationReport {
+        defer { try? FileManager.default.removeItem(at: preview.workDir) }
+        let importReport = try await modpackManager.importPack(from: preview.archive, name: name, excludedPaths: excludedPaths)
+        return ModpackCreationReport(
+            instanceName: importReport.instanceName,
+            minecraftVersion: preview.summary.minecraftVersion,
+            loader: preview.summary.loader,
+            loaderVersion: preview.summary.loaderVersion,
+            filesInstalled: importReport.filesInstalled,
+            warnings: importReport.warnings
+        )
+    }
+
+    /// Drops the downloaded pack of a preview that was not installed.
+    public func discardPreview(_ preview: ModpackPreview) {
+        try? FileManager.default.removeItem(at: preview.workDir)
+    }
+
     /// Checks compatibility of a catalog project before downloading.
     public func compatibility(
         project idOrSlug: String,

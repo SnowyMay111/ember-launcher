@@ -476,5 +476,15 @@
   "A modpack creates a new instance. This build stays as it is.": "Модпак создаёт новую сборку. Текущая останется как есть.",
   "Nothing here yet. Add the first one from the right.": "Здесь пока пусто. Добавьте первое справа.",
   "Remove from selection": "Убрать из выбранного",
-  "Add to selection": "Добавить к выбранному"
+  "Add to selection": "Добавить к выбранному",
+  "← Packs": "← Сборки",
+  "Select all": "Выбрать все",
+  "Keep": "Оставить",
+  "Remove anyway": "Всё равно убрать",
+  "Downloading the pack…": "Скачиваю сборку…",
+  "Other files": "Прочие файлы",
+  "Needed by %@": "Нужен для: %@",
+  "%@ is needed by %@.": "%@ нужен для: %@.",
+  "Install %d of %d": "Установить %d из %d",
+  "Minecraft %@ · %@ · %d/%d selected · %@": "Minecraft %@ · %@ · выбрано %d из %d · %@"
 }
