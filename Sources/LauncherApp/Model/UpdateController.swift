@@ -69,6 +69,10 @@ final class UpdateController: ObservableObject {
     func pillAction() {
         switch state {
         case .available, .failed:
+            // The temporary folder may have been cleaned since the download: then the copy is gone and must be fetched again.
+            if let app = downloadedApp, !FileManager.default.fileExists(atPath: app.path) {
+                downloadedApp = nil
+            }
             if downloadedApp != nil {
                 state = .ready
                 restart()
@@ -158,6 +162,7 @@ final class UpdateController: ObservableObject {
             try UpdateInstaller.replaceAndRelaunch(newApp: app)
             NSApp.terminate(nil)
         } catch {
+            downloadedApp = nil
             state = .failed(Self.message(for: error))
         }
     }
