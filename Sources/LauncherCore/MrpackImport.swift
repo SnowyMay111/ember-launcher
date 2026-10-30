@@ -197,7 +197,7 @@ extension ModpackManager {
                     while inFlight < maxConcurrency, let file = iterator.next() {
                         inFlight += 1
                         group.addTask {
-                            await self.downloadFile(file, gameDir: gameDir)
+                            try await self.downloadFile(file, gameDir: gameDir)
                         }
                     }
 
@@ -216,11 +216,13 @@ extension ModpackManager {
                         if let nextFile = iterator.next() {
                             inFlight += 1
                             group.addTask {
-                                await self.downloadFile(nextFile, gameDir: gameDir)
+                                try await self.downloadFile(nextFile, gameDir: gameDir)
                             }
                         }
                     }
                 }
+                // A cancelled import must not end up as a pack without mods: the catch below sends it to the trash.
+                try Task.checkCancellation()
             }
 
             progress("Copying files", 0.0)
@@ -325,7 +327,7 @@ extension ModpackManager {
     private func downloadFile(
         _ file: MrpackFile,
         gameDir: URL
-    ) async -> DownloadFileResult {
+    ) async throws -> DownloadFileResult {
         guard let downloadURL = selectDownloadURL(from: file.downloads) else {
             return .failed(path: file.path, reason: "download host not allowed")
         }
@@ -359,6 +361,9 @@ extension ModpackManager {
             }
             return .success(file: file, usedURL: downloadURL)
         } catch {
+            if error is CancellationError || (error as? URLError)?.code == .cancelled || Task.isCancelled {
+                throw CancellationError()
+            }
             return .failed(path: file.path, reason: error.localizedDescription)
         }
     }
