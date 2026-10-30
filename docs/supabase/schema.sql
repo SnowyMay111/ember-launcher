@@ -337,7 +337,7 @@ create table if not exists public.lobbies (
     name text not null check (char_length(name) between 1 and 40),
     mc_version text not null check (char_length(mc_version) <= 32),
     loader text not null check (loader in ('fabric', 'quilt', 'neoforge', 'forge', 'vanilla')),
-    pack_url text check (char_length(pack_url) <= 500),
+    pack_url text check (char_length(pack_url) <= 20000),
     pack_sha1 text check (pack_sha1 ~ '^[0-9a-f]{40}$'),
     privacy text not null default 'friends' check (privacy in ('friends', 'invite')),
     max_players int not null default 8 check (max_players between 2 and 16),
@@ -731,3 +731,7 @@ revoke all on function public.fetch_lobby_signals(uuid, bigint) from public, ano
 grant execute on function public.lobby_tunnel_key(uuid) to authenticated;
 grant execute on function public.post_lobby_signal(uuid, uuid, text) to authenticated;
 grant execute on function public.fetch_lobby_signals(uuid, bigint) to authenticated;
+
+-- 10. Mod list of a lobby ("modrinth:<version ids>") needs more room than a single URL.
+alter table public.lobbies drop constraint if exists lobbies_pack_url_check;
+alter table public.lobbies add constraint lobbies_pack_url_check check (char_length(pack_url) <= 20000);

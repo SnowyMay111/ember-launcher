@@ -141,6 +141,11 @@ struct LobbyFlowModal: View {
                 .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.elevated))
             }
 
+            if current.isHost, host.unsyncedMods > 0 {
+                Text(verbatim: L("%d mods were added by hand and guests will not get them.", host.unsyncedMods))
+                    .style(.secondary)
+            }
+
             VStack(alignment: .leading, spacing: 8) {
                 Text(tr: "In the lobby").style(.secondary)
                 ForEach(lobbies.roster) { member in

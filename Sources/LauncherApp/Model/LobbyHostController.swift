@@ -16,6 +16,8 @@ final class LobbyHostController: ObservableObject {
     static let shared = LobbyHostController()
 
     @Published private(set) var state: LobbyHostState = .idle
+    /// Enabled mods of the hosted instance that guests cannot be given (added by hand, not from Modrinth).
+    @Published private(set) var unsyncedMods = 0
     @Published var eulaAccepted: Bool {
         didSet { UserDefaults.standard.set(eulaAccepted, forKey: "lobbyEulaAccepted") }
     }
@@ -79,12 +81,15 @@ final class LobbyHostController: ObservableObject {
         let lobbies = LobbyStore.shared
         let nick = settings.nickname
         do {
+            let modList = LobbyModList(mods: (try? ModManager(store: launcher.store).list(instance: item.name)) ?? [])
+            let pack = modList.packFields
+            unsyncedMods = modList.unsyncedCount
             let request = LobbyCreateRequest(
                 name: name,
                 mcVersion: item.minecraftVersion,
                 loader: item.loader.coreName,
-                packURL: nil,
-                packSHA1: nil,
+                packURL: pack?.url,
+                packSHA1: pack?.sha1,
                 privacy: privacy,
                 maxPlayers: maxPlayers,
                 nick: nick

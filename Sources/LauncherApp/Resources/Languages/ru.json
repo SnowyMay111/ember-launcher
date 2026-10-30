@@ -640,5 +640,8 @@
   "Close lobby": "Закрыть лобби",
   "Leave lobby": "Выйти из лобби",
   "Create lobby": "Создать лобби",
-  "Invite only": "Только по приглашению"
+  "Invite only": "Только по приглашению",
+  "Installing the host's mods…": "Ставим моды хоста…",
+  "Installing the host's mods %d/%d": "Ставим моды хоста %d/%d",
+  "%d mods were added by hand and guests will not get them.": "Модов, добавленных вручную: %d. Гости их не получат."
 }
