@@ -8,3 +8,4 @@ backups/
 dist/
 .agents/
 windows/
+.claude/settings.local.json
