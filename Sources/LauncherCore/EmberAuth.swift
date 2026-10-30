@@ -399,7 +399,7 @@ public struct EmberAuth: @unchecked Sendable {
         return profile
     }
 
-    private func perform(
+    func perform(
         path: String,
         method: String,
         queryItems: [URLQueryItem] = [],
