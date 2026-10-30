@@ -141,7 +141,7 @@ extension ModpackManager {
 
         let clientFiles = index.files.filter { $0.env?.client != "unsupported" && !excludedPaths.contains($0.path) }
 
-        let finalName = store.uniqueName(base: name ?? index.name)
+        let finalName = store.uniqueName(base: name ?? index.name, fallback: "Modpack")
         let gameDir = store.gameDirectory(for: finalName)
 
         for file in clientFiles {

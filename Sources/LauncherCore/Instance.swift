@@ -135,6 +135,36 @@ public final class InstanceStore: Sendable {
         instanceDirectory(for: name).appendingPathComponent("instance.json")
     }
 
+    public static func isValidName(_ name: String) -> Bool {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            return false
+        }
+        if trimmed == "." || trimmed == ".." {
+            return false
+        }
+        if trimmed.hasPrefix(".") {
+            return false
+        }
+        if trimmed.contains("/") || trimmed.contains("\\") || trimmed.contains(":") || trimmed.contains("\0") {
+            return false
+        }
+        return true
+    }
+
+    func validatedInstanceDirectory(for name: String) throws -> URL {
+        guard Self.isValidName(name) else {
+            throw InstanceStoreError.invalidName
+        }
+        let url = instanceDirectory(for: name)
+        let instancesPath = paths.instances.standardizedFileURL.path
+        let prefix = instancesPath.hasSuffix("/") ? instancesPath : instancesPath + "/"
+        guard url.standardizedFileURL.path.hasPrefix(prefix) else {
+            throw InstanceStoreError.invalidName
+        }
+        return url
+    }
+
     @discardableResult
     public func create(
         name: String,
@@ -162,6 +192,7 @@ public final class InstanceStore: Sendable {
     }
 
     public func create(_ instance: Instance) throws {
+        _ = try validatedInstanceDirectory(for: instance.name)
         let instDir = instanceDirectory(for: instance.name)
         let gameDir = gameDirectory(for: instance.name)
         let fm = FileManager.default
@@ -171,6 +202,7 @@ public final class InstanceStore: Sendable {
     }
 
     public func save(_ instance: Instance) throws {
+        _ = try validatedInstanceDirectory(for: instance.name)
         let instDir = instanceDirectory(for: instance.name)
         let gameDir = gameDirectory(for: instance.name)
         let fm = FileManager.default
@@ -185,6 +217,7 @@ public final class InstanceStore: Sendable {
     }
 
     public func load(name: String) throws -> Instance {
+        _ = try validatedInstanceDirectory(for: name)
         let jsonURL = instanceJSON(for: name)
         guard FileManager.default.fileExists(atPath: jsonURL.path) else {
             throw InstanceStoreError.instanceNotFound(name)

@@ -4,6 +4,7 @@ extension InstanceStore {
     public static func sanitizedName(_ raw: String) -> String {
         var s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         s = s.replacingOccurrences(of: "/", with: "-")
+        s = s.replacingOccurrences(of: "\\", with: "-")
         s = s.replacingOccurrences(of: ":", with: "-")
         s = s.replacingOccurrences(of: "\0", with: "-")
         while s.contains("  ") {
@@ -35,10 +36,10 @@ extension InstanceStore {
         return false
     }
 
-    public func uniqueName(base: String) -> String {
+    public func uniqueName(base: String, fallback: String = "Instance") -> String {
         var candidate = Self.sanitizedName(base)
         if candidate.isEmpty {
-            candidate = "Instance"
+            candidate = fallback
         }
         if !exists(name: candidate) {
             return candidate
@@ -54,10 +55,12 @@ extension InstanceStore {
     }
 
     public func rename(_ name: String, to newName: String) throws -> Instance {
+        _ = try validatedInstanceDirectory(for: name)
         let sanitized = Self.sanitizedName(newName)
         guard !sanitized.isEmpty else {
             throw InstanceStoreError.invalidName
         }
+        _ = try validatedInstanceDirectory(for: sanitized)
         let isCaseOnly = name.caseInsensitiveCompare(sanitized) == .orderedSame
         if !isCaseOnly && exists(name: sanitized) {
             throw InstanceStoreError.nameTaken(sanitized)
@@ -81,10 +84,12 @@ extension InstanceStore {
     }
 
     public func duplicate(_ name: String, as newName: String) throws -> Instance {
+        _ = try validatedInstanceDirectory(for: name)
         let sanitized = Self.sanitizedName(newName)
         guard !sanitized.isEmpty else {
             throw InstanceStoreError.invalidName
         }
+        _ = try validatedInstanceDirectory(for: sanitized)
         if exists(name: sanitized) {
             throw InstanceStoreError.nameTaken(sanitized)
         }
@@ -105,15 +110,17 @@ extension InstanceStore {
     }
 
     public func moveToTrash(_ name: String) throws {
+        let dir = try validatedInstanceDirectory(for: name)
         #if os(macOS)
-        try FileManager.default.trashItem(at: instanceDirectory(for: name), resultingItemURL: nil)
+        try FileManager.default.trashItem(at: dir, resultingItemURL: nil)
         #else
         throw InstanceStoreError.trashUnsupported
         #endif
     }
 
     public func deleteForever(_ name: String) throws {
-        try FileManager.default.removeItem(at: instanceDirectory(for: name))
+        let dir = try validatedInstanceDirectory(for: name)
+        try FileManager.default.removeItem(at: dir)
     }
 
     public func names(usingMinecraftVersion mc: String) -> [String] {
