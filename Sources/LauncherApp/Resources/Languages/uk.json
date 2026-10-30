@@ -643,5 +643,14 @@
   "Invite only": "Лише за запрошенням",
   "Installing the host's mods…": "Ставимо моди хоста…",
   "Installing the host's mods %d/%d": "Ставимо моди хоста %d/%d",
-  "%d mods were added by hand and guests will not get them.": "Модів, доданих вручну: %d. Гості їх не отримають."
+  "%d mods were added by hand and guests will not get them.": "Модів, доданих вручну: %d. Гості їх не отримають.",
+  "Lobbies": "Лобі",
+  "Friends only": "Лише друзі",
+  "No lobbies from friends yet.": "Лобі друзів поки немає.",
+  "Start from your world": "Почати з вашого світу",
+  "Friends join without changing your instance.": "Друзі заходять, не чіпаючи вашу збірку.",
+  "Invited": "Вас запросили",
+  "%@ is hosting": "Хост: %@",
+  "%d / %d players": "Гравців: %d / %d",
+  "Join lobby": "Увійти в лобі"
 }

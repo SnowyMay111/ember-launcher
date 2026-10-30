@@ -643,5 +643,14 @@
   "Invite only": "Только по приглашению",
   "Installing the host's mods…": "Ставим моды хоста…",
   "Installing the host's mods %d/%d": "Ставим моды хоста %d/%d",
-  "%d mods were added by hand and guests will not get them.": "Модов, добавленных вручную: %d. Гости их не получат."
+  "%d mods were added by hand and guests will not get them.": "Модов, добавленных вручную: %d. Гости их не получат.",
+  "Lobbies": "Лобби",
+  "Friends only": "Только друзья",
+  "No lobbies from friends yet.": "Лобби друзей пока нет.",
+  "Start from your world": "Начать с вашего мира",
+  "Friends join without changing your instance.": "Друзья заходят, не затрагивая вашу сборку.",
+  "Invited": "Вас пригласили",
+  "%@ is hosting": "Хост: %@",
+  "%d / %d players": "Игроков: %d / %d",
+  "Join lobby": "Войти в лобби"
 }
