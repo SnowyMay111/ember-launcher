@@ -404,10 +404,10 @@ public struct EmberAuth: @unchecked Sendable {
         request.setValue(EmberBackend.anonKey, forHTTPHeaderField: "apikey")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Ember-Launcher", forHTTPHeaderField: "User-Agent")
-        request.setValue(
-            "Bearer \(session?.accessToken ?? EmberBackend.anonKey)",
-            forHTTPHeaderField: "Authorization"
-        )
+        // A publishable key is not a JWT, so it goes in `apikey` only; Bearer is for a signed-in user's token.
+        if let token = session?.accessToken {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
 
         if let prefer {
             request.setValue(prefer, forHTTPHeaderField: "Prefer")
