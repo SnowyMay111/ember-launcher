@@ -289,6 +289,16 @@ public struct EmberAuth: @unchecked Sendable {
         )
     }
 
+    public func deleteAccount(_ session: EmberSession) async throws {
+        _ = try await perform(
+            path: "rest/v1/rpc/delete_own_account",
+            method: "POST",
+            body: Data("{}".utf8),
+            session: session,
+            prefer: nil
+        )
+    }
+
     public func isTagAvailable(_ tag: String) async throws -> Bool {
         let body = TagAvailabilityRequest(tag: tag)
         let data = try await perform(

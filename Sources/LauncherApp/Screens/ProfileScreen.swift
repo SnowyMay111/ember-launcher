@@ -13,6 +13,7 @@ struct ProfileScreen: View {
     @Local private var bio = ""
     @Local private var avatarName = ""
     @Local private var tagNote: String?
+    @Local private var confirmingDelete = false
 
     private var profile: EmberProfile? { ember.profile }
     private var isSaving: Bool { ember.phase == .working }
@@ -140,7 +141,15 @@ struct ProfileScreen: View {
         SettingsGroup(title: "LINKED ACCOUNTS") {
             if ember.isSignedIn {
                 SettingsRow(title: "Ember", detail: ember.session?.email ?? "Signed in") {
-                    actionButton("Sign out") { ember.signOut() }
+                    HStack(spacing: 8) {
+                        if confirmingDelete {
+                            actionButton("Cancel") { confirmingDelete = false }
+                            dangerButton("Delete forever") { ember.deleteAccount() }
+                        } else {
+                            actionButton("Sign out") { ember.signOut() }
+                            dangerButton("Delete account") { confirmingDelete = true }
+                        }
+                    }
                 }
             }
             SettingsRow(
@@ -167,6 +176,19 @@ struct ProfileScreen: View {
                 .padding(.horizontal, 16)
                 .frame(height: 36)
                 .background(Theme.emberGradient)
+                .cornerRadius(Theme.radiusCompact)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func dangerButton(_ title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(tr: title)
+                .font(Theme.font(size: 12, weight: .semibold))
+                .foregroundColor(Theme.danger)
+                .padding(.horizontal, 16)
+                .frame(height: 36)
+                .background(Theme.danger.opacity(0.12))
                 .cornerRadius(Theme.radiusCompact)
         }
         .buttonStyle(.plain)

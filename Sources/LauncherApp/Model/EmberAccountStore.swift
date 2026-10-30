@@ -82,6 +82,17 @@ final class EmberAccountStore: ObservableObject {
         phase = .idle
     }
 
+    func deleteAccount() {
+        run { [self] in
+            guard let current = await validSession() else { return }
+            try await auth.deleteAccount(current)
+            session = nil
+            profile = nil
+            KeychainStore.remove(Self.keychainKey)
+            phase = .idle
+        }
+    }
+
     func clearMessage() {
         if phase != .working { phase = .idle }
     }
