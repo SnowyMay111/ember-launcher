@@ -642,3 +642,84 @@ grant execute on function public.join_lobby(text, uuid, text) to authenticated;
 grant execute on function public.leave_lobby(uuid) to authenticated;
 grant execute on function public.lobby_roster(uuid) to authenticated;
 grant execute on function public.visible_lobbies() to authenticated;
+
+
+-- 9. Tunnel signaling ---------------------------------------------------------
+-- Peer-to-peer play: the host's launcher and each guest's launcher learn each other's public UDP
+-- endpoint (found with STUN) through short-lived signals, then punch through their NATs.
+-- tunnel_key encrypts the tunnel; only joined members of the lobby can read it.
+
+alter table public.lobbies
+    add column if not exists tunnel_key text not null
+    default replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', '');
+
+create table if not exists public.lobby_signals (
+    id bigint generated always as identity primary key,
+    lobby_id uuid not null references public.lobbies(id) on delete cascade,
+    from_user uuid not null references auth.users(id) on delete cascade,
+    to_user uuid not null references auth.users(id) on delete cascade,
+    payload text not null check (char_length(payload) <= 400),
+    created_at timestamptz not null default now()
+);
+
+create index if not exists lobby_signals_to_idx on public.lobby_signals (to_user, lobby_id, id);
+
+alter table public.lobby_signals enable row level security;
+
+create or replace function public.lobby_member_joined(p_lobby uuid, p_user uuid)
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+    select exists (select 1 from public.lobby_members
+                   where lobby_id = p_lobby and user_id = p_user and state = 'joined');
+$$;
+
+-- Joined members only (host included).
+create or replace function public.lobby_tunnel_key(p_lobby uuid)
+returns text
+language sql
+security definer
+stable
+set search_path = public
+as $$
+    select l.tunnel_key from public.lobbies l
+    where l.id = p_lobby and l.status <> 'closed'
+      and public.lobby_member_joined(l.id, auth.uid());
+$$;
+
+-- Send a signal to another joined member of the same lobby.
+create or replace function public.post_lobby_signal(p_lobby uuid, p_to uuid, p_payload text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    me uuid := auth.uid();
+begin
+    if me is null or not public.lobby_member_joined(p_lobby, me) or not public.lobby_member_joined(p_lobby, p_to) then
+        raise exception 'forbidden';
+    end if;
+    delete from public.lobby_signals where created_at < now() - interval '10 minutes';
+    insert into public.lobby_signals (lobby_id, from_user, to_user, payload)
+    values (p_lobby, me, p_to, p_payload);
+end;
+$$;
+
+-- Signals addressed to the caller with id > p_after and younger than 2 minutes, oldest first.
+create or replace function public.fetch_lobby_signals(p_lobby uuid, p_after bigint default 0)
+returns table (id bigint, from_user uuid, payload text)
+language sql
+security definer
+stable
+set search_path = public
+as $$
+    select s.id, s.from_user, s.payload
+    from public.lobby_signals s
+    where s.lobby_id = p_lobby and s.to_user = auth.uid() and s.id > p_after
+      and s.created_at > now() - interval '2 minutes'
+    order by s.id;
+$$;
