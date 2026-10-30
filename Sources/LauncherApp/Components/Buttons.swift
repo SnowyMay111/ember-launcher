@@ -368,7 +368,7 @@ struct PixelAvatar: View {
 /// Account button in the top bar: pixel avatar, name with status line, chevron. Flat until hovered.
 struct AccountPill: View {
     let name: String
-    /// A Microsoft account is signed in; otherwise the player is on an offline nickname and is not "online" anywhere.
+    /// A Microsoft or Ember account is signed in; otherwise the player is on an offline nickname and is not "online" anywhere.
     var isSignedIn: Bool = false
     var action: () -> Void = {}
 

@@ -5,6 +5,7 @@ struct TopBar: View {
     @EnvironmentObject var app: AppState
     @EnvironmentObject var settings: SettingsStore
     @EnvironmentObject var accounts: AccountStore
+    @EnvironmentObject var ember: EmberAccountStore
 
     private var pageTitle: String {
         switch app.screen {
@@ -49,7 +50,7 @@ struct TopBar: View {
                         app.friendsDrawerOpen.toggle()
                     }
                 }
-                AccountPill(name: accounts.session?.name ?? settings.nickname, isSignedIn: accounts.session != nil) { app.modal = .profile }
+                AccountPill(name: accounts.session?.name ?? settings.nickname, isSignedIn: accounts.session != nil || ember.isSignedIn) { app.modal = .profile }
             }
         }
         .padding(.horizontal, 71)
