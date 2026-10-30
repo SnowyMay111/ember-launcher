@@ -271,7 +271,11 @@ public final class LocalGameServer: @unchecked Sendable {
         let handle = inputPipe.fileHandleForWriting
         lock.unlock()
 
-        handle.write(Data("\(command)\n".utf8))
+        do {
+            try handle.write(contentsOf: Data("\(command)\n".utf8))
+        } catch {
+            throw LocalGameServerError.notRunning
+        }
     }
 
     public func reloadWhitelist() throws {
@@ -332,6 +336,8 @@ public final class LocalGameServer: @unchecked Sendable {
         logHandle.seekToEndOfFile()
 
         let inputPipe = Pipe()
+        // A server that exits between the isRunning check and the write must give EPIPE, not kill the launcher with SIGPIPE.
+        _ = fcntl(inputPipe.fileHandleForWriting.fileDescriptor, F_SETNOSIGPIPE, 1)
         let outputPipe = Pipe()
         let process = Process()
         process.executableURL = javaExecutable
