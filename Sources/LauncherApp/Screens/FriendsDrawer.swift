@@ -2,21 +2,7 @@ import SwiftUI
 
 struct FriendsDrawer: View {
     @EnvironmentObject var app: AppState
-
-    struct FriendDrawerItem: Identifiable {
-        let id: String
-        let name: String
-        let status: String
-        let isOnline: Bool
-        let color: Color
-    }
-
-    private let friends: [FriendDrawerItem] = [
-        FriendDrawerItem(id: "1", name: "Mossy", status: "Building in 1.21.4", isOnline: true, color: Color(red: 101/255, green: 73/255, blue: 56/255)),
-        FriendDrawerItem(id: "2", name: "Luna", status: "In the main menu", isOnline: true, color: Color(red: 77/255, green: 89/255, blue: 68/255)),
-        FriendDrawerItem(id: "3", name: "North", status: "Exploring Ember Valley", isOnline: true, color: Color(red: 89/255, green: 71/255, blue: 92/255)),
-        FriendDrawerItem(id: "4", name: "Rowan", status: "Offline · 2h ago", isOnline: false, color: Color(red: 77/255, green: 73/255, blue: 68/255)),
-    ]
+    @EnvironmentObject var store: FriendsStore
 
     var body: some View {
         ZStack(alignment: .trailing) {
@@ -35,14 +21,13 @@ struct FriendsDrawer: View {
                 // Header
                 HStack(alignment: .center) {
                     VStack(alignment: .leading, spacing: 3) {
-                        Text(verbatim: "FRIENDS")
-                            .font(Theme.font(size: 10, weight: .medium, mono: true))
-                            .tracking(1.4)
-                            .foregroundColor(Color(red: 146/255, green: 112/255, blue: 91/255))
-
-                        Text(verbatim: "3 people online")
-                            .font(Theme.font(size: 15, weight: .semibold))
+                        Text(verbatim: L("Friends"))
+                            .font(Theme.font(size: 13, weight: .semibold))
                             .foregroundColor(Theme.text)
+
+                        Text(verbatim: L("%d online", store.onlineCount))
+                            .font(Theme.font(size: 12, weight: .regular))
+                            .foregroundColor(Theme.textSecondary)
                     }
 
                     Spacer()
@@ -126,43 +111,12 @@ struct FriendsDrawer: View {
                 .cornerRadius(10)
                 .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color(red: 59/255, green: 48/255, blue: 40/255), lineWidth: 1))
                 .padding(14)
+                .soonPreview(badge: false)
 
                 // Friends list
-                ScrollView(.vertical, showsIndicators: false) {
-                    VStack(spacing: 2) {
-                        ForEach(friends) { friend in
-                            HStack(spacing: 12) {
-                                ZStack {
-                                    RoundedRectangle(cornerRadius: 7)
-                                        .fill(friend.color)
-                                        .frame(width: 34, height: 34)
-                                    Text(String(friend.name.prefix(1)))
-                                        .font(Theme.font(size: 12, weight: .bold))
-                                        .foregroundColor(Color(red: 234/255, green: 223/255, blue: 212/255))
-                                }
-
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(verbatim: friend.name)
-                                        .font(Theme.font(size: 12, weight: .semibold))
-                                        .foregroundColor(Theme.text)
-                                    Text(verbatim: friend.status)
-                                        .font(Theme.font(size: 10, weight: .regular))
-                                        .foregroundColor(Theme.textSecondary)
-                                        .lineLimit(1)
-                                }
-
-                                Spacer()
-
-                                Circle()
-                                    .fill(friend.isOnline ? Theme.success : Color(red: 77/255, green: 73/255, blue: 68/255))
-                                    .frame(width: 6, height: 6)
-                            }
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 8)
-                            .contentShape(Rectangle())
-                        }
-                    }
-                    .padding(.vertical, 4)
+                ScrollView {
+                    FriendsList(compact: true)
+                        .padding(14)
                 }
 
                 Spacer(minLength: 8)
@@ -175,7 +129,7 @@ struct FriendsDrawer: View {
                     }
                 } label: {
                     HStack {
-                        Text(verbatim: "Open Social center →")
+                        Text(verbatim: L("Open Social center →"))
                             .font(Theme.font(size: 11, weight: .medium))
                             .foregroundColor(Color(red: 168/255, green: 159/255, blue: 150/255))
                         Spacer()

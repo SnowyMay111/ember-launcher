@@ -11,7 +11,7 @@
 [![Latest release](https://img.shields.io/github/v/release/SnowyMay111/ember-launcher?style=for-the-badge&label=download&color=ee8a56)](https://github.com/SnowyMay111/ember-launcher/releases/latest)
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-black?style=for-the-badge&logo=apple)
 ![Apple Silicon](https://img.shields.io/badge/Apple%20Silicon-native-blue?style=for-the-badge)
-![Swift 6](https://img.shields.io/badge/Swift-6%20%C2%B7%20SwiftUI-F05138?style=for-the-badge&logo=swift&logoColor=white)
+![Swift 6 toolchain](https://img.shields.io/badge/Swift%206%20toolchain%20%C2%B7%20SwiftUI-F05138?style=for-the-badge&logo=swift&logoColor=white)
 [![MIT](https://img.shields.io/badge/license-MIT-lightgrey?style=for-the-badge)](LICENSE)
 
 [Скачать](https://github.com/SnowyMay111/ember-launcher/releases/latest) · [Что нового](#whats-new) · [Возможности](#features) · [Скриншоты](#screenshots) · [Как устроен](#how-it-works) · [Установка](#install) · [Вопросы и ответы](#faq) · [Планы](#roadmap)
@@ -30,8 +30,6 @@
 
 <a id="whats-new"></a>
 ## Что нового
-
-**0.2.1: Voxel теперь Ember.** У лаунчера новое имя. Приложение называется `Ember.app`, скачивать нужно `Ember-mac-arm64.zip`, а ваши сборки, миры, настройки и ключ в Keychain остаются на своих местах. Если у вас уже стоит 0.1.0 или 0.2.0, встроенное обновление само переведёт вас на Ember; при первом обновлении файл останется с именем `Voxel.app`, при желании переименуйте его в Finder.
 
 **0.2.0: новый облик и много нового внутри.**
 
@@ -153,12 +151,6 @@ softwareupdate --install-rosetta --agree-to-license
 </details>
 
 <details>
-<summary><b>Почему раньше он назывался Voxel?</b></summary>
-
-Релизы до 0.2.0 вышли под именем Voxel. С 0.2.1 проект называется Ember. Встроенное обновление само переведёт вас на новое имя, а старые названия загрузок продолжают работать для уже установленных копий.
-</details>
-
-<details>
 <summary><b>Будут ли версии для Windows и Linux?</b></summary>
 
 Windows есть в планах. Ядро переносимо, а интерфейс на SwiftUI нет, поэтому для Windows понадобится свой интерфейс поверх `LauncherCore`.
@@ -167,7 +159,7 @@ Windows есть в планах. Ядро переносимо, а интерф
 <a id="build-from-source"></a>
 ## Сборка из исходного кода
 
-Xcode не нужен, достаточно Command Line Tools и Swift 6.
+Xcode не нужен, достаточно Command Line Tools и тулчейна Swift 6.
 
 ```bash
 git clone https://github.com/SnowyMay111/ember-launcher.git

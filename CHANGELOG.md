@@ -1,7 +1,42 @@
 # Changelog
 
-All notable changes to Ember. Releases up to 0.2.0 were published under the name Voxel.
+All notable changes to Ember.
 Versions follow [Semantic Versioning](https://semver.org); downloads are on the [Releases](https://github.com/SnowyMay111/ember-launcher/releases) page.
+
+## [Unreleased]
+
+## [0.2.3] - 2026-10-30
+
+### Added
+- Friends: live friend list, requests, add by tag, online status in the top bar and the Social screen.
+- Lobbies: create a room, share the code, friends join with one button. The host runs a local Fabric server and friends connect through an encrypted tunnel (no port forwarding).
+- Shared content list for a lobby (mods, shaders, resource packs) with authors and edit rights; guests get the host's content installed automatically.
+- Servers screen: saved lobby servers with console, players, world settings and mods.
+- Pick the AI model from a per-provider list or type an id.
+- Delete your Ember account from the profile.
+- Shaders are allowed on NeoForge instances.
+- Warning when an imported pack bundles `.jar` mods that do not come from Modrinth, and a note about secrets in exported configs.
+- Unit tests (`scripts/test.sh`) and one User-Agent for all requests.
+
+### Security
+- Instance names are validated in `InstanceStore` (no `..`, separators, leading dot); a crafted `.mrpack` name can no longer point outside `instances/`.
+- `.mrpack` archives with symbolic links are rejected before extraction; files without both `sha1` and `sha512` hashes are refused.
+- File names from the Modrinth API must be a single plain path component.
+- `EMBER_UPDATE_URL` (renamed from the old project's variable) is read only in debug builds.
+
+### Fixed
+- The updater no longer gets stuck when its temporary download was cleaned up.
+- The natives `.extracted` marker is written only after a successful unpack and is tied to the native libraries; a forced reinstall clears it.
+- Cancelling a `.mrpack` import removes the half-made instance instead of keeping a pack without mods.
+- Long AI answers are no longer cut off silently (limits raised to 8192 tokens; a truncated answer is reported).
+- Data race on the update download failure; a failed `codesign` now stops release builds.
+- Iris detection no longer matches any file name containing "iris".
+- The account pill says "Offline nickname" unless a Microsoft account is signed in.
+- Imported mods keep their real Modrinth version numbers.
+- A lobby server no longer reloads its whitelist (and spams the in-game chat) every few seconds; it reloads only when the player list changes.
+
+### Changed
+- The updater no longer carries the legacy archive name or app-folder fallback, and the internal UI components and debug variables are named Ember.
 
 ## [0.2.2] - 2026-10-28
 
@@ -11,7 +46,7 @@ Versions follow [Semantic Versioning](https://semver.org); downloads are on the 
 
 ### Performance
 - **Faster game launch**: Cached native libraries extraction via `.extracted` marker in `GameLauncher`, avoiding repeated `/usr/bin/unzip` process invocations and recursive permission updates on every start (saving 0.5–1.5 seconds per launch).
-- **Asset verification fast path**: Added instant size check before running SHA-1 hash calculation on existing assets in `Downloader`, significantly reducing disk I/O when verifying Minecraft assets.
+- **Asset verification fast path**: Existing assets with a different size are now re-downloaded without computing a SHA-1 first; a file of the right size is still verified by SHA-1, so disk I/O is only saved for files that are plainly broken.
 - **Zero-allocation hex encoding**: Replaced intermediate String array allocations in `sha1Hex`, `sha256Hex`, and `sha512Hex` with a fast in-place byte lookup table.
 - **Network concurrency**: Increased `URLSession` maximum connections per host from 8 to 16 to utilize all parallel download worker tasks.
 - **Reduced background GPU/CPU usage**: Lowered particle & dust animation rate in `AmbientBackdrop` from 30 FPS to 15 FPS without visible difference.
@@ -32,9 +67,8 @@ The launcher is now called **Ember**.
 
 ### Changed
 - The app is `Ember.app` and the download is `Ember-mac-arm64.zip`. The bundle identifier, the data folder (`~/Library/Application Support/mc-launcher`) and the Keychain entry are unchanged, so instances, worlds, settings and your AI key carry over.
-- The self-updater understands both names. Copies of 0.1.0 and 0.2.0 look for `Voxel-mac-arm64.zip`, so each release also ships that file (the same build inside `Voxel.app`); from 0.2.1 on the updater prefers `Ember-mac-arm64.zip`.
 - Messages, Settings text and the Russian and Ukrainian translations say Ember.
-- `scripts/build-app.sh` builds `build/Ember.app`; `scripts/package-app.sh` writes `dist/Ember-mac-arm64.zip` and the legacy `dist/Voxel-mac-arm64.zip`.
+- `scripts/build-app.sh` builds `build/Ember.app`; `scripts/package-app.sh` writes `dist/Ember-mac-arm64.zip`.
 
 ### Docs
 - New README in English, Russian and Ukrainian: banner, "What's new", architecture diagram, FAQ.

@@ -19,9 +19,11 @@ final class SettingsStore: ObservableObject {
         didSet {
             defaults.set(aiProvider.rawValue, forKey: "aiProvider")
             hasAIKey = KeychainStore.exists(aiProvider.rawValue)
+            aiModel = defaults.string(forKey: SettingsStore.aiModelKey(aiProvider)) ?? ""
         }
     }
-    @Published var aiModel: String { didSet { defaults.set(aiModel, forKey: "aiModel") } }
+    /// The chosen model is remembered per provider, so switching providers never sends a Claude id to Gemini.
+    @Published var aiModel: String { didSet { defaults.set(aiModel, forKey: SettingsStore.aiModelKey(aiProvider)) } }
     /// Whether a key for the chosen provider is in the Keychain. The key itself is read only when it is used.
     @Published private(set) var hasAIKey: Bool
 
@@ -40,9 +42,12 @@ final class SettingsStore: ObservableObject {
         backgroundAnimations = defaults.object(forKey: "backgroundAnimations") as? Bool ?? true
         let provider = AIProviderKind(rawValue: defaults.string(forKey: "aiProvider") ?? "") ?? .claude
         aiProvider = provider
-        aiModel = defaults.string(forKey: "aiModel") ?? ""
+        // "aiModel" is the pre-per-provider key; it belonged to whichever provider was chosen then.
+        aiModel = defaults.string(forKey: SettingsStore.aiModelKey(provider)) ?? defaults.string(forKey: "aiModel") ?? ""
         hasAIKey = KeychainStore.exists(provider.rawValue)
     }
+
+    private static func aiModelKey(_ provider: AIProviderKind) -> String { "aiModel.\(provider.rawValue)" }
 
     func saveAIKey(_ key: String) {
         let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)

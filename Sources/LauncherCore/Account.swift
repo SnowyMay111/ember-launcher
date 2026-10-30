@@ -49,3 +49,24 @@ public struct OfflineAccount: Codable, Sendable, Equatable {
         self.uuid = uuid
     }
 }
+
+/// What the game is launched with: an offline player (token "0") or a signed-in Microsoft account.
+public struct MinecraftAccount: Sendable, Equatable {
+    public let name: String
+    public let uuid: String
+    public let accessToken: String
+    public let userType: String
+
+    public init(name: String, uuid: String, accessToken: String, userType: String) {
+        self.name = name
+        self.uuid = uuid
+        self.accessToken = accessToken
+        self.userType = userType
+    }
+
+    public init(offline: OfflineAccount) {
+        self.init(name: offline.name, uuid: offline.uuid, accessToken: "0", userType: "legacy")
+    }
+
+    public var isOnline: Bool { userType == "msa" }
+}

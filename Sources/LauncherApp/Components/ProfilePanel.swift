@@ -3,6 +3,8 @@ import SwiftUI
 struct ProfilePanel: View {
     @EnvironmentObject var app: AppState
     @EnvironmentObject var settings: SettingsStore
+    @EnvironmentObject var accounts: AccountStore
+    @EnvironmentObject var ember: EmberAccountStore
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Local private var isAppeared = false
 
@@ -12,7 +14,7 @@ struct ProfilePanel: View {
                 VStack(alignment: .leading, spacing: 0) {
                     Text(tr: "YOUR PROFILE").style(.eyebrow)
                         .padding(.bottom, 4)
-                    Text(settings.nickname)
+                    Text(displayName)
                         .font(Theme.font(size: 25, weight: .semibold))
                         .tracking(-1)
                         .foregroundColor(.white)
@@ -36,12 +38,12 @@ struct ProfilePanel: View {
             .padding(.bottom, 20)
 
             HStack(spacing: 16) {
-                PixelAvatar(size: 55)
+                PlayerHead(name: ember.profile?.avatarName ?? displayName, size: 55)
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(settings.nickname)
+                    Text(displayName)
                         .font(Theme.font(size: 14, weight: .semibold))
                         .foregroundColor(.white)
-                    Text(tr: "Online · Offline profile")
+                    Text(tr: accounts.isSignedIn ? "Microsoft account" : "Offline profile")
                         .font(Theme.font(size: 9))
                         .foregroundColor(Color(red: 0x67/255, green: 0x60/255, blue: 0x67/255))
                 }
@@ -61,20 +63,28 @@ struct ProfilePanel: View {
             .padding(.bottom, 25)
 
             VStack(spacing: 7) {
-                profileRow(text: "Manage account", isDisabled: false) {
-                    app.screen = .settings
+                profileRow(text: "Open profile", isDisabled: false) {
+                    app.modal = nil
+                    app.screen = .profile
                 }
-                profileRow(text: "Switch profile", isDisabled: true) {
+                if !ember.isSignedIn {
+                    profileRow(text: "Sign in to Ember", isDisabled: false) {
+                        app.modal = .emberSignIn
+                    }
                 }
-                profileRow(text: "Sign out", isDisabled: true) {
+                if accounts.isSignedIn {
+                    profileRow(text: "Sign out of Microsoft", isDisabled: false) {
+                        accounts.signOut()
+                    }
+                } else {
+                    profileRow(text: "Sign in with Microsoft", isDisabled: isWaitingForCode) {
+                        accounts.signIn()
+                    }
                 }
             }
             .padding(.horizontal, 22)
 
-            Text(tr: "Microsoft account support can be connected here when authentication is implemented.")
-                .font(Theme.font(size: 10))
-                .foregroundColor(Color(red: 0x67/255, green: 0x60/255, blue: 0x67/255))
-                .lineSpacing(6)
+            signInStatus
                 .padding(.top, 18)
                 .padding(.horizontal, 22)
         }
@@ -100,6 +110,44 @@ struct ProfilePanel: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L("Your Profile"))
+    }
+
+    private var displayName: String { accounts.session?.name ?? ember.profile?.displayName ?? settings.nickname }
+
+    private var isWaitingForCode: Bool {
+        if case .waitingForCode = accounts.phase { return true }
+        return false
+    }
+
+    @ViewBuilder
+    private var signInStatus: some View {
+        let muted = Color(red: 0x67/255, green: 0x60/255, blue: 0x67/255)
+        switch accounts.phase {
+        case .idle:
+            Text(tr: accounts.isSignedIn ? "Signed in. Online servers and your own skin are available." : "Without an account you play offline with the nickname from settings.")
+                .font(Theme.font(size: 10))
+                .foregroundColor(muted)
+                .lineSpacing(6)
+        case .waitingForCode(let userCode, let url):
+            VStack(alignment: .leading, spacing: 10) {
+                Text(tr: "Open the page and enter this code:")
+                    .font(Theme.font(size: 10))
+                    .foregroundColor(muted)
+                Text(verbatim: userCode)
+                    .font(Theme.font(size: 22, weight: .semibold, mono: true))
+                    .foregroundColor(.white)
+                    .textSelection(.enabled)
+                HStack(spacing: 14) {
+                    profileRow(text: "Open Microsoft page", isDisabled: false) { NSWorkspace.shared.open(url) }
+                    profileRow(text: "Cancel", isDisabled: false) { accounts.cancelSignIn() }
+                }
+            }
+        case .failed(let message):
+            Text(verbatim: message)
+                .font(Theme.font(size: 10))
+                .foregroundColor(Color(red: 0.93, green: 0.45, blue: 0.40))
+                .lineSpacing(6)
+        }
     }
 
     private func profileRow(text: String, isDisabled: Bool, action: @escaping () -> Void) -> some View {

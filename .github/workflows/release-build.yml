@@ -1,5 +1,5 @@
-# Every push to main builds Ember.app and publishes it as a pre-release (v<version>-build.<run>).
-# Pre-releases are skipped by "latest", so the in-app updater keeps following the manual stable releases.
+# Every push to main builds Ember.app and keeps the zip as a workflow artifact (no GitHub releases are created).
+# Stable releases stay manual, so the in-app updater keeps following them.
 name: Release build
 
 on:
@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
 
 # One build per commit: queue instead of cancelling.
 concurrency:
@@ -20,18 +20,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Optional: with the EMBER_SIGN_P12 (base64 .p12) and EMBER_SIGN_P12_PASSWORD secrets the build is signed
+      # with the "Ember Signing" certificate; without them it stays ad-hoc signed.
+      - name: Import signing certificate
+        env:
+          P12: ${{ secrets.EMBER_SIGN_P12 }}
+          P12_PASSWORD: ${{ secrets.EMBER_SIGN_P12_PASSWORD }}
+        run: |
+          if [ -n "$P12" ]; then
+            echo "$P12" | base64 --decode > "$RUNNER_TEMP/sign.p12"
+            security create-keychain -p ci "$RUNNER_TEMP/ci.keychain-db"
+            security unlock-keychain -p ci "$RUNNER_TEMP/ci.keychain-db"
+            security import "$RUNNER_TEMP/sign.p12" -k "$RUNNER_TEMP/ci.keychain-db" -P "$P12_PASSWORD" -T /usr/bin/codesign
+            security set-key-partition-list -S apple-tool:,apple: -s -k ci "$RUNNER_TEMP/ci.keychain-db" >/dev/null
+            security list-keychains -d user -s "$RUNNER_TEMP/ci.keychain-db" login.keychain-db
+          fi
+
       - name: Build and zip
         run: scripts/package-app.sh
 
-      - name: Publish pre-release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          VERSION="$(sed -n 's/.*version = "\([^"]*\)".*/\1/p' Sources/LauncherCore/LauncherInfo.swift | head -n 1)"
-          TAG="v${VERSION}-build.${GITHUB_RUN_NUMBER}"
-          SHORT="${GITHUB_SHA::7}"
-          gh release create "$TAG" dist/Ember-mac-arm64.zip \
-            --target "$GITHUB_SHA" \
-            --prerelease \
-            --title "Ember ${VERSION} build ${GITHUB_RUN_NUMBER} (${SHORT})" \
-            --notes "Automatic build of commit ${SHORT}. Not a stable release: for everyday use take the [latest release](https://github.com/${GITHUB_REPOSITORY}/releases/latest). Not notarized: run \`xattr -dr com.apple.quarantine /Applications/Ember.app\` once."
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ember-mac-arm64-${{ github.sha }}
+          path: dist/Ember-mac-arm64.zip
+          retention-days: 30

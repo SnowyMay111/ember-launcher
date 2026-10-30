@@ -82,6 +82,13 @@ struct PlayScreen: View {
 
                 VStack(spacing: 12) {
                     status
+                    if let notice = player.launchNotice {
+                        Text(verbatim: notice)
+                            .font(Theme.font(size: 12, weight: .regular, mono: false))
+                            .foregroundColor(Theme.danger)
+                            .multilineTextAlignment(.center)
+                            .lineLimit(2)
+                    }
                     if case .failed = player.state, player.diagnosisInstance == item.name {
                         SecondaryPill(title: "Crash report") { app.modal = .gameLog(item.name) }
                     }
@@ -141,7 +148,7 @@ private struct VersionMenu: View {
     let item: LibraryInstance
 
     var body: some View {
-        VoxelMenu(label: "Version", value: item.minecraftVersion, isPill: true) {
+        EmberMenu(label: "Version", value: item.minecraftVersion, isPill: true) {
             if let latest = app.manifest?.latest {
                 Button(L("Latest release") + " · " + latest.release) { use(snapshot: false) }
                 Button(L("Latest snapshot") + " · " + latest.snapshot) { use(snapshot: true) }

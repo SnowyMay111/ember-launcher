@@ -25,6 +25,7 @@ let package = Package(
                 .copy("Resources/Skins")
             ]
         ),
+        .testTarget(name: "LauncherCoreTests", dependencies: ["LauncherCore"]),
     ],
-    swiftLanguageModes: [.v5]
+    swiftLanguageModes: [.v6]
 )

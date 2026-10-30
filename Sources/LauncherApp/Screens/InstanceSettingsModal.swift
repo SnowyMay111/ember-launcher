@@ -35,7 +35,7 @@ struct InstanceSettingsModal: View {
     }
 
     var body: some View {
-        VoxelModal(title: "Instance settings") {
+        EmberModal(title: "Instance settings") {
             VStack(alignment: .leading, spacing: 18) {
                 HStack(spacing: 12) {
                     Text(verbatim: instance.versionLine).style(.secondary)
@@ -46,17 +46,17 @@ struct InstanceSettingsModal: View {
                 }
 
                 ModalField(label: "Name") {
-                    VoxelInput(label: "Name", text: $name)
+                    EmberInput(label: "Name", text: $name)
                 }
                 ModalField(label: "Group") {
                     GroupPicker(group: $group)
                 }
                 ModalField(label: "Memory") {
-                    VoxelSlider(label: "Memory", value: $memoryGB, range: memoryRange, valueText: L("%d GB", Int(memoryGB)))
+                    EmberSlider(label: "Memory", value: $memoryGB, range: memoryRange, valueText: L("%d GB", Int(memoryGB)))
                     Text(verbatim: memoryHint).style(.secondary)
                 }
                 ModalField(label: "Garbage collector") {
-                    VoxelMenu(label: "Garbage collector", value: gcProfileTitle(gcProfile), minWidth: 160) {
+                    EmberMenu(label: "Garbage collector", value: gcProfileTitle(gcProfile), minWidth: 160) {
                         ForEach([GCProfile.auto, .tunedG1GC, .zeroStutterZGC, .none], id: \.self) { profile in
                             Button(gcProfileTitle(profile)) {
                                 gcProfile = profile
@@ -68,7 +68,7 @@ struct InstanceSettingsModal: View {
                     }
                 }
                 ModalField(label: "Java arguments") {
-                    VoxelInput(label: "Java arguments", text: $javaArgs, placeholder: "-XX:+UseG1GC")
+                    EmberInput(label: "Java arguments", text: $javaArgs, placeholder: "-XX:+UseG1GC")
                 }
 
                 if confirmingDelete {
@@ -93,6 +93,8 @@ struct InstanceSettingsModal: View {
                             SecondaryPill(title: isExporting ? "Exporting…" : "Export .mrpack", action: exportPack)
                             SecondaryPill(title: "Delete") { confirmingDelete = true }
                         }
+                        Text(tr: "An exported pack includes mod configs. They can hold tokens or passwords, so check them before sharing the file.")
+                            .style(.secondary)
                     }
                 }
 

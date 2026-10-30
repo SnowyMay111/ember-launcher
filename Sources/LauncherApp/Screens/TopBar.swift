@@ -1,9 +1,12 @@
+import LauncherCore
 import SwiftUI
 
 /// Top bar on every screen: greeting eyebrow and title on the left, Java runtime badge and account on the right.
 struct TopBar: View {
     @EnvironmentObject var app: AppState
     @EnvironmentObject var settings: SettingsStore
+    @EnvironmentObject var accounts: AccountStore
+    @EnvironmentObject var ember: EmberAccountStore
 
     private var pageTitle: String {
         switch app.screen {
@@ -11,6 +14,8 @@ struct TopBar: View {
             return L("Welcome home.")
         case .social:
             return L("Social")
+        case .servers:
+            return L("Servers")
         case .library:
             return L("Instances")
         case .mods:
@@ -19,6 +24,8 @@ struct TopBar: View {
             return L("Skins")
         case .settings:
             return L("Settings")
+        case .profile:
+            return L("Profile")
         }
     }
 
@@ -46,7 +53,7 @@ struct TopBar: View {
                         app.friendsDrawerOpen.toggle()
                     }
                 }
-                AccountPill(name: settings.nickname) { app.modal = .profile }
+                AccountPill(name: accounts.session?.name ?? settings.nickname, isSignedIn: accounts.session != nil || ember.isSignedIn) { app.modal = .profile }
             }
         }
         .padding(.horizontal, 71)
@@ -126,6 +133,7 @@ struct UpdateNotice: View {
 /// Friends button in the top bar: stacked avatars with a presence dot, online count, chevron. Flat until hovered or open.
 private struct SocialTopButton: View {
     @EnvironmentObject var app: AppState
+    @EnvironmentObject var store: FriendsStore
     let action: () -> Void
 
     @Local private var isHovered = false
@@ -134,25 +142,46 @@ private struct SocialTopButton: View {
 
     private var isActive: Bool { isHovered || app.friendsDrawerOpen }
     private var fill: Color { isActive ? Color(red: 0x14/255, green: 0x14/255, blue: 0x13/255) : Theme.bg }
+    private var onlineFriends: [FriendEntry] {
+        Array(store.friendsList.filter { $0.online }.prefix(3))
+    }
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 12) {
                 HStack(spacing: -8) {
-                    avatar("M", Color(red: 102/255, green: 75/255, blue: 60/255))
-                    avatar("L", Color(red: 83/255, green: 94/255, blue: 71/255))
-                    avatar("N", Color(red: 93/255, green: 72/255, blue: 94/255))
+                    if onlineFriends.isEmpty {
+                        ZStack {
+                            Circle()
+                                .fill(Theme.elevated)
+                            Image(systemName: "person.2")
+                                .font(Theme.font(size: 13, weight: .medium))
+                                .foregroundColor(Theme.textSecondary)
+                        }
+                        .frame(width: 28, height: 28)
+                        .overlay(Circle().strokeBorder(fill, lineWidth: 2))
+                    } else {
+                        ForEach(onlineFriends, id: \.userID) { friend in
+                            PlayerHead(
+                                name: friend.avatarName ?? friend.displayName,
+                                size: 28
+                            )
+                            .frame(width: 28, height: 28)
+                            .clipShape(Circle())
+                            .overlay(Circle().strokeBorder(fill, lineWidth: 2))
+                        }
+                    }
                 }
                 .overlay(alignment: .bottomTrailing) {
                     Circle()
-                        .fill(Theme.success)
+                        .fill(store.onlineCount > 0 ? Theme.success : Theme.textMuted)
                         .frame(width: 8, height: 8)
                         .overlay(Circle().strokeBorder(fill, lineWidth: 2))
                         .offset(x: 2, y: 2)
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(verbatim: L("3 online")).style(.init(size: 13, weight: .semibold, color: Theme.text))
+                    Text(verbatim: L("%d online", store.onlineCount)).style(.init(size: 13, weight: .semibold, color: Theme.text))
                     Text(verbatim: L("Friends")).style(.init(size: 12, weight: .regular, color: Theme.textSecondary))
                 }
 
@@ -178,15 +207,6 @@ private struct SocialTopButton: View {
         .opacity(isEnabled ? 1.0 : 0.45)
         .animation(.easeInOut(duration: 0.18), value: isActive)
         .animation(.easeInOut(duration: 0.22), value: app.friendsDrawerOpen)
-        .accessibilityLabel(L("Friends, 3 online"))
-    }
-
-    private func avatar(_ letter: String, _ bg: Color) -> some View {
-        Text(verbatim: letter)
-            .font(Theme.font(size: 12, weight: .semibold))
-            .foregroundColor(Theme.text)
-            .frame(width: 28, height: 28)
-            .background(Circle().fill(bg))
-            .overlay(Circle().strokeBorder(fill, lineWidth: 2))
+        .accessibilityLabel(L("Friends, %d online", store.onlineCount))
     }
 }

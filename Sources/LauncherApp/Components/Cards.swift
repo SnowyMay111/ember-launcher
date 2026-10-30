@@ -129,7 +129,7 @@ extension LibraryInstance {
         if minecraftVersion.range(of: #"^\d+\.\d+(\.\d+)?$"#, options: .regularExpression) == nil { return .void }
         switch loader {
         case .vanilla: return .dusk
-        case .fabric: return .violet
+        case .fabric, .quilt: return .violet
         default: return .gold
         }
     }

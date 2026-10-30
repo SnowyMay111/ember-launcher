@@ -9,3 +9,6 @@ dist/
 .agents/
 windows/
 .claude/settings.local.json
+CLAUDE.md
+GEMINI.md
+tools/

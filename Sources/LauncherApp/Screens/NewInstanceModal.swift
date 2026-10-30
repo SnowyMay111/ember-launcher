@@ -10,6 +10,7 @@ struct NewInstanceModal: View {
     @Local private var loader: LoaderKind = .vanilla
     @Local private var group = GroupName.vanilla
     @Local private var fabricVersions: Set<String>?
+    @Local private var quiltVersions: Set<String>?
     @Local private var forgeVersions: [LoaderKind: Set<String>] = [:]
     @Local private var errorText = ""
     @Local private var mode = Mode.custom
@@ -40,6 +41,7 @@ struct NewInstanceModal: View {
         switch activeLoader {
         case .vanilla: supported = nil
         case .fabric: supported = fabricVersions
+        case .quilt: supported = quiltVersions
         case .forge, .neoforge: supported = forgeVersions[activeLoader]
         }
         guard let supported else { return all }
@@ -74,13 +76,14 @@ struct NewInstanceModal: View {
     private static let loaderNotes: [LoaderKind: String] = [
         .vanilla: "The original experience",
         .fabric: "Lightweight and mod-friendly",
+        .quilt: "Fabric-compatible community loader",
         .forge: "Built for expansive modpacks",
         .neoforge: "Modern community loader"
     ]
 
     private var versionMenu: some View {
         ModalField(label: "Minecraft version") {
-            VoxelMenu(label: "Minecraft version", value: version.isEmpty ? "…" : version, minWidth: 170) {
+            EmberMenu(label: "Minecraft version", value: version.isEmpty ? "…" : version, minWidth: 170) {
                 ForEach(versions, id: \.id) { entry in
                     Button(title(for: entry)) { version = entry.id }
                 }
@@ -97,7 +100,7 @@ struct NewInstanceModal: View {
     }
 
     var body: some View {
-        VoxelModal(title: wizardTitle, eyebrow: "NEW INSTANCE") {
+        EmberModal(title: wizardTitle, eyebrow: "NEW INSTANCE") {
             if isWorking {
                 FlowInstallState(title: installTitle, detail: isImporting ? importProgress : buildProgress, fraction: installFraction)
             } else {
@@ -123,7 +126,7 @@ struct NewInstanceModal: View {
 
                     if mode == .custom && step == 1 {
                         ModalField(label: "Instance name") {
-                            VoxelInput(label: "Name", text: $name, placeholder: namePlaceholder)
+                            EmberInput(label: "Name", text: $name, placeholder: namePlaceholder)
                         }
                         NamePreviewCard(name: displayName)
                     }
@@ -153,7 +156,7 @@ struct NewInstanceModal: View {
 
                     if !isWizard && showsNameAndGroup {
                         ModalField(label: "Name") {
-                            VoxelInput(label: "Name", text: $name, placeholder: mode == .mrpack ? (pack?.name ?? "") : (mode == .ai ? (plan?.name ?? "") : namePlaceholder))
+                            EmberInput(label: "Name", text: $name, placeholder: mode == .mrpack ? (pack?.name ?? "") : (mode == .ai ? (plan?.name ?? "") : namePlaceholder))
                         }
                     }
 
@@ -238,7 +241,7 @@ struct NewInstanceModal: View {
                 VStack(spacing: 0) {
                     ForEach(plan.mods) { mod in
                         HStack(alignment: .top, spacing: 14) {
-                            VoxelCheckbox(label: mod.title, isOn: Binding(
+                            EmberCheckbox(label: mod.title, isOn: Binding(
                                 get: { picked.contains(mod.projectId) },
                                 set: { isOn in
                                     if isOn { picked.insert(mod.projectId) } else { picked.remove(mod.projectId) }
@@ -271,7 +274,7 @@ struct NewInstanceModal: View {
             }
         } else {
             ModalField(label: "Describe your pack") {
-                VoxelTextArea(
+                EmberTextArea(
                     label: "Describe your pack",
                     text: $aiText,
                     placeholder: L("A cozy survival pack with better graphics, a minimap and some farming mods")
@@ -300,7 +303,7 @@ struct NewInstanceModal: View {
                 plan = result
                 picked = Set(result.mods.map(\.projectId))
             } catch {
-                errorText = error.localizedDescription
+                errorText = L(error.localizedDescription)
             }
             isPlanning = false
         }
@@ -350,6 +353,11 @@ struct NewInstanceModal: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text(verbatim: pack.name).style(.row)
                 Text(verbatim: packDetails(pack)).style(.secondary)
+                if pack.overrideJarCount > 0 {
+                    Text(verbatim: L("The pack has %d mods that do not come from Modrinth. Install packs only from people you trust.", pack.overrideJarCount))
+                        .style(.secondary)
+                        .foregroundColor(Theme.danger)
+                }
             }
         } else {
             Text(tr: "Packs from Modrinth and other launchers work. Forge packs are not supported yet.").style(.secondary)
@@ -439,10 +447,13 @@ struct NewInstanceModal: View {
         let fabric = FabricInstaller(paths: app.paths, installer: app.versionInstaller)
         let forge = ForgeInstaller(paths: app.paths, installer: app.versionInstaller, runtimeManager: JavaRuntimeManager(paths: app.paths))
         let candidates = app.launchableVersions(includeSnapshots: true).map(\.id)
+        let quilt = QuiltInstaller(paths: app.paths, installer: app.versionInstaller)
         async let fabricSet = try? fabric.supportedGameVersions()
+        async let quiltSet = try? quilt.supportedGameVersions()
         async let forgeSet = try? forge.supportedGameVersions(loader: .forge, among: candidates)
         async let neoForgeSet = try? forge.supportedGameVersions(loader: .neoforge, among: candidates)
         fabricVersions = await fabricSet
+        quiltVersions = await quiltSet
         if let found = await forgeSet { forgeVersions[.forge] = found }
         if let found = await neoForgeSet { forgeVersions[.neoforge] = found }
         chooseVersion()

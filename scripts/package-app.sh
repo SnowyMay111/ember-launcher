@@ -8,7 +8,7 @@ cd "$(dirname "$0")/.."
 
 scripts/build-app.sh release
 mkdir -p dist
-rm -f dist/Ember-mac-arm64.zip dist/Voxel-mac-arm64.zip
+rm -f dist/Ember-mac-arm64.zip
 ditto -c -k --sequesterRsrc --keepParent build/Ember.app dist/Ember-mac-arm64.zip
 
 echo "Готово: $PWD/dist/Ember-mac-arm64.zip ($(du -h dist/Ember-mac-arm64.zip | cut -f1))"

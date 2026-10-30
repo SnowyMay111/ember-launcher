@@ -21,7 +21,7 @@ struct GameLogModal: View {
     }
 
     var body: some View {
-        VoxelModal(title: "Game log", width: 760) {
+        EmberModal(title: "Game log", width: 760) {
             VStack(alignment: .leading, spacing: 16) {
                 if let diagnosis { DiagnosisBlock(diagnosis: diagnosis) }
                 console

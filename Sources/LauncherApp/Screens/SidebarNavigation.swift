@@ -45,6 +45,13 @@ public struct SidebarNavigation: View {
                 )
 
                 navButton(
+                    screen: .servers,
+                    title: L("Servers"),
+                    systemName: "server.rack",
+                    shortcutKey: "7"
+                )
+
+                navButton(
                     screen: .mods,
                     title: L("Explore"),
                     systemName: "arrow.down.to.line",

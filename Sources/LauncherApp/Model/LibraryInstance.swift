@@ -4,6 +4,7 @@ import SwiftUI
 enum LoaderKind: String, CaseIterable, Identifiable {
     case vanilla = "Vanilla"
     case fabric = "Fabric"
+    case quilt = "Quilt"
     case forge = "Forge"
     case neoforge = "NeoForge"
 
@@ -21,18 +22,22 @@ enum LoaderKind: String, CaseIterable, Identifiable {
         switch self {
         case .forge: return .forge
         case .neoforge: return .neoforge
-        case .vanilla, .fabric: return nil
+        case .vanilla, .fabric, .quilt: return nil
         }
     }
 
     /// Whether the Mods screen can install mods into an instance with this loader.
     var supportsMods: Bool { self != .vanilla }
+
+    /// The loader Modrinth is asked for: Quilt runs Fabric mods.
+    var modrinthLoader: String { self == .quilt ? "fabric" : coreName }
 }
 
 enum LoaderFilter: String, CaseIterable, Identifiable {
     case all = "All"
     case vanilla = "Vanilla"
     case fabric = "Fabric"
+    case quilt = "Quilt"
     case forge = "Forge"
     case neoforge = "NeoForge"
 
@@ -43,6 +48,7 @@ enum LoaderFilter: String, CaseIterable, Identifiable {
         case .all: return true
         case .vanilla: return loader == .vanilla
         case .fabric: return loader == .fabric
+        case .quilt: return loader == .quilt
         case .forge: return loader == .forge
         case .neoforge: return loader == .neoforge
         }

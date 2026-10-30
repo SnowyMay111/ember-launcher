@@ -4,6 +4,7 @@ public enum ZipArchiveError: Error, LocalizedError, Sendable {
     case unsupportedPlatform
     case toolFailed(String)
     case unreadable(String)
+    case tooLarge(Int64)
 
     public var errorDescription: String? {
         switch self {
@@ -13,6 +14,8 @@ public enum ZipArchiveError: Error, LocalizedError, Sendable {
             return "Zip tool failed: \(message)"
         case .unreadable(let message):
             return "Unreadable archive: \(message)"
+        case .tooLarge(let limit):
+            return "Archive unpacks to more than \(limit) bytes"
         }
     }
 }
@@ -26,6 +29,16 @@ public enum ZipArchive: Sendable {
             .components(separatedBy: .newlines)
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }
+        #else
+        throw ZipArchiveError.unsupportedPlatform
+        #endif
+    }
+
+    /// True if any entry is a symbolic link (permissions column of `unzip -Z` starts with `l`).
+    public static func hasSymlinks(_ archive: URL) throws -> Bool {
+        #if os(macOS)
+        let output = try run(executable: "/usr/bin/unzip", arguments: ["-Z", archive.path]).stdout
+        return output.components(separatedBy: .newlines).contains { $0.hasPrefix("l") && $0.count > 10 }
         #else
         throw ZipArchiveError.unsupportedPlatform
         #endif
@@ -56,10 +69,22 @@ public enum ZipArchive: Sendable {
     }
 
     /// Extracts an archive into the destination directory.
-    public static func extract(_ archive: URL, to directory: URL) throws {
+    /// With `maxBytes` the real size on disk is watched while `unzip` runs and extraction is killed past the limit
+    /// (the sizes in the archive headers can be forged, so they are not trusted). Already written files stay for the caller to clean up.
+    public static func extract(_ archive: URL, to directory: URL, maxBytes: Int64? = nil) throws {
         #if os(macOS)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: nil)
-        _ = try run(executable: "/usr/bin/unzip", arguments: ["-q", "-o", archive.path, "-d", directory.path])
+        var abortWhen: (() -> Bool)?
+        if let maxBytes {
+            abortWhen = { directorySize(directory) > maxBytes }
+        }
+        let result = try run(
+            executable: "/usr/bin/unzip",
+            arguments: ["-q", "-o", archive.path, "-d", directory.path],
+            abortWhen: abortWhen
+        )
+        if result.aborted { throw ZipArchiveError.tooLarge(maxBytes ?? 0) }
+        if let maxBytes, directorySize(directory) > maxBytes { throw ZipArchiveError.tooLarge(maxBytes) }
         // Ensure extracted items are owner-readable and owner-writable (e.g. Windows archives with 0000 mode).
         if let enumerator = FileManager.default.enumerator(
             at: directory,
@@ -94,12 +119,36 @@ public enum ZipArchive: Sendable {
     }
 
     #if os(macOS)
+    private static func directorySize(_ directory: URL) -> Int64 {
+        guard let enumerator = FileManager.default.enumerator(
+            at: directory,
+            includingPropertiesForKeys: [.fileSizeKey],
+            options: []
+        ) else { return 0 }
+        var total: Int64 = 0
+        for case let url as URL in enumerator {
+            total += Int64((try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0)
+        }
+        return total
+    }
+
+    /// Output of one pipe, filled by a reader thread and read after the group has finished.
+    private final class DataBox: @unchecked Sendable {
+        private let lock = NSLock()
+        private var stored = Data()
+        var data: Data {
+            get { lock.lock(); defer { lock.unlock() }; return stored }
+            set { lock.lock(); stored = newValue; lock.unlock() }
+        }
+    }
+
     @discardableResult
     private static func run(
         executable: String,
         arguments: [String],
-        currentDirectoryURL: URL? = nil
-    ) throws -> (stdout: String, stderr: String) {
+        currentDirectoryURL: URL? = nil,
+        abortWhen: (() -> Bool)? = nil
+    ) throws -> (stdout: String, stderr: String, aborted: Bool) {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: executable)
         process.arguments = arguments
@@ -112,19 +161,19 @@ public enum ZipArchive: Sendable {
         process.standardOutput = stdoutPipe
         process.standardError = stderrPipe
 
-        var stdoutData = Data()
-        var stderrData = Data()
+        let stdoutBox = DataBox()
+        let stderrBox = DataBox()
         let group = DispatchGroup()
 
         group.enter()
         DispatchQueue.global().async {
-            stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
+            stdoutBox.data = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
             group.leave()
         }
 
         group.enter()
         DispatchQueue.global().async {
-            stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
+            stderrBox.data = stderrPipe.fileHandleForReading.readDataToEndOfFile()
             group.leave()
         }
 
@@ -134,9 +183,23 @@ public enum ZipArchive: Sendable {
             throw ZipArchiveError.toolFailed("Failed to run \(executable): \(error.localizedDescription)")
         }
 
+        var aborted = false
+        if let abortWhen {
+            while process.isRunning {
+                if abortWhen() {
+                    aborted = true
+                    process.terminate()
+                    break
+                }
+                Thread.sleep(forTimeInterval: 0.2)
+            }
+        }
         process.waitUntilExit()
         group.wait()
+        let stdoutData = stdoutBox.data
+        let stderrData = stderrBox.data
 
+        if aborted { return ("", "", true) }
         if process.terminationStatus != 0 {
             var errText = String(data: stderrData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             if errText.isEmpty {
@@ -148,7 +211,7 @@ public enum ZipArchive: Sendable {
 
         let stdoutText = String(data: stdoutData, encoding: .utf8) ?? ""
         let stderrText = String(data: stderrData, encoding: .utf8) ?? ""
-        return (stdoutText, stderrText)
+        return (stdoutText, stderrText, false)
     }
     #endif
 }

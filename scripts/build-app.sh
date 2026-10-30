@@ -38,6 +38,19 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 
-# Локальная подпись, чтобы приложение запускалось на Apple Silicon. Подпись для публики и нотаризация позже.
-codesign --force --sign - "$APP" >/dev/null 2>&1 || echo "warning: codesign failed (приложение может не запуститься)"
+# Подпись: EMBER_SIGN_IDENTITY (SHA-1 отпечаток или имя), иначе сертификат "Ember Signing" из связки ключей,
+# иначе ad-hoc ("-"), чтобы приложение запускалось на Apple Silicon. Нотаризация позже.
+SIGN_IDENTITY="${EMBER_SIGN_IDENTITY:-}"
+if [ -z "$SIGN_IDENTITY" ]; then
+    SIGN_IDENTITY="$(security find-certificate -c "Ember Signing" -Z 2>/dev/null | sed -n 's/^SHA-1 hash: //p' | head -n 1)"
+fi
+SIGN_IDENTITY="${SIGN_IDENTITY:--}"
+if ! codesign --force --sign "$SIGN_IDENTITY" "$APP" >/dev/null 2>&1; then
+    # Релиз без подписи не запустится на Apple Silicon, поэтому для него это ошибка; для debug хватает предупреждения.
+    if [ "$CONFIG" = "release" ]; then
+        echo "error: codesign failed (релизная сборка без подписи не запустится)"
+        exit 1
+    fi
+    echo "warning: codesign failed (приложение может не запуститься)"
+fi
 echo "Готово: $PWD/$APP"

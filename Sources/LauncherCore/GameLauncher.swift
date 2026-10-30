@@ -125,6 +125,12 @@ public final class GameLauncher: Sendable {
     ) async throws -> Instance {
         var updated = instance
         let fm = FileManager.default
+        if force {
+            // A forced reinstall may bring new libraries: drop the unpacked natives (and their marker) so the next launch unpacks them again.
+            for id in Set([instance.versionId, instance.minecraftVersion]) where !id.isEmpty {
+                try? fm.removeItem(at: paths.versionDir(id).appendingPathComponent("natives", isDirectory: true))
+            }
+        }
         if instance.loader == "fabric" {
             let needsInstall = force
                 || instance.versionId.isEmpty
@@ -144,6 +150,26 @@ public final class GameLauncher: Sendable {
                 )
                 updated.versionId = profileId
                 updated.loaderVersion = loaderVersion
+                if updated != instance {
+                    try store.save(updated)
+                }
+            }
+            return updated
+        } else if instance.loader == "quilt" {
+            let needsInstall = force
+                || instance.versionId.isEmpty
+                || !fm.fileExists(atPath: paths.versionJSON(instance.versionId).path)
+                || !fm.fileExists(atPath: paths.versionJSON(instance.minecraftVersion).path)
+            if needsInstall {
+                let quiltInstaller = QuiltInstaller(paths: paths, installer: installer)
+                let profileId = try await quiltInstaller.install(
+                    minecraftVersion: instance.minecraftVersion,
+                    loaderVersion: instance.loaderVersion,
+                    progress: progress
+                )
+                let suffix = "-\(instance.minecraftVersion)"
+                updated.versionId = profileId
+                updated.loaderVersion = String(profileId.dropFirst(QuiltInstaller.profilePrefix.count).dropLast(suffix.count))
                 if updated != instance {
                     try store.save(updated)
                 }
@@ -183,11 +209,12 @@ public final class GameLauncher: Sendable {
     /// Makes sure Mojang's Java for this version is present, then builds the command.
     public func makeCommand(
         instance: Instance,
-        account: OfflineAccount,
+        account: MinecraftAccount,
+        quickPlayServer: String? = nil,
         progress: (@Sendable (DownloadProgress) -> Void)? = nil
     ) async throws -> LaunchCommand {
         let java = try await ensureJava(for: instance, progress: progress)
-        return try buildCommand(instance: instance, account: account, javaExecutable: java)
+        return try buildCommand(instance: instance, account: account, javaExecutable: java, quickPlayServer: quickPlayServer)
     }
 
     /// Downloads Mojang's Java for the installed version if it is missing and returns its `java` executable.
@@ -209,7 +236,13 @@ public final class GameLauncher: Sendable {
         )
     }
 
-    public func buildCommand(instance: Instance, account: OfflineAccount, javaExecutable: URL) throws -> LaunchCommand {
+    /// `quickPlayServer` ("host:port") makes the game join that server straight after the main menu loads.
+    public func buildCommand(
+        instance: Instance,
+        account: MinecraftAccount,
+        javaExecutable: URL,
+        quickPlayServer: String? = nil
+    ) throws -> LaunchCommand {
         let version = try resolveInstalled(instance)
         guard let mainClass = version.mainClass else {
             throw GameLauncherError.missingMainClass(version.id)
@@ -243,7 +276,14 @@ public final class GameLauncher: Sendable {
         var classpath: [String] = []
         var seen = Set<String>()
         let nativesMarker = nativesDir.appendingPathComponent(".extracted")
-        let needsNativesExtract = !fm.fileExists(atPath: nativesMarker.path)
+        // The marker holds a stamp of the native libraries it was made from, so changed libraries are unpacked again.
+        let nativesStamp = version.libraries
+            .filter { RuleEvaluator.isAllowed(rules: $0.rules) && ($0.nativeClassifier != nil || $0.extract != nil) }
+            .compactMap { $0.resolvedArtifact.map { "\($0.path):\($0.sha1 ?? "")" } }
+            .sorted()
+            .joined(separator: "\n")
+        let needsNativesExtract = (try? String(contentsOf: nativesMarker, encoding: .utf8)) != nativesStamp
+        var nativesOK = true
 
         for library in version.libraries {
             guard RuleEvaluator.isAllowed(rules: library.rules),
@@ -252,7 +292,11 @@ public final class GameLauncher: Sendable {
 
             if needsNativesExtract, library.nativeClassifier != nil || library.extract != nil {
                 if fm.fileExists(atPath: file.path) {
-                    try? ZipArchive.extract(file, to: nativesDir)
+                    do {
+                        try ZipArchive.extract(file, to: nativesDir)
+                    } catch {
+                        nativesOK = false
+                    }
                     if let excludes = library.extract?.exclude {
                         for pattern in excludes {
                             let clean = pattern.hasSuffix("/") ? String(pattern.dropLast()) : pattern
@@ -260,6 +304,8 @@ public final class GameLauncher: Sendable {
                             try? fm.removeItem(at: target)
                         }
                     }
+                } else {
+                    nativesOK = false
                 }
             }
 
@@ -269,8 +315,8 @@ public final class GameLauncher: Sendable {
             }
             classpath.append(file.path)
         }
-        if needsNativesExtract {
-            fm.createFile(atPath: nativesMarker.path, contents: nil)
+        if needsNativesExtract && nativesOK {
+            try? Data(nativesStamp.utf8).write(to: nativesMarker)
         }
         let clientJar = paths.versionJAR(version.clientJarID)
         guard fm.fileExists(atPath: clientJar.path) else {
@@ -319,12 +365,12 @@ public final class GameLauncher: Sendable {
 
         let variables: [String: String] = [
             "auth_player_name": account.name,
-            "auth_session": "token:0:0",
+            "auth_session": "token:\(account.accessToken):\(account.uuid.replacingOccurrences(of: "-", with: ""))",
             "auth_uuid": account.uuid.replacingOccurrences(of: "-", with: ""),
-            "auth_access_token": "0",
+            "auth_access_token": account.accessToken,
             "auth_xuid": "0",
             "clientid": "0",
-            "user_type": "legacy",
+            "user_type": account.userType,
             "user_properties": "{}",
             // Forge's `-DignoreList` names `${version_name}.jar`; the client jar on the classpath is the parent's, so that name must match it.
             "version_name": ForgeLoaderKind(instanceLoader: instance.loader) == nil ? version.id : version.clientJarID,
@@ -401,7 +447,16 @@ public final class GameLauncher: Sendable {
             javaMajor: effectiveJavaMajor,
             userArguments: instance.extraJVMArgs
         )
-        let all = memory + diagnosticArgs + instance.extraJVMArgs + jvmArguments + [mainClass] + gameArguments
+        var quickPlayArguments: [String] = []
+        if let server = quickPlayServer, !server.isEmpty {
+            if version.arguments != nil {
+                quickPlayArguments = ["--quickPlayMultiplayer", server]
+            } else {
+                let parts = server.split(separator: ":", maxSplits: 1).map(String.init)
+                quickPlayArguments = ["--server", parts[0]] + (parts.count > 1 ? ["--port", parts[1]] : [])
+            }
+        }
+        let all = memory + diagnosticArgs + instance.extraJVMArgs + jvmArguments + [mainClass] + gameArguments + quickPlayArguments
 
         return LaunchCommand(
             executable: javaExecutable,

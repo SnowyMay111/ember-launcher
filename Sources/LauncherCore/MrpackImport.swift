@@ -9,6 +9,8 @@ public struct MrpackSummary: Sendable, Equatable {
     public var loaderVersion: String?
     public var fileCount: Int
     public var overrideFileCount: Int
+    /// `.jar` files bundled in `overrides/mods` and `client-overrides/mods`: mods that do not come from Modrinth.
+    public var overrideJarCount: Int
     public var downloadBytes: Int64
 
     public init(
@@ -20,6 +22,7 @@ public struct MrpackSummary: Sendable, Equatable {
         loaderVersion: String? = nil,
         fileCount: Int,
         overrideFileCount: Int,
+        overrideJarCount: Int = 0,
         downloadBytes: Int64
     ) {
         self.name = name
@@ -30,6 +33,7 @@ public struct MrpackSummary: Sendable, Equatable {
         self.loaderVersion = loaderVersion
         self.fileCount = fileCount
         self.overrideFileCount = overrideFileCount
+        self.overrideJarCount = overrideJarCount
         self.downloadBytes = downloadBytes
     }
 }
@@ -87,7 +91,7 @@ extension ModpackManager {
             try? fm.removeItem(at: tempDir)
         }
 
-        try ZipArchive.extract(archive, to: tempDir)
+        try extractWithinLimit(archive, to: tempDir)
         try validateNoSymbolicLinks(in: tempDir)
 
         let (index, minecraftVersion, loader, loaderVersion) = try parseAndValidateIndex(in: tempDir)
@@ -101,6 +105,7 @@ extension ModpackManager {
 
         let downloadBytes = clientFiles.reduce(Int64(0)) { $0 + Int64($1.fileSize) }
         let overrideFileCount = countOverrideFiles(in: tempDir)
+        let overrideJarCount = countOverrideJars(in: tempDir)
 
         return MrpackSummary(
             name: index.name,
@@ -111,6 +116,7 @@ extension ModpackManager {
             loaderVersion: loaderVersion,
             fileCount: clientFiles.count,
             overrideFileCount: overrideFileCount,
+            overrideJarCount: overrideJarCount,
             downloadBytes: downloadBytes
         )
     }
@@ -134,14 +140,14 @@ extension ModpackManager {
             try? fm.removeItem(at: tempDir)
         }
 
-        try ZipArchive.extract(archive, to: tempDir)
+        try extractWithinLimit(archive, to: tempDir)
         try validateNoSymbolicLinks(in: tempDir)
 
         let (index, minecraftVersion, loader, loaderVersion) = try parseAndValidateIndex(in: tempDir)
 
         let clientFiles = index.files.filter { $0.env?.client != "unsupported" && !excludedPaths.contains($0.path) }
 
-        let finalName = store.uniqueName(base: name ?? index.name)
+        let finalName = store.uniqueName(base: name ?? index.name, fallback: "Modpack")
         let gameDir = store.gameDirectory(for: finalName)
 
         for file in clientFiles {
@@ -154,7 +160,7 @@ extension ModpackManager {
 
         let instance: Instance
         if loader != "vanilla" {
-            // Fabric, Forge and NeoForge are installed on the first Play, which fills in the version id.
+            // Fabric, Quilt, Forge and NeoForge are installed on the first Play, which fills in the version id.
             instance = Instance(
                 name: finalName,
                 minecraftVersion: minecraftVersion,
@@ -197,7 +203,7 @@ extension ModpackManager {
                     while inFlight < maxConcurrency, let file = iterator.next() {
                         inFlight += 1
                         group.addTask {
-                            await self.downloadFile(file, gameDir: gameDir)
+                            try await self.downloadFile(file, gameDir: gameDir)
                         }
                     }
 
@@ -216,11 +222,13 @@ extension ModpackManager {
                         if let nextFile = iterator.next() {
                             inFlight += 1
                             group.addTask {
-                                await self.downloadFile(nextFile, gameDir: gameDir)
+                                try await self.downloadFile(nextFile, gameDir: gameDir)
                             }
                         }
                     }
                 }
+                // A cancelled import must not end up as a pack without mods: the catch below sends it to the trash.
+                try Task.checkCancellation()
             }
 
             progress("Copying files", 0.0)
@@ -283,6 +291,19 @@ extension ModpackManager {
                     warnings.append("Could not fetch project metadata: \(error.localizedDescription)")
                 }
 
+                // Real version numbers come from Modrinth; the file name stays as the fallback when they cannot be fetched.
+                var versionMap: [String: ModrinthVersion] = [:]
+                do {
+                    let uniqueVersionIds = Array(Set(candidates.map { $0.versionId }))
+                    for chunk in stride(from: 0, to: uniqueVersionIds.count, by: 100).map({ Array(uniqueVersionIds[$0..<min($0 + 100, uniqueVersionIds.count)]) }) {
+                        for version in try await client.versions(ids: chunk) {
+                            versionMap[version.id] = version
+                        }
+                    }
+                } catch {
+                    warnings.append("Could not fetch version metadata: \(error.localizedDescription)")
+                }
+
                 var records: [ModRecord] = []
                 for candidate in candidates {
                     let project = projectMap[candidate.projectId]
@@ -293,7 +314,7 @@ extension ModpackManager {
                         projectId: candidate.projectId,
                         versionId: candidate.versionId,
                         title: title,
-                        versionNumber: candidate.versionNumber,
+                        versionNumber: versionMap[candidate.versionId]?.versionNumber ?? candidate.versionNumber,
                         iconURL: iconURL,
                         isDependency: false,
                         installedFor: nil
@@ -325,9 +346,15 @@ extension ModpackManager {
     private func downloadFile(
         _ file: MrpackFile,
         gameDir: URL
-    ) async -> DownloadFileResult {
+    ) async throws -> DownloadFileResult {
         guard let downloadURL = selectDownloadURL(from: file.downloads) else {
             return .failed(path: file.path, reason: "download host not allowed")
+        }
+
+        // The .mrpack spec requires both hashes; a file without them cannot be verified, so nothing is downloaded.
+        guard let expectedSha1 = file.hashes["sha1"], !expectedSha1.isEmpty,
+              let expectedSha512 = file.hashes["sha512"], !expectedSha512.isEmpty else {
+            return .failed(path: file.path, reason: "missing hashes")
         }
 
         let destURL = gameDir.appendingPathComponent(file.path)
@@ -337,24 +364,25 @@ extension ModpackManager {
             try await downloader.download(
                 url: downloadURL,
                 to: destURL,
-                sha1: file.hashes["sha1"],
+                sha1: expectedSha1,
                 size: file.fileSize
             )
 
-            if let expectedSha512 = file.hashes["sha512"], !expectedSha512.isEmpty {
-                do {
-                    let actualSha512 = try sha512Hex(of: destURL)
-                    if actualSha512.caseInsensitiveCompare(expectedSha512) != .orderedSame {
-                        try? fm.removeItem(at: destURL)
-                        return .failed(path: file.path, reason: "sha512 mismatch")
-                    }
-                } catch {
+            do {
+                let actualSha512 = try sha512Hex(of: destURL)
+                if actualSha512.caseInsensitiveCompare(expectedSha512) != .orderedSame {
                     try? fm.removeItem(at: destURL)
                     return .failed(path: file.path, reason: "sha512 mismatch")
                 }
+            } catch {
+                try? fm.removeItem(at: destURL)
+                return .failed(path: file.path, reason: "sha512 mismatch")
             }
             return .success(file: file, usedURL: downloadURL)
         } catch {
+            if error is CancellationError || (error as? URLError)?.code == .cancelled || Task.isCancelled {
+                throw CancellationError()
+            }
             return .failed(path: file.path, reason: error.localizedDescription)
         }
     }
@@ -373,6 +401,17 @@ extension ModpackManager {
         return nil
     }
 
+    static let maxArchiveSize: Int64 = 4 * 1024 * 1024 * 1024
+
+    /// Unpacks while checking the real size on disk, not the header sizes, so a forged archive cannot fill the disk.
+    func extractWithinLimit(_ archive: URL, to directory: URL) throws {
+        do {
+            try ZipArchive.extract(archive, to: directory, maxBytes: Self.maxArchiveSize)
+        } catch ZipArchiveError.tooLarge(let limit) {
+            throw ModpackError.archiveTooLarge(limit)
+        }
+    }
+
     func validateArchiveBeforeExtract(_ archive: URL) throws {
         let entries = try ZipArchive.entries(of: archive)
         for entry in entries {
@@ -386,13 +425,16 @@ extension ModpackManager {
             }
         }
 
+        if try ZipArchive.hasSymlinks(archive) {
+            throw ModpackError.invalidArchive("symbolic links are not allowed")
+        }
+
         guard entries.contains("modrinth.index.json") else {
             throw ModpackError.invalidArchive("modrinth.index.json is missing")
         }
 
         let uncompressedSize = try ZipArchive.uncompressedSize(of: archive)
-        let maxArchiveSize: Int64 = 4 * 1024 * 1024 * 1024
-        if uncompressedSize > maxArchiveSize {
+        if uncompressedSize > Self.maxArchiveSize {
             throw ModpackError.archiveTooLarge(uncompressedSize)
         }
     }
@@ -447,15 +489,14 @@ extension ModpackManager {
             throw ModpackError.missingDependency("minecraft")
         }
 
-        if index.dependencies["quilt-loader"] != nil {
-            throw ModpackError.unsupportedLoader("quilt-loader")
-        }
-
         let loader: String
         let loaderVersion: String?
         if let fabricVersion = index.dependencies["fabric-loader"] {
             loader = "fabric"
             loaderVersion = fabricVersion
+        } else if let quiltVersion = index.dependencies["quilt-loader"] {
+            loader = "quilt"
+            loaderVersion = quiltVersion
         } else if let forgeVersion = index.dependencies["forge"] {
             loader = "forge"
             loaderVersion = forgeVersion
@@ -578,6 +619,21 @@ extension ModpackManager {
                     continue
                 }
                 count += 1
+            }
+        }
+        return count
+    }
+    private func countOverrideJars(in directory: URL) -> Int {
+        let fm = FileManager.default
+        var count = 0
+        for folder in ["overrides/mods", "client-overrides/mods"] {
+            let folderURL = directory.appendingPathComponent(folder, isDirectory: true)
+            guard let enumerator = fm.enumerator(at: folderURL, includingPropertiesForKeys: [.isRegularFileKey], options: []) else {
+                continue
+            }
+            for case let fileURL as URL in enumerator where fileURL.pathExtension.lowercased() == "jar" {
+                let values = try? fileURL.resourceValues(forKeys: [.isRegularFileKey])
+                if values?.isRegularFile == true { count += 1 }
             }
         }
         return count

@@ -275,18 +275,12 @@ public final class ContentInstaller: Sendable {
             return .mod(modResult)
 
         case .shader:
-            guard instance.loader.lowercased() == "fabric" else {
-                return .unsupported("Shaders require the Fabric loader with Iris, but instance uses '\(instance.loader)'")
+            guard Self.supportsShaders(loader: instance.loader) else {
+                return .unsupported("Shaders require the Fabric or NeoForge loader with Iris, but instance uses '\(instance.loader)'")
             }
 
             let installedMods = (try? modManager.list(instance: instanceName)) ?? []
-            let hasIris = installedMods.contains { mod in
-                if mod.record?.projectId.lowercased() == "iris" || mod.record?.projectId == "YL57xq9U" {
-                    return true
-                }
-                let lower = mod.fileName.lowercased()
-                return lower.hasPrefix("iris-") || lower.hasPrefix("iris_") || lower.contains("iris")
-            }
+            let hasIris = Self.hasIris(in: installedMods)
             guard hasIris else {
                 return .needsShaderLoader
             }
@@ -323,22 +317,40 @@ public final class ContentInstaller: Sendable {
         }
     }
 
-    /// Installs Iris to provide shader support on a Fabric instance.
+    /// Shaders go through Iris, which exists for Fabric and NeoForge.
+    public static func supportsShaders(loader: String) -> Bool {
+        ["fabric", "neoforge"].contains(loader.lowercased())
+    }
+
+    /// Iris is recognised by its Modrinth project id or by an `iris-`/`iris_` file name (not any name that merely contains "iris").
+    static func hasIris(in mods: [InstalledMod]) -> Bool {
+        mods.contains { mod in
+            if mod.record?.projectId.lowercased() == "iris" || mod.record?.projectId == "YL57xq9U" {
+                return true
+            }
+            let lower = mod.fileName.lowercased()
+            return lower.hasPrefix("iris-") || lower.hasPrefix("iris_")
+        }
+    }
+
+    /// Installs Iris to provide shader support on a Fabric or NeoForge instance.
     @discardableResult
     public func ensureShaderSupport(into instanceName: String) async throws -> ModInstallResult {
         let instance = try store.load(name: instanceName)
-        guard instance.loader.lowercased() == "fabric" else {
-            throw ContentError.unsupported("Shader support requires loader 'fabric', but instance uses '\(instance.loader)'")
+        guard Self.supportsShaders(loader: instance.loader) else {
+            throw ContentError.unsupported("Shader support requires loader 'fabric' or 'neoforge', but instance uses '\(instance.loader)'")
         }
         return try await modManager.install(project: "iris", into: instanceName)
     }
 
     /// Loaders a modpack can ask for that the launcher can install.
-    public static let packLoaders = ["fabric", "forge", "neoforge"]
+    public static let packLoaders = ["fabric", "quilt", "forge", "neoforge"]
 
-    static func runnablePackVersions(_ versions: [ModrinthVersion]) -> [ModrinthVersion] {
-        versions.filter { version in
-            version.loaders.isEmpty || version.loaders.contains { packLoaders.contains($0.lowercased()) }
+    /// Versions the launcher can run; with `loader` set, only those built for that loader.
+    static func runnablePackVersions(_ versions: [ModrinthVersion], loader: String? = nil) -> [ModrinthVersion] {
+        let wanted = loader.map { [$0.lowercased()] } ?? packLoaders
+        return versions.filter { version in
+            version.loaders.isEmpty || version.loaders.contains { wanted.contains($0.lowercased()) }
         }
     }
 
@@ -347,13 +359,14 @@ public final class ContentInstaller: Sendable {
         fromModpack projectIdOrSlug: String,
         version: ModrinthVersion? = nil,
         name: String? = nil,
-        gameVersion: String? = nil
+        gameVersion: String? = nil,
+        loader: String? = nil
     ) async throws -> ModpackCreationReport {
         let chosenVersion: ModrinthVersion
         if let version = version {
             chosenVersion = version
         } else {
-            let versions = Self.runnablePackVersions(try await client.versions(project: projectIdOrSlug, gameVersion: gameVersion))
+            let versions = Self.runnablePackVersions(try await client.versions(project: projectIdOrSlug, gameVersion: gameVersion), loader: loader)
             guard !versions.isEmpty else {
                 throw ContentError.notFound("No version of modpack '\(projectIdOrSlug)' for \(gameVersion ?? "any Minecraft version") that this launcher can run")
             }
@@ -397,8 +410,8 @@ public final class ContentInstaller: Sendable {
 
     /// Downloads a modpack and lists its files so the user can pick which to install.
     /// Finish with `createInstance(fromPreview:excludedPaths:)` or `discardPreview(_:)`.
-    public func previewModpack(_ projectIdOrSlug: String, gameVersion: String? = nil) async throws -> ModpackPreview {
-        let versions = Self.runnablePackVersions(try await client.versions(project: projectIdOrSlug, gameVersion: gameVersion))
+    public func previewModpack(_ projectIdOrSlug: String, gameVersion: String? = nil, loader: String? = nil) async throws -> ModpackPreview {
+        let versions = Self.runnablePackVersions(try await client.versions(project: projectIdOrSlug, gameVersion: gameVersion), loader: loader)
         guard !versions.isEmpty else {
             throw ContentError.notFound("No version of modpack '\(projectIdOrSlug)' for \(gameVersion ?? "any Minecraft version") that this launcher can run")
         }
@@ -447,7 +460,8 @@ public final class ContentInstaller: Sendable {
         project idOrSlug: String,
         kind: ContentKind,
         instance instanceName: String,
-        modpackGameVersion: String? = nil
+        modpackGameVersion: String? = nil,
+        modpackLoader: String? = nil
     ) async throws -> ContentCompatibility {
         let instance = try store.load(name: instanceName)
         switch kind {
@@ -465,17 +479,11 @@ public final class ContentInstaller: Sendable {
             }
 
         case .shader:
-            guard instance.loader.lowercased() == "fabric" else {
-                return .needsOther("Requires Fabric loader with Iris")
+            guard Self.supportsShaders(loader: instance.loader) else {
+                return .needsOther("Requires Fabric or NeoForge loader with Iris")
             }
             let installedMods = (try? modManager.list(instance: instanceName)) ?? []
-            let hasIris = installedMods.contains { mod in
-                if mod.record?.projectId.lowercased() == "iris" || mod.record?.projectId == "YL57xq9U" {
-                    return true
-                }
-                let lower = mod.fileName.lowercased()
-                return lower.hasPrefix("iris-") || lower.hasPrefix("iris_") || lower.contains("iris")
-            }
+            let hasIris = Self.hasIris(in: installedMods)
             if !hasIris {
                 return .needsOther("needsShaderLoader")
             }
@@ -491,7 +499,7 @@ public final class ContentInstaller: Sendable {
             return versions.isEmpty ? .noRelease : .ready
 
         case .modpack:
-            let versions = Self.runnablePackVersions(try await client.versions(project: idOrSlug, gameVersion: modpackGameVersion))
+            let versions = Self.runnablePackVersions(try await client.versions(project: idOrSlug, gameVersion: modpackGameVersion), loader: modpackLoader)
             return versions.isEmpty ? .noRelease : .ready
         }
     }

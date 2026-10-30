@@ -99,6 +99,14 @@ public struct ModrinthFile: Codable, Sendable, Equatable {
         self.primary = primary
     }
 
+    /// A file name from the API is joined to a local path, so it must be a single plain path component.
+    public static func isSafeFilename(_ name: String) -> Bool {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !trimmed.isEmpty
+            && trimmed != "." && trimmed != ".."
+            && !trimmed.contains("/") && !trimmed.contains("\\") && !trimmed.contains("\0")
+    }
+
     enum CodingKeys: String, CodingKey {
         case url
         case filename
@@ -114,7 +122,11 @@ public struct ModrinthFile: Codable, Sendable, Equatable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.url = try container.decode(URL.self, forKey: .url)
-        self.filename = try container.decode(String.self, forKey: .filename)
+        let filename = try container.decode(String.self, forKey: .filename)
+        guard Self.isSafeFilename(filename) else {
+            throw DecodingError.dataCorruptedError(forKey: .filename, in: container, debugDescription: "Unsafe file name: \(filename)")
+        }
+        self.filename = filename
         self.size = try container.decode(Int.self, forKey: .size)
         self.primary = try container.decodeIfPresent(Bool.self, forKey: .primary) ?? false
 

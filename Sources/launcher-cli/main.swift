@@ -28,8 +28,12 @@ guard args.count >= 2 else {
     print("Commands:")
     print("  versions              List latest and recent release versions")
     print("  install <versionId>   Install a Minecraft version and its Java runtime")
+    print("  install-quilt <mc> [--loader <version>]")
+    print("                        Install Quilt for an installed Minecraft version")
     print("  install-fabric <mc> [--loader <version>]")
     print("                        Install Fabric for an installed Minecraft version")
+    print("  install-forge <mc> [--neoforge] [--loader <version>] [--instance <name>] [--force]")
+    print("                        Install Forge (or NeoForge) and create or update the instance")
     print("  launch <mc> [--fabric] [--name <nick>] [--instance <name>] [--dry-run]")
     print("                        Start the game (offline nick, default Player)")
     print("  diagnose <instance-name>")
@@ -61,7 +65,7 @@ guard args.count >= 2 else {
     print("  catalog search <mod|modpack|shader|resourcepack> <query> [--game-version V]")
     print("  catalog install <kind> <slug> <instance>")
     print("  catalog modpack <slug> [name]")
-    print("  update check          Look for a newer launcher on GitHub Releases (VOXEL_UPDATE_URL overrides the address)")
+    print("  update check          Look for a newer launcher on GitHub Releases (debug builds: EMBER_UPDATE_URL overrides the address)")
     exit(1)
 }
 
@@ -143,6 +147,21 @@ do {
         }
         print("\nFabric installed: \(profileId)")
 
+    case "install-quilt":
+        guard args.count >= 3 else {
+            print("Error: Missing Minecraft version. Usage: launcher-cli install-quilt <mc> [--loader <version>]")
+            exit(1)
+        }
+        let quiltMC = args[2]
+        print("Installing Quilt for \(quiltMC)...")
+        let quiltVersions = VersionInstaller(paths: paths, downloader: downloader)
+        let quilt = QuiltInstaller(paths: paths, installer: quiltVersions, downloader: downloader)
+        let quiltPrinter = ProgressPrinter()
+        let quiltId = try await quilt.install(minecraftVersion: quiltMC, loaderVersion: option("--loader")) { phase, progress in
+            quiltPrinter.update(phase: phase, progress: progress)
+        }
+        print("\nQuilt installed: \(quiltId)")
+
     case "install-forge":
         guard args.count >= 3 else {
             print("Error: Missing Minecraft version. Usage: launcher-cli install-forge <mc> [--neoforge] [--loader <version>] [--instance <name>]")
@@ -177,7 +196,7 @@ do {
         let launcher = GameLauncher(paths: paths, downloader: downloader)
         let instance = try launcher.prepareInstance(name: instanceName, minecraftVersion: mc, fabric: useFabric)
         let printer = ProgressPrinter()
-        let launchCommand = try await launcher.makeCommand(instance: instance, account: account) { progress in
+        let launchCommand = try await launcher.makeCommand(instance: instance, account: MinecraftAccount(offline: account)) { progress in
             printer.update(phase: "runtime", progress: progress)
         }
 
@@ -606,7 +625,7 @@ do {
             let group = option("--group")
             let memoryMB = option("--memory").flatMap { Int($0) } ?? 4096
 
-            final class ProgressPrinter: @unchecked Sendable {
+            final class ImportProgressPrinter: @unchecked Sendable {
                 private let lock = NSLock()
                 private var lastPhase = ""
                 private var lastPercent = -10
@@ -626,7 +645,7 @@ do {
                     }
                 }
             }
-            let printer = ProgressPrinter()
+            let printer = ImportProgressPrinter()
             let report = try await manager.importPack(
                 from: archiveURL,
                 name: customName,

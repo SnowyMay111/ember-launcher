@@ -154,7 +154,7 @@ private struct NewInstanceTile: View {
                     .foregroundColor(Theme.ember)
                 Text(tr: "New instance")
                     .style(.init(size: 16, weight: .semibold, color: Theme.text))
-                Text(tr: "Vanilla, Fabric, Forge or NeoForge")
+                Text(tr: "Vanilla, Fabric, Quilt, Forge or NeoForge")
                     .style(.init(size: 13, color: Theme.textSecondary))
                     .multilineTextAlignment(.center)
             }

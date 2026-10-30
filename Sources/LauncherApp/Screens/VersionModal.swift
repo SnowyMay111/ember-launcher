@@ -32,7 +32,7 @@ struct VersionModal: View {
     private var isBusy: Bool { isUpgrading || isRestoring }
 
     var body: some View {
-        VoxelModal(title: "Change version", width: 560) {
+        EmberModal(title: "Change version", width: 560) {
             VStack(alignment: .leading, spacing: 18) {
                 Text(verbatim: instance.versionLine).style(.secondary)
 
@@ -71,7 +71,7 @@ struct VersionModal: View {
     private var upgradeSection: some View {
         VStack(alignment: .leading, spacing: 18) {
             ModalField(label: "New Minecraft version") {
-                VoxelMenu(label: "New Minecraft version", value: target.isEmpty ? "…" : target, minWidth: 170) {
+                EmberMenu(label: "New Minecraft version", value: target.isEmpty ? "…" : target, minWidth: 170) {
                     ForEach(versions, id: \.id) { entry in
                         Button(title(for: entry)) {
                             target = entry.id

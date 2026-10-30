@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Dialog panel on the glass: title, content, and a right-aligned button row.
-struct VoxelModal<Content: View, Footer: View>: View {
+struct EmberModal<Content: View, Footer: View>: View {
     let title: String
     var eyebrow: String? = nil
     var width: CGFloat = 540
@@ -127,7 +127,7 @@ struct ModalCancel: View {
 }
 
 /// Dropdown: our own list opened from a field-like label (or a pill).
-struct VoxelMenu<Content: View>: View {
+struct EmberMenu<Content: View>: View {
     let label: String
     let value: String
     var isPill = false
@@ -205,7 +205,7 @@ struct GroupPicker: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            VoxelMenu(label: "Group", value: isNew ? L("New group…") : L(group), minWidth: 160) {
+            EmberMenu(label: "Group", value: isNew ? L("New group…") : L(group), minWidth: 160) {
                 ForEach(app.groupNames, id: \.self) { name in
                     Button {
                         group = name
@@ -237,10 +237,10 @@ struct GroupPicker: View {
                 }
             }
             if isNew {
-                VoxelInput(label: "Group name", text: $group, width: 200)
+                EmberInput(label: "Group name", text: $group, width: 200)
             }
         }
     }
 }
 
-typealias ModalShell<Content: View, Footer: View> = VoxelModal<Content, Footer>
+typealias ModalShell<Content: View, Footer: View> = EmberModal<Content, Footer>

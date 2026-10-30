@@ -227,16 +227,16 @@ struct SettingsScreen: View {
         case .general:
             SettingsGroup(title: "PLAYER") {
                 SettingsRow(title: "Display name", detail: "Used for offline and local worlds.") {
-                    VoxelInput(label: "Nickname", text: $settings.nickname, width: 220)
+                    EmberInput(label: "Nickname", text: $settings.nickname, width: 220)
                 }
             }
 
             SettingsGroup(title: "BEHAVIOR") {
                 SettingsRow(title: "Automatic updates", detail: "Keep Ember and game metadata current.") {
-                    VoxelToggle(label: "Automatic updates", isOn: $settings.autoUpdate)
+                    EmberToggle(label: "Automatic updates", isOn: $settings.autoUpdate)
                 }
                 SettingsRow(title: "Close launcher after start", detail: "Save resources while Minecraft is running.", isLast: true) {
-                    VoxelToggle(label: "Close launcher on start", isOn: $settings.closeOnStart)
+                    EmberToggle(label: "Close launcher on start", isOn: $settings.closeOnStart)
                 }
             }
 
@@ -266,9 +266,9 @@ struct SettingsScreen: View {
 
                 SettingsRow(title: "Window size", detail: "Game window size at launch.", isLast: true) {
                     HStack(spacing: 10) {
-                        VoxelInput(label: "Window width", text: $settings.windowWidth, width: 90, alignment: .center)
+                        EmberInput(label: "Window width", text: $settings.windowWidth, width: 90, alignment: .center)
                         Text(verbatim: "×").style(.init(size: 14, weight: .regular, color: Theme.muted))
-                        VoxelInput(label: "Window height", text: $settings.windowHeight, width: 90, alignment: .center)
+                        EmberInput(label: "Window height", text: $settings.windowHeight, width: 90, alignment: .center)
                     }
                 }
             }
@@ -276,21 +276,21 @@ struct SettingsScreen: View {
         case .downloads:
             SettingsGroup(title: "FILES & NETWORK") {
                 SettingsRow(title: "Show snapshots", detail: "Include snapshot versions in the list.", isLast: true) {
-                    VoxelToggle(label: "Show snapshots", isOn: $settings.showSnapshots)
+                    EmberToggle(label: "Show snapshots", isOn: $settings.showSnapshots)
                 }
             }
 
         case .appearance:
             SettingsGroup(title: "ATMOSPHERE") {
                 SettingsRow(title: "Living background", detail: "Glows, particles and world ambience.", isLast: true) {
-                    VoxelToggle(label: "Background animations", isOn: $settings.backgroundAnimations)
+                    EmberToggle(label: "Background animations", isOn: $settings.backgroundAnimations)
                 }
             }
 
         case .ai:
             SettingsGroup(title: "AI ASSISTANT") {
                 SettingsRow(title: "AI provider", detail: "Builds pack suggestions from your description.") {
-                    VoxelMenu(label: "AI provider", value: settings.aiProvider.displayName, minWidth: 150) {
+                    EmberMenu(label: "AI provider", value: settings.aiProvider.displayName, minWidth: 150) {
                         ForEach(AIProviderKind.allCases, id: \.self) { kind in
                             Button(kind.displayName) { settings.aiProvider = kind }
                         }
@@ -299,8 +299,16 @@ struct SettingsScreen: View {
                 SettingsRow(title: "API key", detail: "Your own key. Kept safely in the macOS Keychain.") {
                     AIKeyField()
                 }
-                SettingsRow(title: "AI model", detail: "Leave empty to use the default.", isLast: true) {
-                    VoxelInput(label: "AI model", text: $settings.aiModel, width: 220, placeholder: settings.aiProvider.defaultModel)
+                SettingsRow(title: "AI model", detail: "Pick one from the list.") {
+                    EmberMenu(label: "AI model", value: settings.aiModel.isEmpty ? L("Default") : settings.aiModel, minWidth: 220) {
+                        Button(L("Default")) { settings.aiModel = "" }
+                        ForEach(settings.aiProvider.suggestedModels, id: \.self) { model in
+                            Button(model) { settings.aiModel = model }
+                        }
+                    }
+                }
+                SettingsRow(title: "Custom model ID", detail: "Any model id your provider offers. Leave empty to use the default.", isLast: true) {
+                    EmberInput(label: "Custom model ID", text: $settings.aiModel, width: 220, placeholder: settings.aiProvider.defaultModel)
                 }
             }
 
@@ -344,7 +352,7 @@ struct SettingsScreen: View {
                 }
 
                 SettingsRow(title: "Automatic updates", detail: "Keep the launcher up to date.", isLast: true) {
-                    VoxelToggle(label: "Update automatically", isOn: $settings.autoUpdate)
+                    EmberToggle(label: "Update automatically", isOn: $settings.autoUpdate)
                 }
             }
             .clipShape(RoundedRectangle(cornerRadius: Theme.radiusCard, style: .continuous))

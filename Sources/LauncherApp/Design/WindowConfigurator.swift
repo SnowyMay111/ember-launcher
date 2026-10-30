@@ -2,7 +2,7 @@ import SwiftUI
 import AppKit
 
 final class WindowConfiguratorView: NSView {
-    private var observers: [NSObjectProtocol] = []
+    nonisolated(unsafe) private var observers: [NSObjectProtocol] = []
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
@@ -11,10 +11,10 @@ final class WindowConfiguratorView: NSView {
         applyDebugSize()
     }
 
-    /// Только для сверки с макетом: `VOXEL_WINDOW_SIZE=900x600 open --env ... build/Voxel.app`.
+    /// Только для сверки с макетом: `EMBER_WINDOW_SIZE=900x600 open --env ... build/Ember.app`.
     private func applyDebugSize() {
         guard let window,
-              let raw = ProcessInfo.processInfo.environment["VOXEL_WINDOW_SIZE"] else { return }
+              let raw = ProcessInfo.processInfo.environment["EMBER_WINDOW_SIZE"] else { return }
         let parts = raw.split(separator: "x").compactMap { Double($0) }
         guard parts.count == 2 else { return }
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak window] in

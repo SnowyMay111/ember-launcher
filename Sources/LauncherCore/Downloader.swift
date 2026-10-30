@@ -65,7 +65,7 @@ public final class Downloader: Sendable {
             let config = URLSessionConfiguration.default
             config.httpMaximumConnectionsPerHost = 16
             config.httpAdditionalHeaders = [
-                "User-Agent": "mc-launcher/0.1"
+                "User-Agent": LauncherInfo.userAgent
             ]
             self.session = URLSession(configuration: config)
         }

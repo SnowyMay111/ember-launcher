@@ -52,12 +52,20 @@ struct RootView: View {
         .overlay { EmberDropdownLayer() }
         .environmentObject(app)
         .environmentObject(settings)
+        .environmentObject(AccountStore.shared)
+        .environmentObject(EmberAccountStore.shared)
+        .environmentObject(FriendsStore.shared)
+        .environmentObject(LobbyStore.shared)
         .environmentObject(player)
         .environmentObject(updates)
         .environmentObject(toasts)
         .environmentObject(dropdowns)
         .environment(\.backgroundAnimations, settings.backgroundAnimations)
-        .onAppear { updates.start() }
+        .onAppear {
+            updates.start()
+            FriendsStore.shared.start { player.state == .running ? "playing" : nil }
+            LobbyStore.shared.start()
+        }
         .onChange(of: player.isBusy) { _, busy in updates.gameIsBusy = busy }
         .onChange(of: settings.autoUpdate) { _, isOn in
             if isOn { updates.autoUpdateEnabled() }
@@ -101,6 +109,8 @@ struct RootView: View {
                     AllVersionsModal()
                 case .profile:
                     ProfilePanel()
+                case .emberSignIn:
+                    EmberAuthPanel()
                 case .modProject(let hit):
                     if let mods = app.activeMods {
                         ModDetailPanel(hit: hit, mods: mods).id(hit.projectId)
@@ -122,9 +132,11 @@ struct RootView: View {
         case .play: HomeScreen()
         case .library: LibraryScreen()
         case .social: SocialScreen()
+        case .servers: ServersScreen()
         case .settings: SettingsScreen()
         case .mods: ModsScreen(app: app)
         case .skins: SkinsScreen()
+        case .profile: ProfileScreen()
         }
     }
 }

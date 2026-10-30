@@ -6,9 +6,11 @@ enum Screen: String, CaseIterable, Identifiable {
     case play = "Play"
     case library = "Library"
     case social = "Social"
+    case servers = "Servers"
     case mods = "Explore"
     case skins = "Skins"
     case settings = "Settings"
+    case profile = "Profile"
 
     var id: String { rawValue }
 }
@@ -23,6 +25,7 @@ enum AppModal: Equatable {
     case sessionHealth(String)
     case allVersions
     case profile
+    case emberSignIn
     case modProject(ModrinthHit)
     case instanceDetails(String)
     case lobby
