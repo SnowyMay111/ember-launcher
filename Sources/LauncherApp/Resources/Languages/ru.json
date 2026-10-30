@@ -610,5 +610,7 @@
   "Someone in the lobby already uses this nickname.": "Этот ник уже занят в лобби.",
   "The host is still starting the server. Try again in a moment.": "Хост ещё запускает сервер. Попробуйте через момент.",
   "Invitation sent.": "Приглашение отправлено.",
-  "You can only invite friends to your own lobby.": "Приглашать можно только друзей, и только в своё лобби."
+  "You can only invite friends to your own lobby.": "Приглашать можно только друзей, и только в своё лобби.",
+  "Could not find a route to the host. Check your internet connection.": "Не удалось найти путь к хосту. Проверьте подключение к интернету.",
+  "Could not connect to the host. Your networks may block direct connections.": "Не удалось подключиться к хосту. Ваши сети могут блокировать прямые соединения."
 }

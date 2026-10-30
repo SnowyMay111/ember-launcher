@@ -23,9 +23,14 @@ final class LobbyStore: ObservableObject {
     @Published private(set) var current: ActiveLobby?
     @Published private(set) var roster: [LobbyMember] = []
     @Published var message: String?
+    /// Local port the game connects to (127.0.0.1) while a guest tunnel is up.
+    @Published private(set) var tunnelPort: UInt16?
+    @Published private(set) var tunnelConnecting = false
 
     private let lobbies = EmberLobbies()
     private var loop: Task<Void, Never>?
+    private var hostService: TunnelHostService?
+    private var guestService: TunnelGuestService?
 
     private init() {}
 
@@ -59,6 +64,7 @@ final class LobbyStore: ObservableObject {
     func stop() {
         loop?.cancel()
         loop = nil
+        stopTunnel()
         visible = []
         current = nil
         roster = []
@@ -88,6 +94,73 @@ final class LobbyStore: ObservableObject {
             }
             await refreshAfterAction()
         }
+    }
+
+    /// Host: the game server listens on `serverPort`. Starts accepting guest tunnels and opens the lobby.
+    func startHosting(serverPort: UInt16) {
+        Task {
+            guard
+                let session = await EmberAccountStore.shared.validSession(),
+                let current, current.isHost,
+                let key = try? await lobbies.tunnelKey(lobby: current.id, session: session)
+            else {
+                message = L("Could not reach the lobby service.")
+                return
+            }
+            hostService?.stop()
+            let service = TunnelHostService(
+                signaling: Self.signaling(for: current.id),
+                tunnelKeyHex: key,
+                serverPort: serverPort
+            )
+            service.start()
+            hostService = service
+            publishAddress("p2p")
+        }
+    }
+
+    /// Guest: opens the tunnel to the host and exposes it on a local port for the game.
+    private func connectTunnel(lobby: JoinedLobby) {
+        tunnelConnecting = true
+        Task {
+            defer { tunnelConnecting = false }
+            guard
+                let session = await EmberAccountStore.shared.validSession(),
+                let key = try? await lobbies.tunnelKey(lobby: lobby.id, session: session)
+            else {
+                message = L("Could not reach the lobby service.")
+                return
+            }
+            let service = TunnelGuestService(
+                signaling: Self.signaling(for: lobby.id),
+                hostUser: lobby.host,
+                tunnelKeyHex: key
+            )
+            service.onClosed = { [weak self] in
+                Task { @MainActor in self?.tunnelPort = nil }
+            }
+            do {
+                let port = try await service.connect()
+                guestService = service
+                tunnelPort = port
+            } catch TunnelError.noPublicEndpoint {
+                message = L("Could not find a route to the host. Check your internet connection.")
+            } catch {
+                message = L("Could not connect to the host. Your networks may block direct connections.")
+            }
+        }
+    }
+
+    private func stopTunnel() {
+        hostService?.stop()
+        hostService = nil
+        guestService?.stop()
+        guestService = nil
+        tunnelPort = nil
+    }
+
+    private static func signaling(for lobby: String) -> EmberLobbySignaling {
+        EmberLobbySignaling(lobby: lobby) { await EmberAccountStore.shared.validSession() }
     }
 
     /// Publishes the server address for the lobby you are hosting.
@@ -126,6 +199,7 @@ final class LobbyStore: ObservableObject {
                         loader: lobby.loader
                     )
                     message = nil
+                    connectTunnel(lobby: lobby)
                 case .notFound:
                     message = L("No lobby with that code.")
                 case .closed:
@@ -161,6 +235,7 @@ final class LobbyStore: ObservableObject {
             } catch {
                 message = L("Could not reach the lobby service.")
             }
+            self.stopTunnel()
             self.current = nil
             self.roster = []
             await refreshAfterAction()
