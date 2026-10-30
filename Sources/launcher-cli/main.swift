@@ -32,6 +32,8 @@ guard args.count >= 2 else {
     print("                        Install Quilt for an installed Minecraft version")
     print("  install-fabric <mc> [--loader <version>]")
     print("                        Install Fabric for an installed Minecraft version")
+    print("  install-forge <mc> [--neoforge] [--loader <version>] [--instance <name>] [--force]")
+    print("                        Install Forge (or NeoForge) and create or update the instance")
     print("  launch <mc> [--fabric] [--name <nick>] [--instance <name>] [--dry-run]")
     print("                        Start the game (offline nick, default Player)")
     print("  diagnose <instance-name>")
@@ -623,7 +625,7 @@ do {
             let group = option("--group")
             let memoryMB = option("--memory").flatMap { Int($0) } ?? 4096
 
-            final class ProgressPrinter: @unchecked Sendable {
+            final class ImportProgressPrinter: @unchecked Sendable {
                 private let lock = NSLock()
                 private var lastPhase = ""
                 private var lastPercent = -10
@@ -643,7 +645,7 @@ do {
                     }
                 }
             }
-            let printer = ProgressPrinter()
+            let printer = ImportProgressPrinter()
             let report = try await manager.importPack(
                 from: archiveURL,
                 name: customName,
