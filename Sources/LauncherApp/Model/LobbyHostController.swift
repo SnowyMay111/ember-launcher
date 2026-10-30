@@ -128,6 +128,7 @@ final class LobbyHostController: ObservableObject {
             }
 
             state = .preparing(L("Starting the server…"))
+            await LocalGameServer.stopStrayProcesses(in: directory)
             logLines = []
             tracker.reset()
             players = []
@@ -181,12 +182,17 @@ final class LobbyHostController: ObservableObject {
     /// Keeps the whitelist in step with the lobby roster and shuts the server down when the lobby is gone.
     private func watch(nick: String) {
         let lobbies = LobbyStore.shared
+        var appliedNames = Set(whitelistNames(nick: nick, roster: lobbies.roster).map { $0.lowercased() })
         rosterWatch = lobbies.$roster
             .dropFirst()
             .sink { [weak self] roster in
                 Task { @MainActor in
                     guard let self, let server = self.server, let directory = self.serverDirectory else { return }
                     let names = self.whitelistNames(nick: nick, roster: roster)
+                    // The lobby is polled every few seconds and re-publishes an unchanged roster; reloading each time spams the in-game chat.
+                    let lowered = Set(names.map { $0.lowercased() })
+                    guard lowered != appliedNames else { return }
+                    appliedNames = lowered
                     try? LocalServerFiles.writeWhitelist(in: directory, names: names)
                     try? server.reloadWhitelist()
                 }

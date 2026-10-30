@@ -197,6 +197,34 @@ public final class LocalGameServer: @unchecked Sendable {
         return launcherURL
     }
 
+    /// Stops a server of this folder left running by a launcher that was killed, so it releases the world lock.
+    public static func stopStrayProcesses(in directory: URL) async {
+        let ps = Process()
+        ps.executableURL = URL(fileURLWithPath: "/bin/ps")
+        ps.arguments = ["-axo", "pid=,command="]
+        let pipe = Pipe()
+        ps.standardOutput = pipe
+        guard (try? ps.run()) != nil else { return }
+        let output = String(decoding: pipe.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+        ps.waitUntilExit()
+
+        let marker = "-jar \(directory.path)/"
+        let pids = output.split(separator: "\n").compactMap { line -> Int32? in
+            let parts = line.drop { $0 == " " }.split(separator: " ", maxSplits: 1)
+            guard parts.count == 2, parts[1].contains(marker), let pid = Int32(parts[0]), pid > 1 else { return nil }
+            return pid
+        }
+        for pid in pids {
+            kill(pid, SIGTERM)
+            var waited = 0
+            while kill(pid, 0) == 0 && waited < 100 {
+                try? await Task.sleep(nanoseconds: 200_000_000)
+                waited += 1
+            }
+            if kill(pid, 0) == 0 { kill(pid, SIGKILL) }
+        }
+    }
+
     public static func isReadyLine(_ line: String) -> Bool {
         line.contains("Done (") && line.contains("s)! For help, type \"help\"")
     }

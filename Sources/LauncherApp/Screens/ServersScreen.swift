@@ -46,7 +46,27 @@ struct ServersScreen: View {
         .onChange(of: host.runningInstance) { _, _ in reload() }
     }
 
+    /// Worlds hosted before profiles existed: a server folder named after an instance gets a profile from that instance.
+    private func adoptLegacyServers() {
+        let library = host.library
+        let known = Set(library.list().map(\.instanceName))
+        for item in app.instances where !known.contains(item.name) {
+            let directory = library.directory(for: item.name)
+            guard FileManager.default.fileExists(atPath: directory.appendingPathComponent("server.properties").path) else { continue }
+            let maxPlayers = Int(ServerProperties.read(in: directory)["max-players"] ?? "") ?? 4
+            try? library.save(ServerProfile(
+                instanceName: item.name,
+                name: item.name,
+                minecraftVersion: item.minecraftVersion,
+                loader: item.loader.coreName,
+                maxPlayers: maxPlayers,
+                lastPlayed: nil
+            ))
+        }
+    }
+
     private func reload() {
+        adoptLegacyServers()
         profiles = host.library.list()
         if selectedID == nil || !profiles.contains(where: { $0.id == selectedID }) {
             selectedID = host.runningInstance ?? profiles.first?.id
