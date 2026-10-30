@@ -72,28 +72,31 @@ final class LobbyStore: ObservableObject {
 
     // MARK: - Actions
 
-    func host(_ request: LobbyCreateRequest) {
-        Task {
-            guard let session = await EmberAccountStore.shared.validSession() else { return }
-            do {
-                let created = try await lobbies.create(request, session: session)
-                current = ActiveLobby(
-                    id: created.id,
-                    code: created.code,
-                    name: request.name,
-                    isHost: true,
-                    address: nil,
-                    packURL: request.packURL,
-                    packSHA1: request.packSHA1,
-                    mcVersion: request.mcVersion,
-                    loader: request.loader
-                )
-                message = nil
-            } catch {
-                message = L("Could not reach the lobby service.")
-            }
-            await refreshAfterAction()
+    /// Creates the lobby; true when it exists afterwards.
+    @discardableResult
+    func host(_ request: LobbyCreateRequest) async -> Bool {
+        guard let session = await EmberAccountStore.shared.validSession() else { return false }
+        var created = false
+        do {
+            let lobby = try await lobbies.create(request, session: session)
+            current = ActiveLobby(
+                id: lobby.id,
+                code: lobby.code,
+                name: request.name,
+                isHost: true,
+                address: nil,
+                packURL: request.packURL,
+                packSHA1: request.packSHA1,
+                mcVersion: request.mcVersion,
+                loader: request.loader
+            )
+            message = nil
+            created = true
+        } catch {
+            message = L("Could not reach the lobby service.")
         }
+        await refreshAfterAction()
+        return created
     }
 
     /// Host: the game server listens on `serverPort`. Starts accepting guest tunnels and opens the lobby.
@@ -120,34 +123,32 @@ final class LobbyStore: ObservableObject {
     }
 
     /// Guest: opens the tunnel to the host and exposes it on a local port for the game.
-    private func connectTunnel(lobby: JoinedLobby) {
+    private func connectTunnel(lobby: JoinedLobby) async {
         tunnelConnecting = true
-        Task {
-            defer { tunnelConnecting = false }
-            guard
-                let session = await EmberAccountStore.shared.validSession(),
-                let key = try? await lobbies.tunnelKey(lobby: lobby.id, session: session)
-            else {
-                message = L("Could not reach the lobby service.")
-                return
-            }
-            let service = TunnelGuestService(
-                signaling: Self.signaling(for: lobby.id),
-                hostUser: lobby.host,
-                tunnelKeyHex: key
-            )
-            service.onClosed = { [weak self] in
-                Task { @MainActor in self?.tunnelPort = nil }
-            }
-            do {
-                let port = try await service.connect()
-                guestService = service
-                tunnelPort = port
-            } catch TunnelError.noPublicEndpoint {
-                message = L("Could not find a route to the host. Check your internet connection.")
-            } catch {
-                message = L("Could not connect to the host. Your networks may block direct connections.")
-            }
+        defer { tunnelConnecting = false }
+        guard
+            let session = await EmberAccountStore.shared.validSession(),
+            let key = try? await lobbies.tunnelKey(lobby: lobby.id, session: session)
+        else {
+            message = L("Could not reach the lobby service.")
+            return
+        }
+        let service = TunnelGuestService(
+            signaling: Self.signaling(for: lobby.id),
+            hostUser: lobby.host,
+            tunnelKeyHex: key
+        )
+        service.onClosed = { [weak self] in
+            Task { @MainActor in self?.tunnelPort = nil }
+        }
+        do {
+            let port = try await service.connect()
+            guestService = service
+            tunnelPort = port
+        } catch TunnelError.noPublicEndpoint {
+            message = L("Could not find a route to the host. Check your internet connection.")
+        } catch {
+            message = L("Could not connect to the host. Your networks may block direct connections.")
         }
     }
 
@@ -180,44 +181,47 @@ final class LobbyStore: ObservableObject {
         }
     }
 
-    func join(code: String?, lobbyID: String?, nick: String) {
-        Task {
-            guard let session = await EmberAccountStore.shared.validSession() else { return }
-            do {
-                let outcome = try await lobbies.join(code: code, lobbyID: lobbyID, nick: nick, session: session)
-                switch outcome {
-                case .ok(let lobby):
-                    current = ActiveLobby(
-                        id: lobby.id,
-                        code: nil,
-                        name: lobby.name,
-                        isHost: false,
-                        address: lobby.address,
-                        packURL: lobby.packURL,
-                        packSHA1: lobby.packSHA1,
-                        mcVersion: lobby.mcVersion,
-                        loader: lobby.loader
-                    )
-                    message = nil
-                    connectTunnel(lobby: lobby)
-                case .notFound:
-                    message = L("No lobby with that code.")
-                case .closed:
-                    message = L("This lobby has closed.")
-                case .forbidden:
-                    message = L("You cannot join this lobby.")
-                case .full:
-                    message = L("The lobby is full.")
-                case .nickTaken:
-                    message = L("Someone in the lobby already uses this nickname.")
-                case .notReady:
-                    message = L("The host is still starting the server. Try again in a moment.")
-                }
-            } catch {
-                message = L("Could not reach the lobby service.")
+    /// Joins the lobby and waits for the tunnel to its host; true when the lobby was joined and `tunnelPort` is set.
+    @discardableResult
+    func join(code: String?, lobbyID: String?, nick: String) async -> Bool {
+        guard let session = await EmberAccountStore.shared.validSession() else { return false }
+        var ready = false
+        do {
+            let outcome = try await lobbies.join(code: code, lobbyID: lobbyID, nick: nick, session: session)
+            switch outcome {
+            case .ok(let lobby):
+                current = ActiveLobby(
+                    id: lobby.id,
+                    code: nil,
+                    name: lobby.name,
+                    isHost: false,
+                    address: lobby.address,
+                    packURL: lobby.packURL,
+                    packSHA1: lobby.packSHA1,
+                    mcVersion: lobby.mcVersion,
+                    loader: lobby.loader
+                )
+                message = nil
+                await connectTunnel(lobby: lobby)
+                ready = tunnelPort != nil
+            case .notFound:
+                message = L("No lobby with that code.")
+            case .closed:
+                message = L("This lobby has closed.")
+            case .forbidden:
+                message = L("You cannot join this lobby.")
+            case .full:
+                message = L("The lobby is full.")
+            case .nickTaken:
+                message = L("Someone in the lobby already uses this nickname.")
+            case .notReady:
+                message = L("The host is still starting the server. Try again in a moment.")
             }
-            await refreshAfterAction()
+        } catch {
+            message = L("Could not reach the lobby service.")
         }
+        await refreshAfterAction()
+        return ready
     }
 
     func leave() {

@@ -211,7 +211,8 @@ final class PlayController: ObservableObject {
         }
     }
 
-    func play(_ item: LibraryInstance, settings: SettingsStore, app: AppState) {
+    /// `quickPlayServer` ("host:port") makes the game join that server as soon as it has loaded.
+    func play(_ item: LibraryInstance, settings: SettingsStore, app: AppState, quickPlayServer: String? = nil) {
         guard !isBusy else { return }
         guard app.downloads[item.minecraftVersion] == nil else {
             state = .failed(L("This version is still downloading."))
@@ -222,17 +223,17 @@ final class PlayController: ObservableObject {
         launchNotice = nil
         let nickname = settings.nickname
         let hideLauncher = settings.closeOnStart
-        Task { await run(item, nickname: nickname, hideLauncher: hideLauncher, app: app) }
+        Task { await run(item, nickname: nickname, hideLauncher: hideLauncher, app: app, quickPlayServer: quickPlayServer) }
     }
 
-    private func run(_ item: LibraryInstance, nickname: String, hideLauncher: Bool, app: AppState) async {
+    private func run(_ item: LibraryInstance, nickname: String, hideLauncher: Bool, app: AppState, quickPlayServer: String?) async {
         do {
             let (account, warning) = try await AccountStore.shared.launchAccount(offlineName: nickname)
             if let warning {
                 launchNotice = warning
             }
             try paths.ensureDirectories()
-            let command = try await prepareCommand(item.name, account: account)
+            let command = try await prepareCommand(item.name, account: account, quickPlayServer: quickPlayServer)
             let process = try launcher.launch(command)
             let started = Date()
             let isRunningBox = AtomicBool(true)
@@ -308,7 +309,7 @@ final class PlayController: ObservableObject {
     }
 
     /// Builds the launch command; installs the game files first when they are missing, and once more if the build still reports a gap.
-    private func prepareCommand(_ name: String, account: MinecraftAccount) async throws -> LaunchCommand {
+    private func prepareCommand(_ name: String, account: MinecraftAccount, quickPlayServer: String?) async throws -> LaunchCommand {
         let relay = ProgressRelay { [weak self] phase, percent in
             Task { @MainActor in self?.showDownload(phase: phase, percent: percent) }
         }
@@ -316,10 +317,10 @@ final class PlayController: ObservableObject {
         var instance = try launcher.store.load(name: name)
         instance = try await launcher.ensureInstalled(instance, progress: progress)
         do {
-            return try await launcher.makeCommand(instance: instance, account: account) { relay.report("runtime", $0) }
+            return try await launcher.makeCommand(instance: instance, account: account, quickPlayServer: quickPlayServer) { relay.report("runtime", $0) }
         } catch let error as GameLauncherError where error.needsInstall {
             instance = try await launcher.ensureInstalled(instance, force: true, progress: progress)
-            return try await launcher.makeCommand(instance: instance, account: account) { relay.report("runtime", $0) }
+            return try await launcher.makeCommand(instance: instance, account: account, quickPlayServer: quickPlayServer) { relay.report("runtime", $0) }
         }
     }
 

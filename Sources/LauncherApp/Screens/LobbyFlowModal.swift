@@ -1,349 +1,218 @@
 import SwiftUI
+import LauncherCore
 
+/// Host a world for friends or join a lobby with a code; the launcher does everything else.
 struct LobbyFlowModal: View {
     @EnvironmentObject var app: AppState
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @EnvironmentObject var settings: SettingsStore
+    @EnvironmentObject var play: PlayController
+    @ObservedObject private var account = EmberAccountStore.shared
+    @ObservedObject private var lobbies = LobbyStore.shared
+    @ObservedObject private var host = LobbyHostController.shared
+    @ObservedObject private var guest = LobbyGuestController.shared
 
-    @Local private var selectedWorld = "Birch Hollow"
-    @Local private var privacy = "Friends only"
-    @Local private var isCreated = false
-    @Local private var allowCheats = false
-    @Local private var friendsCanInvite = true
+    @Local private var instanceName = ""
+    @Local private var lobbyName = ""
+    @Local private var privacy: LobbyPrivacy = .friends
+    @Local private var maxPlayers = 4
+    @Local private var joinCode = ""
     @Local private var copiedCode = false
 
-    private let privacyOptions: [(title: String, desc: String)] = [
-        ("Friends only", "Anyone on your friends list"),
-        ("Invite only", "Only people with an invite"),
-        ("Public", "Visible to everyone in Social")
-    ]
+    private var hostable: [LibraryInstance] {
+        app.instances.filter { $0.loader == .fabric || $0.loader == .vanilla }
+    }
+
+    private var selected: LibraryInstance? {
+        hostable.first { $0.id == instanceName } ?? hostable.first
+    }
+
+    private var busy: Bool { host.isBusy || guest.isBusy || play.isBusy }
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Header
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(verbatim: "TEMPORARY LOBBY")
-                        .font(Theme.font(size: 10, weight: .medium, mono: true))
-                        .tracking(1.4)
-                        .foregroundColor(Color(red: 143/255, green: 109/255, blue: 89/255))
-
-                    Text(verbatim: isCreated ? "Lobby is ready" : "Bring friends in")
-                        .font(Theme.font(size: 24, weight: .semibold))
-                        .tracking(-0.6)
-                        .foregroundColor(Theme.text)
+        EmberModal(title: "Play together", width: 540) {
+            VStack(alignment: .leading, spacing: 18) {
+                if !account.isSignedIn {
+                    signedOutView
+                } else if let current = lobbies.current {
+                    activeView(current)
+                } else {
+                    setupView
                 }
-
-                Spacer()
-
-                Button {
-                    app.modal = nil
-                } label: {
-                    Circle()
-                        .fill(Color(hex: 0x201e20))
-                        .frame(width: 32, height: 32)
-                        .overlay(
-                            Text("×")
-                                .font(.system(size: 18))
-                                .foregroundColor(Color(hex: 0x8e878e))
-                        )
-                }
-                .buttonStyle(.plain)
+                statusLine
             }
-            .padding(.top, 24)
-            .padding(.horizontal, 28)
-            .padding(.bottom, 18)
-
-            Divider().background(Theme.border)
-
-            if isCreated {
-                readyView
-            } else {
-                setupView
-            }
+        } footer: {
+            footer
         }
-        .frame(width: 540)
-        .background(Color(red: 17/255, green: 16/255, blue: 17/255))
-        .cornerRadius(20)
-        .overlay(
-            RoundedRectangle(cornerRadius: 20)
-                .stroke(Color(red: 52/255, green: 46/255, blue: 52/255), lineWidth: 1)
-        )
     }
 
-    // MARK: - Setup View
+    // MARK: - Signed out
+
+    private var signedOutView: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(tr: "Lobbies use your Ember account, so friends can find you and the host knows who may join.")
+                .style(.secondary)
+            SecondaryPill(title: "Sign in to Ember", height: 38) {
+                app.modal = .emberSignIn
+            }
+        }
+    }
+
+    // MARK: - Setup
 
     private var setupView: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 18) {
-                    // World picker
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(verbatim: "WORLD")
-                            .font(Theme.font(size: 10, weight: .medium, mono: true))
-                            .tracking(1.2)
-                            .foregroundColor(Theme.textSecondary)
-
-                        HStack {
-                            Text(selectedWorld)
-                                .font(Theme.font(size: 13, weight: .medium))
-                                .foregroundColor(Theme.text)
-                            Spacer()
-                            Image(systemName: "chevron.up.chevron.down")
-                                .font(.system(size: 11))
-                                .foregroundColor(Theme.textSecondary)
-                        }
-                        .padding(.horizontal, 14)
-                        .frame(height: 44)
-                        .background(Color(red: 24/255, green: 22/255, blue: 24/255))
-                        .cornerRadius(10)
-                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Theme.border, lineWidth: 1))
-                        .onTapGesture {
-                            selectedWorld = (selectedWorld == "Birch Hollow") ? "Ember Valley" : "Birch Hollow"
+        VStack(alignment: .leading, spacing: 18) {
+            ModalField(label: "World") {
+                if hostable.isEmpty {
+                    Text(tr: "Create a Fabric or Vanilla instance first.").style(.secondary)
+                } else {
+                    EmberMenu(label: "World", value: selected?.name ?? "…", minWidth: 280) {
+                        ForEach(hostable) { item in
+                            Button(item.name) { instanceName = item.id }
                         }
                     }
+                }
+            }
 
-                    // Privacy options
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(verbatim: "WHO CAN JOIN")
-                            .font(Theme.font(size: 10, weight: .medium, mono: true))
-                            .tracking(1.2)
-                            .foregroundColor(Theme.textSecondary)
+            ModalField(label: "Lobby name") {
+                EmberInput(label: "Lobby name", text: $lobbyName, placeholder: defaultLobbyName)
+            }
 
-                        VStack(spacing: 0) {
-                            ForEach(Array(privacyOptions.enumerated()), id: \.offset) { index, opt in
-                                Button {
-                                    privacy = opt.title
-                                } label: {
-                                    HStack(spacing: 12) {
-                                        ZStack {
-                                            Circle()
-                                                .stroke(privacy == opt.title ? Theme.ember : Theme.textSecondary, lineWidth: 1.5)
-                                                .frame(width: 14, height: 14)
-                                            if privacy == opt.title {
-                                                Circle()
-                                                    .fill(Theme.ember)
-                                                    .frame(width: 8, height: 8)
-                                            }
-                                        }
-
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            Text(opt.title)
-                                                .font(Theme.font(size: 12, weight: .semibold))
-                                                .foregroundColor(privacy == opt.title ? Theme.text : Theme.textSecondary)
-                                            Text(opt.desc)
-                                                .font(Theme.font(size: 10, weight: .regular))
-                                                .foregroundColor(Theme.textMuted)
-                                        }
-                                        Spacer()
-                                    }
-                                    .padding(.horizontal, 14)
-                                    .padding(.vertical, 10)
-                                    .background(privacy == opt.title ? Color(red: 30/255, green: 24/255, blue: 20/255) : Color(red: 21/255, green: 19/255, blue: 16/255))
-                                }
-                                .buttonStyle(.plain)
-
-                                if index < privacyOptions.count - 1 {
-                                    Divider().background(Theme.border)
-                                }
-                            }
+            HStack(alignment: .top, spacing: 24) {
+                ModalField(label: "Who can join") {
+                    EmberMenu(label: "Who can join", value: privacyTitle(privacy), minWidth: 200) {
+                        Button(privacyTitle(.friends)) { privacy = .friends }
+                        Button(privacyTitle(.invite)) { privacy = .invite }
+                    }
+                }
+                ModalField(label: "Players") {
+                    EmberMenu(label: "Players", value: "\(maxPlayers)", minWidth: 80) {
+                        ForEach(2...8, id: \.self) { count in
+                            Button("\(count)") { maxPlayers = count }
                         }
-                        .cornerRadius(10)
-                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Theme.border, lineWidth: 1))
                     }
+                }
+            }
 
-                    // Settings grid
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                        settingChip(label: "MAX PLAYERS", value: "8")
-                        settingChip(label: "DIFFICULTY", value: "Normal")
-                        settingChip(label: "MOD SYNC", value: "Required")
-                        settingChip(label: "MEMBER ROLE", value: "Survival")
+            if !host.eulaAccepted {
+                HStack(spacing: 8) {
+                    EmberCheckbox(label: "I accept the Minecraft EULA", isOn: $host.eulaAccepted)
+                    Text(tr: "I accept the Minecraft EULA (aka.ms/MinecraftEULA)").style(.secondary)
+                }
+            }
+
+            Rectangle().fill(Color(hex: 0x252225)).frame(height: 1)
+
+            ModalField(label: "Join with a code") {
+                HStack(spacing: 10) {
+                    EmberInput(label: "Lobby code", text: $joinCode, placeholder: "ABC123")
+                    SecondaryPill(title: "Join", height: 40) {
+                        guest.join(code: joinCode.trimmingCharacters(in: .whitespaces).uppercased(), lobbyID: nil,
+                                   settings: settings, app: app, play: play)
                     }
+                    .disabled(busy || joinCode.trimmingCharacters(in: .whitespaces).count < 4)
+                }
+            }
+        }
+    }
 
-                    // Permissions
-                    VStack(spacing: 12) {
-                        toggleRow(title: "Allow cheats", subtitle: "Only the host can change this later", isOn: $allowCheats)
-                        Divider().background(Theme.border)
-                        toggleRow(title: "Friends can invite", subtitle: "Group members may bring mutual friends", isOn: $friendsCanInvite)
-                    }
-                    .padding(.top, 4)
+    // MARK: - Active lobby
 
-                    // Note
-                    HStack(spacing: 10) {
-                        Image(systemName: "person.2")
-                            .font(.system(size: 14))
+    private func activeView(_ current: ActiveLobby) -> some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Text(verbatim: current.name).style(.row)
+            Text(verbatim: "\(current.mcVersion) · \(current.loader)").style(.secondary)
+
+            if current.isHost, let code = current.code {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(tr: "Lobby code").style(.secondary)
+                        Text(verbatim: code)
+                            .font(Theme.font(size: 22, weight: .semibold, mono: true))
                             .foregroundColor(Theme.ember)
-                        Text(verbatim: "This is temporary. Your world and instance files stay private.")
-                            .font(Theme.font(size: 11, weight: .regular))
-                            .foregroundColor(Theme.textSecondary)
                     }
-                    .padding(12)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color(red: 23/255, green: 20/255, blue: 17/255))
-                    .cornerRadius(8)
-                    .overlay(alignment: .leading) {
-                        Rectangle().fill(Theme.ember).frame(width: 3)
+                    Spacer()
+                    SecondaryPill(title: copiedCode ? "Copied" : "Copy", height: 36) {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(code, forType: .string)
+                        copiedCode = true
                     }
                 }
-                .padding(.horizontal, 28)
-                .padding(.vertical, 16)
+                .padding(14)
+                .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.elevated))
             }
-            .frame(maxHeight: 360)
 
-            Divider().background(Theme.border)
-
-            // Footer
-            HStack {
-                Button {
-                    app.modal = nil
-                } label: {
-                    Text(verbatim: "Cancel")
-                        .font(Theme.font(size: 12, weight: .medium))
-                        .foregroundColor(Theme.textSecondary)
-                }
-                .buttonStyle(.plain)
-
-                Spacer()
-
-                Button {
-                    withAnimation { isCreated = true }
-                } label: {
-                    HStack(spacing: 6) {
-                        Text(verbatim: "Create \(privacy) lobby →")
-                            .font(Theme.font(size: 12, weight: .bold))
+            VStack(alignment: .leading, spacing: 8) {
+                Text(tr: "In the lobby").style(.secondary)
+                ForEach(lobbies.roster) { member in
+                    HStack {
+                        Text(verbatim: member.nick).style(.row)
+                        Spacer()
+                        Text(tr: member.state == "playing" ? "Playing" : "Joined").style(.secondary)
                     }
-                    .foregroundColor(Color(red: 32/255, green: 20/255, blue: 14/255))
-                    .padding(.horizontal, 18)
-                    .padding(.vertical, 10)
-                    .background(Theme.emberGradient)
-                    .cornerRadius(8)
                 }
-                .buttonStyle(.plain)
+                if lobbies.roster.isEmpty {
+                    Text(tr: "Only you for now. Share the code or invite a friend from Social.").style(.secondary)
+                }
             }
-            .padding(.horizontal, 28)
-            .padding(.vertical, 16)
         }
     }
 
-    private func settingChip(label: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(label)
-                .font(Theme.font(size: 9, weight: .medium, mono: true))
-                .tracking(1.0)
-                .foregroundColor(Theme.textMuted)
+    // MARK: - Status and footer
 
-            HStack {
-                Text(value)
-                    .font(Theme.font(size: 12, weight: .medium))
-                    .foregroundColor(Theme.text)
-                Spacer()
-                Image(systemName: "chevron.up.chevron.down")
-                    .font(.system(size: 10))
-                    .foregroundColor(Theme.textMuted)
-            }
-            .padding(.horizontal, 10)
-            .frame(height: 36)
-            .background(Color(red: 21/255, green: 19/255, blue: 16/255))
-            .cornerRadius(8)
-            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Theme.border, lineWidth: 1))
+    @ViewBuilder private var statusLine: some View {
+        if case .preparing(let text) = host.state {
+            Text(verbatim: text).style(.secondary)
+        } else if case .preparing(let text) = guest.state {
+            Text(verbatim: text).style(.secondary)
+        } else if case .failed(let text) = host.state {
+            Text(verbatim: text).style(.init(size: 13, weight: .regular, color: Theme.danger))
+        } else if case .failed(let text) = guest.state {
+            Text(verbatim: text).style(.init(size: 13, weight: .regular, color: Theme.danger))
+        } else if let message = lobbies.message {
+            Text(verbatim: message).style(.init(size: 13, weight: .regular, color: Theme.danger))
         }
     }
 
-    private func toggleRow(title: String, subtitle: String, isOn: Binding<Bool>) -> some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(Theme.font(size: 12, weight: .semibold))
-                    .foregroundColor(Theme.text)
-                Text(subtitle)
-                    .font(Theme.font(size: 10, weight: .regular))
-                    .foregroundColor(Theme.textSecondary)
+    @ViewBuilder private var footer: some View {
+        if let current = lobbies.current {
+            ModalCancel(title: "Close window")
+            SecondaryPill(title: current.isHost ? "Close lobby" : "Leave lobby", height: 38) {
+                if current.isHost { host.close() } else { lobbies.leave() }
             }
-            Spacer()
-            Toggle("", isOn: isOn)
-                .labelsHidden()
-                .toggleStyle(SwitchToggleStyle(tint: Theme.ember))
+        } else {
+            ModalCancel()
+            PrimaryPill(title: "Create lobby", height: 38, isDisabled: !canCreate) {
+                guard let item = selected else { return }
+                host.host(
+                    item,
+                    name: effectiveLobbyName,
+                    privacy: privacy,
+                    maxPlayers: maxPlayers,
+                    settings: settings,
+                    app: app,
+                    play: play
+                )
+            }
         }
     }
 
-    // MARK: - Ready View
+    // MARK: - Helpers
 
-    private var readyView: some View {
-        VStack(spacing: 20) {
-            ZStack {
-                Circle()
-                    .stroke(Color(red: 88/255, green: 65/255, blue: 52/255), lineWidth: 1.5)
-                    .frame(width: 74, height: 74)
+    private var canCreate: Bool {
+        account.isSignedIn && selected != nil && host.eulaAccepted && !busy
+    }
 
-                Circle()
-                    .fill(Theme.ember)
-                    .frame(width: 40, height: 40)
+    private var defaultLobbyName: String { "\(settings.nickname)'s world" }
 
-                Text(verbatim: "3")
-                    .font(Theme.font(size: 16, weight: .bold))
-                    .foregroundColor(Color(red: 32/255, green: 20/255, blue: 14/255))
-            }
-            .padding(.top, 16)
+    private var effectiveLobbyName: String {
+        let trimmed = lobbyName.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? defaultLobbyName : trimmed
+    }
 
-            VStack(spacing: 6) {
-                Text(verbatim: "Waiting in \(selectedWorld)")
-                    .font(Theme.font(size: 18, weight: .semibold))
-                    .foregroundColor(Theme.text)
-
-                Text(verbatim: "Friends can now see and join your lobby. It closes when you leave.")
-                    .font(Theme.font(size: 12, weight: .regular))
-                    .foregroundColor(Theme.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
-            }
-
-            // Invite code
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(verbatim: "INVITE CODE")
-                        .font(Theme.font(size: 8, weight: .medium, mono: true))
-                        .foregroundColor(Theme.textMuted)
-                    Text(verbatim: "WARM-4821")
-                        .font(Theme.font(size: 15, weight: .bold, mono: true))
-                        .foregroundColor(Theme.ember)
-                }
-
-                Spacer()
-
-                Button {
-                    NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString("WARM-4821", forType: .string)
-                    copiedCode = true
-                } label: {
-                    Text(copiedCode ? "Copied!" : "Copy")
-                        .font(Theme.font(size: 11, weight: .medium))
-                        .foregroundColor(Theme.textSecondary)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(Color(white: 0.15))
-                        .cornerRadius(6)
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(14)
-            .background(Color(red: 21/255, green: 19/255, blue: 16/255))
-            .cornerRadius(10)
-            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Theme.border, lineWidth: 1))
-            .padding(.horizontal, 48)
-
-            Button {
-                app.modal = nil
-            } label: {
-                Text(verbatim: "Open lobby")
-                    .font(Theme.font(size: 13, weight: .bold))
-                    .foregroundColor(Color(red: 32/255, green: 20/255, blue: 14/255))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 40)
-                    .background(Theme.emberGradient)
-                    .cornerRadius(8)
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 48)
-            .padding(.bottom, 24)
+    private func privacyTitle(_ privacy: LobbyPrivacy) -> String {
+        switch privacy {
+        case .friends: return L("Friends")
+        case .invite: return L("Invite only")
         }
     }
 }
