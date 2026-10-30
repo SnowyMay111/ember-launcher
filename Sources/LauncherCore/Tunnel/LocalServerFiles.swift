@@ -21,10 +21,28 @@ public enum LocalServerFiles {
     }
 
     /// Writes server.properties configured for a loopback-only lobby reached through the tunnel.
+    /// If server.properties already exists, only the lobby-relevant keys are updated so world
+    /// settings such as difficulty, gamemode and pvp survive across launches.
     public static func writeServerProperties(in dir: URL, port: Int, maxPlayers: Int, motd: String) throws {
         let cleanMotd = motd
             .replacingOccurrences(of: "\r", with: " ")
             .replacingOccurrences(of: "\n", with: " ")
+
+        let propertiesURL = dir.appendingPathComponent("server.properties")
+
+        if FileManager.default.fileExists(atPath: propertiesURL.path) {
+            let values: [String: String] = [
+                "server-ip": "127.0.0.1",
+                "server-port": "\(port)",
+                "online-mode": "false",
+                "white-list": "true",
+                "enforce-whitelist": "true",
+                "max-players": "\(maxPlayers)",
+                "motd": cleanMotd,
+            ]
+            try ServerProperties.update(in: dir, values: values)
+            return
+        }
 
         let lines = [
             "server-ip=127.0.0.1",
@@ -42,7 +60,7 @@ public enum LocalServerFiles {
         ]
 
         let contents = lines.joined(separator: "\n") + "\n"
-        try contents.write(to: dir.appendingPathComponent("server.properties"), atomically: true, encoding: .utf8)
+        try contents.write(to: propertiesURL, atomically: true, encoding: .utf8)
     }
 
     private struct WhitelistEntry: Codable {

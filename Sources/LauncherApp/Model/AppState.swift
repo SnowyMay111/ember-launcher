@@ -6,6 +6,7 @@ enum Screen: String, CaseIterable, Identifiable {
     case play = "Play"
     case library = "Library"
     case social = "Social"
+    case servers = "Servers"
     case mods = "Explore"
     case skins = "Skins"
     case settings = "Settings"

@@ -14,6 +14,8 @@ struct TopBar: View {
             return L("Welcome home.")
         case .social:
             return L("Social")
+        case .servers:
+            return L("Servers")
         case .library:
             return L("Instances")
         case .mods:

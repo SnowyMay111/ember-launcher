@@ -132,6 +132,7 @@ struct RootView: View {
         case .play: HomeScreen()
         case .library: LibraryScreen()
         case .social: SocialScreen()
+        case .servers: ServersScreen()
         case .settings: SettingsScreen()
         case .mods: ModsScreen(app: app)
         case .skins: SkinsScreen()

@@ -22,8 +22,16 @@ final class LobbyHostController: ObservableObject {
         didSet { UserDefaults.standard.set(eulaAccepted, forKey: "lobbyEulaAccepted") }
     }
 
+    /// Live console of the running server, newest last; kept after a stop so the last run can be read.
+    @Published private(set) var logLines: [String] = []
+    @Published private(set) var players: [String] = []
+    @Published private(set) var runningInstance: String?
+    @Published private(set) var startedAt: Date?
+
     private let paths = LauncherPaths()
     private let launcher: GameLauncher
+    private var tracker = ServerPlayerTracker()
+    var library: ServerLibrary { ServerLibrary(root: paths.root.appendingPathComponent("lobby-servers", isDirectory: true)) }
     private var server: LocalGameServer?
     private var serverDirectory: URL?
     private var rosterWatch: AnyCancellable?
@@ -102,9 +110,7 @@ final class LobbyHostController: ObservableObject {
             instance = try await launcher.ensureInstalled(instance) { _, _ in }
             let java = try await launcher.ensureJava(for: instance)
 
-            let directory = paths.root
-                .appendingPathComponent("lobby-servers", isDirectory: true)
-                .appendingPathComponent(item.name, isDirectory: true)
+            let directory = library.directory(for: item.name)
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             let port = Int.random(in: 41000...49000)
 
@@ -122,9 +128,24 @@ final class LobbyHostController: ObservableObject {
             }
 
             state = .preparing(L("Starting the server…"))
-            try await server.start(launcherJar: jar, memoryMB: max(2048, min(instance.memoryMB, 4096)))
+            logLines = []
+            tracker.reset()
+            players = []
+            try await server.start(launcherJar: jar, memoryMB: max(2048, min(instance.memoryMB, 4096))) { [weak self] line in
+                Task { @MainActor in self?.ingest(line) }
+            }
             self.server = server
             serverDirectory = directory
+            runningInstance = item.name
+            startedAt = Date()
+            try? library.save(ServerProfile(
+                instanceName: item.name,
+                name: name,
+                minecraftVersion: item.minecraftVersion,
+                loader: item.loader.coreName,
+                maxPlayers: maxPlayers,
+                lastPlayed: Date()
+            ))
             watch(nick: nick)
 
             lobbies.startHosting(serverPort: UInt16(port))
@@ -136,6 +157,21 @@ final class LobbyHostController: ObservableObject {
             if lobbies.current?.isHost == true { lobbies.leave() }
             state = .failed(error.localizedDescription)
         }
+    }
+
+    private func ingest(_ line: String) {
+        logLines.append(line)
+        if logLines.count > 600 { logLines.removeFirst(logLines.count - 600) }
+        tracker.apply(line)
+        if players != tracker.online { players = tracker.online }
+    }
+
+    /// Sends a console command to the running server and echoes it into the log.
+    func send(_ command: String) {
+        let trimmed = command.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, let server else { return }
+        logLines.append("> \(trimmed)")
+        try? server.send(command: trimmed)
     }
 
     private func whitelistNames(nick: String, roster: [LobbyMember]) -> [String] {
@@ -183,6 +219,10 @@ final class LobbyHostController: ObservableObject {
         let running = server
         server = nil
         serverDirectory = nil
+        runningInstance = nil
+        startedAt = nil
+        tracker.reset()
+        players = []
         await running?.stop()
     }
 
