@@ -466,5 +466,15 @@
   "Drag with mouse to rotate Boba 360° · Double-click to reset": "Обертайте мишею на 360° · Подвійний клік для скидання",
   "Drag with mouse to rotate 360° · Double-click to reset": "Обертайте мишею на 360° · Подвійний клік для скидання",
   "Equip skin": "Вдягнути скін",
-  "Model": "Модель"
+  "Model": "Модель",
+  "In this build": "У збірці",
+  "Find on Modrinth": "Знайти на Modrinth",
+  "%d selected": "Вибрано: %d",
+  "Install %d": "Встановити %d",
+  "Waiting to install": "Чекає встановлення",
+  "%d items": "Елементів: %d",
+  "A modpack creates a new instance. This build stays as it is.": "Модпак створює нову збірку. Поточна залишиться як є.",
+  "Nothing here yet. Add the first one from the right.": "Тут поки порожньо. Додайте перше праворуч.",
+  "Remove from selection": "Прибрати з вибраного",
+  "Add to selection": "Додати до вибраного"
 }

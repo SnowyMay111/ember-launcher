@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ember · Mods, три варианта</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#080808;--s1:#111110;--s2:#171517;--bd:#242321;--bd2:#33302d;--tx:#EEEAE3;--tx2:#9a938b;--tx3:#6f6963;--em:#F0A062;--em2:#D97B48;--vi:#A875B8;--ok:#94A978;--bad:#A96B68}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#050505;color:var(--tx);font:14px/1.45 'Geist',-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased;padding:20px 20px 40px}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+input{font:inherit;color:inherit}
+.demo-bar{max-width:1280px;margin:0 auto 14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.demo-bar .v{padding:9px 16px;border-radius:999px;border:1px solid var(--bd);background:var(--s1);color:var(--tx2);font-weight:500}
+.demo-bar .v.on{background:linear-gradient(135deg,var(--em),var(--em2));color:#1a0f07;border-color:transparent}
+.demo-note{max-width:1280px;margin:0 auto 14px;color:var(--tx2);font-size:13px}
+.app{max-width:1280px;margin:0 auto;height:800px;border-radius:20px;border:1px solid var(--bd);background:var(--bg);display:grid;grid-template-columns:208px 1fr;overflow:hidden;position:relative}
+.app::before{content:"";position:absolute;inset:0;background:radial-gradient(600px 360px at 85% -10%,rgba(168,117,184,.16),transparent 70%),radial-gradient(520px 320px at 10% 110%,rgba(240,160,98,.10),transparent 70%);pointer-events:none}
+.side{border-right:1px solid var(--bd);padding:18px 14px;display:flex;flex-direction:column;gap:4px;position:relative;background:rgba(10,10,10,.6)}
+.logo{display:flex;align-items:center;gap:10px;padding:2px 8px 18px;font-weight:600;font-size:16px}
+.logo i{width:30px;height:30px;border-radius:9px;background:#141214;border:1px solid var(--bd);display:grid;place-items:center}
+.logo i::after{content:"";width:12px;height:12px;transform:rotate(45deg);border-radius:2px;background:linear-gradient(135deg,var(--vi),var(--em))}
+.nav{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:11px;color:var(--tx2);font-weight:500;width:100%;text-align:left}
+.nav.on{background:var(--s2);color:var(--tx);box-shadow:inset 0 0 0 1px var(--bd)}
+.nav .d{width:7px;height:7px;border-radius:50%;background:var(--tx3)}
+.nav.on .d{background:var(--em)}
+.side .foot{margin-top:auto;padding:10px 12px;color:var(--tx3);font-size:12px}
+.main{position:relative;display:flex;flex-direction:column;min-width:0;min-height:0}
+.top{display:flex;align-items:center;justify-content:space-between;padding:14px 28px 0}
+.inst{display:flex;align-items:center;gap:10px;padding:7px 14px 7px 8px;border-radius:999px;background:var(--s1);border:1px solid var(--bd)}
+.inst b{font-weight:600}
+.inst span{color:var(--tx2);font-size:13px}
+.av{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--vi),var(--em2))}
+.page{flex:1;min-height:0;display:flex;flex-direction:column;padding:14px 28px 20px;position:relative}
+h1{font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1.1}
+.sub{color:var(--tx2);margin-top:6px}
+.head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:16px}
+.seg{display:inline-flex;padding:4px;border-radius:999px;background:var(--s1);border:1px solid var(--bd);gap:2px}
+.seg button{padding:7px 14px;border-radius:999px;color:var(--tx2);font-weight:500;font-size:13px}
+.seg button.on{background:var(--s2);color:var(--tx);box-shadow:inset 0 0 0 1px var(--bd2)}
+.card{background:var(--s1);border:1px solid var(--bd);border-radius:16px;display:flex;flex-direction:column;min-height:0;min-width:0}
+.card-h{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 18px 10px}
+.card-h h2{font-size:16px;font-weight:600}
+.scroll{overflow-y:auto;min-height:0;flex:1}
+.scroll::-webkit-scrollbar{width:8px}.scroll::-webkit-scrollbar-thumb{background:var(--bd);border-radius:8px}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:999px;font-weight:600;font-size:13px;white-space:nowrap}
+.pill.p{background:linear-gradient(135deg,var(--em),var(--em2));color:#1a0f07;box-shadow:0 6px 20px rgba(240,160,98,.22)}
+.pill.s{background:var(--s2);box-shadow:inset 0 0 0 1px var(--bd2);color:var(--tx)}
+.pill.s:hover{box-shadow:inset 0 0 0 1px var(--tx3)}
+.pill.ok{background:rgba(148,169,120,.14);color:var(--ok);box-shadow:inset 0 0 0 1px rgba(148,169,120,.35)}
+.search{display:flex;align-items:center;gap:10px;padding:0 14px;height:40px;border-radius:12px;background:var(--s2);border:1px solid var(--bd);flex:1;min-width:0}
+.search:focus-within{border-color:var(--em)}
+.search input{flex:1;background:none;border:0;outline:0;min-width:0}
+.search input::placeholder{color:var(--tx3)}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{padding:6px 13px;border-radius:999px;background:var(--s2);box-shadow:inset 0 0 0 1px var(--bd);color:var(--tx2);font-size:13px;font-weight:500}
+.chip.on{background:rgba(240,160,98,.14);color:var(--em);box-shadow:inset 0 0 0 1px rgba(240,160,98,.4)}
+.ic{width:42px;height:42px;border-radius:11px;flex:none;display:grid;place-items:center;font-weight:700;font-size:16px;color:rgba(255,255,255,.92)}
+.ic.sm{width:32px;height:32px;border-radius:9px;font-size:13px}
+.ic.lg{width:72px;height:72px;border-radius:18px;font-size:28px}
+.row{display:flex;align-items:center;gap:14px;padding:12px 18px;border-top:1px solid var(--bd)}
+.row:first-child{border-top:0}
+.row:hover{background:rgba(255,255,255,.015)}
+.row.sel{background:rgba(240,160,98,.06);box-shadow:inset 3px 0 0 var(--em)}
+.row .m{flex:1;min-width:0}
+.row .n{font-weight:600;display:flex;gap:8px;align-items:center}
+.row .n small{font-weight:400;color:var(--tx3);font-size:12px}
+.row .d{color:var(--tx2);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .st{color:var(--tx3);font-size:12px;text-align:right;min-width:64px}
+.tag{font-size:12px;padding:2px 9px;border-radius:999px;font-weight:500;white-space:nowrap}
+.tag.ok{background:rgba(148,169,120,.13);color:var(--ok)}
+.tag.dep{background:rgba(240,160,98,.12);color:var(--em)}
+.tag.no{background:rgba(169,107,104,.14);color:var(--bad)}
+.tag.mac{background:rgba(168,117,184,.15);color:#c493d3}
+.tag.upd{background:rgba(240,160,98,.14);color:var(--em)}
+.sw{width:38px;height:22px;border-radius:999px;background:#2a2725;position:relative;flex:none;transition:.15s}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#bdb6ad;transition:.15s}
+.sw.on{background:var(--em2)}.sw.on::after{left:19px;background:#fff}
+.add{width:34px;height:34px;border-radius:50%;background:var(--s2);box-shadow:inset 0 0 0 1px var(--bd2);display:grid;place-items:center;font-size:18px;color:var(--tx);flex:none}
+.add:hover{box-shadow:inset 0 0 0 1px var(--em);color:var(--em)}
+.add.in{background:rgba(148,169,120,.16);box-shadow:inset 0 0 0 1px rgba(148,169,120,.5);color:var(--ok);font-size:15px}
+.add.done{opacity:.5;pointer-events:none;font-size:14px}
+.menu{position:relative}
+.menu-b{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 14px;border-radius:12px;background:var(--s2);border:1px solid var(--bd);font-weight:500;font-size:13px;color:var(--tx2)}
+.menu-b b{color:var(--tx);font-weight:500}
+.menu-l{position:absolute;right:0;top:46px;z-index:20;min-width:200px;padding:6px;border-radius:12px;background:#1b191b;border:1px solid var(--bd2);box-shadow:0 18px 40px rgba(0,0,0,.6)}
+.menu-l button{display:block;width:100%;text-align:left;padding:9px 12px;border-radius:8px;color:var(--tx2)}
+.menu-l button:hover{background:var(--s2);color:var(--tx)}
+.menu-l button.on{color:var(--em)}
+.basket{position:absolute;left:28px;right:28px;bottom:18px;z-index:15;display:flex;align-items:center;gap:14px;padding:12px 14px 12px 18px;border-radius:18px;background:rgba(27,25,27,.94);border:1px solid var(--bd2);backdrop-filter:blur(14px);box-shadow:0 20px 50px rgba(0,0,0,.65);transform:translateY(130%);opacity:0;transition:.25s}
+.basket.on{transform:none;opacity:1}
+.basket .t{flex:1;min-width:0}
+.basket .t b{font-weight:600}
+.basket .t div{color:var(--tx2);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.toast{position:absolute;top:70px;right:28px;z-index:30;padding:11px 16px;border-radius:12px;background:#1b191b;border:1px solid rgba(148,169,120,.5);color:var(--ok);font-weight:500;opacity:0;transform:translateY(-8px);transition:.2s;pointer-events:none}
+.toast.on{opacity:1;transform:none}
+.empty{padding:40px 20px;text-align:center;color:var(--tx3)}
+.kicker{color:var(--tx2);font-size:13px}
+/* A */
+.A{display:grid;grid-template-columns:400px 1fr;gap:16px;flex:1;min-height:0;padding-bottom:6px}
+.A .tools{display:flex;gap:10px;padding:0 18px 12px;align-items:center}
+.sum{display:flex;gap:10px;padding:0 18px 12px}
+.sum div{flex:1;padding:10px 12px;border-radius:12px;background:var(--s2);border:1px solid var(--bd)}
+.sum b{display:block;font-size:20px;font-weight:600}
+.sum span{color:var(--tx2);font-size:12px}
+.chips-line{padding:0 18px 12px}
+/* B */
+.B{flex:1;min-height:0;display:flex;flex-direction:column;gap:14px;overflow:hidden}
+.B .hero{display:flex;gap:10px;align-items:center}
+.B .hero .search{height:48px;border-radius:999px;padding:0 20px}
+.tabs{display:flex;gap:22px;border-bottom:1px solid var(--bd)}
+.tabs button{padding:8px 0 11px;color:var(--tx2);font-weight:500;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs button.on{color:var(--tx);border-color:var(--em)}
+.shelf-h{display:flex;align-items:baseline;gap:12px;margin:2px 0 10px}
+.shelf-h h2{font-size:18px;font-weight:600}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.tile{padding:14px;border-radius:16px;background:var(--s1);border:1px solid var(--bd);display:flex;flex-direction:column;gap:10px;min-width:0}
+.tile:hover{border-color:var(--bd2)}
+.tile .d{color:var(--tx2);font-size:13px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:38px}
+.tile .f{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.drawer{position:absolute;top:0;right:0;bottom:0;width:380px;z-index:25;background:#0e0d0e;border-left:1px solid var(--bd2);box-shadow:-30px 0 60px rgba(0,0,0,.6);transform:translateX(105%);transition:.25s;display:flex;flex-direction:column}
+.drawer.on{transform:none}
+/* C */
+.C{display:grid;grid-template-columns:220px 1fr 330px;gap:16px;flex:1;min-height:0;padding-bottom:6px}
+.C .row .n small,.C .row .tag.mac,.C .row .st{display:none}
+.C .row .n{white-space:nowrap}
+.fl{padding:6px 18px 16px;display:flex;flex-direction:column;gap:6px}
+.fl h3{font-size:13px;font-weight:600;color:var(--tx2);margin:12px 0 4px}
+.fl button{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:9px;color:var(--tx2);text-align:left}
+.fl button.on{background:var(--s2);color:var(--tx);box-shadow:inset 0 0 0 1px var(--bd2)}
+.fl button span{color:var(--tx3);font-size:12px}
+.lock{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;background:var(--s2);border:1px solid var(--bd);font-size:13px}
+.lock b{font-weight:600}
+.det{padding:20px;display:flex;flex-direction:column;gap:14px}
+.det h2{font-size:20px;font-weight:600}
+.det p{color:var(--tx2)}
+.kv{display:flex;flex-direction:column;border-top:1px solid var(--bd)}
+.kv div{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--bd);font-size:13px}
+.kv span{color:var(--tx2)}
+.shot{height:110px;border-radius:12px;background:linear-gradient(135deg,#2c2038,#6b3e3a 60%,#f0a66d);opacity:.8}
+@media(max-width:1100px){.app{height:auto;min-height:800px}.A,.C{grid-template-columns:1fr}.tiles{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="demo-bar" id="bar"></div>
+<div class="demo-note" id="note"></div>
+<div class="app">
+  <aside class="side">
+    <div class="logo"><i></i>Ember</div>
+    <button class="nav"><span class="d"></span>Home</button>
+    <button class="nav"><span class="d"></span>Instances</button>
+    <button class="nav on"><span class="d"></span>Mods</button>
+    <button class="nav"><span class="d"></span>Skins</button>
+    <button class="nav"><span class="d"></span>Settings</button>
+    <div class="foot">Java 21 · arm64<br>Система в порядке</div>
+  </aside>
+  <section class="main">
+    <div class="top"><div class="inst"><div class="av" style="width:24px;height:24px"></div><b>Survival</b><span>1.21.4 · Fabric</span></div><div class="av"></div></div>
+    <div class="page" id="page"></div>
+    <div class="toast" id="toast"></div>
+  </section>
+</div>
+
+<script>
+const HUES=[['#5b7fa8','#3b5878'],['#a8755b','#784a3b'],['#7a9c6a','#4e6d41'],['#a875b8','#74497f'],['#c79a4a','#8a6526'],['#5ba8a0','#397872'],['#b85b72','#7f3a4c']];
+const hue=s=>HUES[[...s].reduce((a,c)=>(a*31+c.charCodeAt(0))%997,7)%HUES.length];
+const M=(id,name,author,desc,dl,dlN,cat,o={})=>({id,name,author,desc,dl,dlN,cat,compat:'ok',mac:false,inst:false,upd:false,ver:'',dep:null,...o});
+const DATA={
+mods:[
+M('sodium','Sodium','jellysquid3','Современный движок рендера: в разы больше FPS без смены картинки.','38M',38,'Производительность',{mac:true,inst:true,ver:'0.6.2',upd:true}),
+M('lithium','Lithium','jellysquid3','Оптимизация физики, ИИ мобов и тиков сервера.','31M',31,'Производительность',{mac:true,inst:true,ver:'0.14.3'}),
+M('fabric-api','Fabric API','modmuss50','Основа почти для всех Fabric-модов.','52M',52,'Библиотека',{inst:true,ver:'0.114'}),
+M('modmenu','Mod Menu','Prospector','Список модов в меню игры и их настройки.','29M',29,'Утилиты',{inst:true,ver:'11.0.3'}),
+M('iris','Iris Shaders','coderbot','Поддержка шейдеров поверх Sodium.','19M',19,'Визуал',{mac:true,inst:true,ver:'1.8.1',dep:'Sodium'}),
+M('ferrite','FerriteCore','malte0811','Меньше памяти на моделях блоков.','24M',24,'Производительность',{mac:true,inst:true,ver:'7.0.1'}),
+M('dfps','Dynamic FPS','juliand665','Снижает нагрузку, когда окно не в фокусе.','6M',6,'Производительность',{mac:true,inst:true,ver:'3.9.0'}),
+M('xaero','Xaero\'s Minimap','xaero96','Мини-карта с метками и вейпойнтами.','18M',18,'Утилиты',{inst:true,ver:'24.5'}),
+M('immfast','ImmediatelyFast','RaphiMC','Ускоряет отрисовку интерфейса и текста.','9M',9,'Производительность',{mac:true,dep:'Fabric API'}),
+M('cull','Entity Culling','tr7zw','Не рисует мобов за стенами.','11M',11,'Производительность',{mac:true}),
+M('emi','EMI','emilyploszaj','Рецепты и поиск предметов, как JEI.','13M',13,'Утилиты',{dep:'Fabric API'}),
+M('create','Create','simibubi','Механизмы, шестерни и поезда. Нужен отдельный загрузчик.','24M',24,'Приключения',{compat:'no'}),
+M('dh','Distant Horizons','jeseibel','Дальность прорисовки в сотни чанков.','8M',8,'Визуал',{dep:'Fabric API'}),
+M('cloth','Cloth Config','shedaniel','Экраны настроек для других модов.','35M',35,'Библиотека',{dep:'Fabric API'}),
+M('xtra','Sodium Extra','FlashyReese','Больше настроек рендера для Sodium.','12M',12,'Производительность',{mac:true,dep:'Sodium'})
+],
+packs:[
+M('fo','Fabulously Optimized','robotkoer','Готовый набор модов для FPS на слабых машинах.','4M',4,'Производительность',{mac:true}),
+M('cobble','Cobblemon','Cobblemon','Лови и тренируй покемонов в обычном Minecraft.','3M',3,'Приключения'),
+M('abo','Create: Above and Beyond','Simibubi','Прогрессия вокруг механизмов Create.','1M',1,'Приключения',{compat:'no'}),
+M('bmc','Better MC','LunaPixel','Подземелья, мобы и биомы в одной сборке.','2M',2,'Приключения')
+],
+shaders:[
+M('mkup','MakeUp Ultra Fast','xMrVizzy','Лёгкие шейдеры, отлично идут на Mac.','2M',2,'Лёгкие',{mac:true}),
+M('compl','Complementary Reimagined','EminGT','Красиво и сбалансированно.','9M',9,'Красивые',{mac:true}),
+M('bsl','BSL Shaders','CaptTatsu','Классика с мягким светом и водой.','11M',11,'Красивые'),
+M('photon','Photon','sixthsurge','Современные тени и объёмный свет.','1M',1,'Красивые')
+],
+res:[
+M('faith','Faithful 32x','Faithful','Те же текстуры, вдвое чётче.','7M',7,'Текстуры'),
+M('fresh','Fresh Animations','FreshLX','Новые анимации мобов.','5M',5,'Анимации',{mac:true}),
+M('dark','Dark Mode','ZeroGraphite','Тёмный интерфейс игры.','3M',3,'Интерфейс',{mac:true})
+]};
+const KINDS=[['mods','Mods'],['packs','Modpacks'],['shaders','Shaders'],['res','Resource packs']];
+const SORTS=[['pop','Популярные'],['new','Новые'],['name','По названию']];
+const VARS={
+ A:['Верстак','Слева ваша сборка, справа поиск. Вкладок Installed/Browse нет: добавили мод — он сразу в списке слева.'],
+ B:['Полки','Поиск и подборки как на Home. Сборка в выезжающей панели справа, корзина снизу.'],
+ C:['Три колонки','Фильтры, список и деталь мода. Установленное — просто фильтр «В сборке» слева.']};
+const S={v:'A',kind:'mods',q:'',cat:'all',sort:'pop',scope:'all',queue:new Set(),sel:'sodium',menu:false,drawer:false,off:new Set()};
+const $=s=>document.querySelector(s);
+const list=()=>DATA[S.kind];
+const find=id=>Object.values(DATA).flat().find(x=>x.id===id);
+const ic=(x,c='')=>{const h=hue(x.name);return `<div class="ic ${c}" style="background:linear-gradient(135deg,${h[0]},${h[1]})">${x.name[0]}</div>`};
+const tagC=x=>x.compat==='no'?'<span class="tag no">Другой загрузчик</span>':x.dep&&!isIn(x.dep)?`<span class="tag dep">+ ${x.dep}</span>`:'<span class="tag ok">Подходит</span>';
+function isIn(name){const it=Object.values(DATA).flat().find(x=>x.name===name);return it&&(it.inst||S.queue.has(it.id))}
+function results(){
+ let r=list().filter(x=>!S.q||(x.name+x.desc+x.author).toLowerCase().includes(S.q.toLowerCase()));
+ if(S.cat!=='all')r=r.filter(x=>x.cat===S.cat);
+ if(S.sort==='pop')r=[...r].sort((a,b)=>b.dlN-a.dlN);
+ if(S.sort==='name')r=[...r].sort((a,b)=>a.name.localeCompare(b.name));
+ return r}
+function cats(){return[...new Set(list().map(x=>x.cat))]}
+function depNames(){const s=new Set();S.queue.forEach(id=>{const x=find(id);if(x.dep&&!isIn(x.dep))s.add(x.dep)});return[...s]}
+function addBtn(x){
+ if(x.inst)return '<button class="add done" aria-label="Уже в сборке">✓</button>';
+ if(x.compat==='no')return '<button class="add done" aria-label="Не подходит">–</button>';
+ const q=S.queue.has(x.id);
+ return `<button class="add ${q?'in':''}" data-a="q" data-id="${x.id}" aria-label="${q?'Убрать из корзины':'Добавить в корзину'}">${q?'✓':'+'}</button>`}
+function sortMenu(){
+ const cur=SORTS.find(s=>s[0]===S.sort)[1];
+ return `<div class="menu"><button class="menu-b" data-a="menu">Сортировка <b>${cur}</b> ▾</button>${S.menu?`<div class="menu-l">${SORTS.map(s=>`<button class="${s[0]===S.sort?'on':''}" data-a="sort" data-id="${s[0]}">${s[1]}</button>`).join('')}</div>`:''}</div>`}
+function kindSeg(){return `<div class="seg">${KINDS.map(k=>`<button class="${S.kind===k[0]?'on':''}" data-a="kind" data-id="${k[0]}">${k[1]}</button>`).join('')}</div>`}
+function chipsLine(){return `<div class="chips"><button class="chip ${S.cat==='all'?'on':''}" data-a="cat" data-id="all">Все</button>${cats().map(c=>`<button class="chip ${S.cat===c?'on':''}" data-a="cat" data-id="${c}">${c}</button>`).join('')}</div>`}
+function searchBox(ph){return `<label class="search"><span style="color:var(--tx3)">⌕</span><input id="q" value="${S.q}" placeholder="${ph}" autocomplete="off"></label>`}
+function resultRow(x,sel){return `<div class="row ${sel&&S.sel===x.id?'sel':''}" ${sel?`data-a="sel" data-id="${x.id}"`:''}>${ic(x)}<div class="m"><div class="n">${x.name}<small>${x.author}</small></div><div class="d">${x.desc}</div></div>${x.mac?'<span class="tag mac">Для Mac</span>':''}${tagC(x)}<div class="st">${x.dl}</div>${addBtn(x)}</div>`}
+const kindWord={mods:'мод',packs:'модпак',shaders:'шейдер',res:'ресурспак'};
+function installedOf(kind){return DATA[kind].filter(x=>x.inst)}
+function basket(){
+ const n=S.queue.size,d=depNames();
+ const names=[...S.queue].map(id=>find(id).name).join(', ');
+ return `<div class="basket ${n?'on':''}" id="basket"><div class="t"><b>В корзине: ${n}</b>${d.length?` <span class="tag dep">+ ${d.length} зависимост${d.length>1?'и':'ь'}: ${d.join(', ')}</span>`:''}<div>${names}</div></div><button class="pill s" data-a="clear">Очистить</button><button class="pill p" data-a="install">Установить ${n+d.length}</button></div>`}
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),2200)}
+
+/* ---------- A ---------- */
+function viewA(){
+ const inst=installedOf(S.kind),n=DATA.mods.filter(x=>x.inst).length,u=DATA.mods.filter(x=>x.inst&&x.upd).length;
+ const left=S.kind==='packs'?`<div class="empty">Модпак создаёт новую сборку.<br>Текущая сборка «Survival» не изменится.</div>`:
+ `<div class="sum"><div><b>${S.kind==='mods'?n:inst.length}</b><span>${S.kind==='mods'?'модов в сборке':'установлено'}</span></div><div><b>${u}</b><span>обновлений</span></div><div><b style="color:var(--ok)">ОК</b><span>совместимость</span></div></div>
+ <div class="scroll">${[...S.queue].map(id=>find(id)).filter(x=>DATA[S.kind].includes(x)).map(x=>`<div class="row">${ic(x,'sm')}<div class="m"><div class="n">${x.name}</div><div class="d" style="color:var(--em)">Ждёт установки</div></div><button class="add in" data-a="q" data-id="${x.id}" aria-label="Убрать">×</button></div>`).join('')}
+ ${inst.length?inst.map(x=>`<div class="row">${ic(x,'sm')}<div class="m"><div class="n">${x.name}${x.upd?'<span class="tag upd">Обновление</span>':''}</div><div class="d">${x.ver}</div></div><button class="sw ${S.off.has(x.id)?'':'on'}" data-a="sw" data-id="${x.id}" aria-label="Включить или выключить"></button></div>`).join(''):`<div class="empty">Здесь пока пусто.<br>Добавьте первое справа.</div>`}</div>`;
+ return `<div class="head"><div><h1>Mods</h1><div class="sub">Для Survival · 1.21.4 · Fabric</div></div>${kindSeg()}</div>
+ <div class="A"><div class="card"><div class="card-h"><h2>В сборке</h2>${u?'<button class="pill s" data-a="upd">Обновить всё · '+u+'</button>':''}</div>${left}</div>
+ <div class="card"><div class="card-h"><h2>Найти ${kindWord[S.kind]==='мод'?'моды':'ещё'}</h2><span class="kicker">Modrinth · только совместимое</span></div><div class="tools">${searchBox('Поиск')}${sortMenu()}</div><div class="chips-line">${chipsLine()}</div><div class="scroll" style="padding-bottom:80px">${resultsHtml(false)}</div></div></div>`}
+function resultsHtml(sel){const r=results();return r.length?r.map(x=>resultRow(x,sel)).join(''):'<div class="empty">Ничего не найдено. Измените запрос.</div>'}
+
+/* ---------- B ---------- */
+function tiles(arr){return `<div class="tiles">${arr.map(x=>`<div class="tile"><div style="display:flex;gap:10px;align-items:center">${ic(x)}<div style="min-width:0"><div style="font-weight:600">${x.name}</div><div class="kicker">${x.author}</div></div></div><div class="d">${x.desc}</div><div class="f">${x.mac?'<span class="tag mac">Для Mac</span>':tagC(x)}${addBtn(x)}</div></div>`).join('')}</div>`}
+function viewB(){
+ const all=list(),n=DATA.mods.filter(x=>x.inst).length;
+ const q=S.q.trim();
+ const shelf=(t,s,a)=>a.length?`<div><div class="shelf-h"><h2>${t}</h2><span class="kicker">${s}</span></div>${tiles(a.slice(0,4))}</div>`:'';
+ let body;
+ if(q||S.cat!=='all')body=`<div class="shelf-h"><h2>Результаты</h2><span class="kicker">${results().length} найдено</span></div>${tiles(results())}`;
+ else body=shelf('Для вашего Mac','Проверено на Apple Silicon',all.filter(x=>x.mac&&!x.inst&&x.compat!=='no'))+shelf('Популярное','Скачивают чаще всего',[...all].sort((a,b)=>b.dlN-a.dlN).filter(x=>!x.inst))+shelf('Нужно для ваших модов','Недостающие зависимости',all.filter(x=>x.dep==='Sodium'&&!x.inst));
+ const upd=DATA.mods.filter(x=>x.inst&&x.upd).length;
+ return `<div class="head"><div><h1>Mods</h1><div class="sub">Для Survival · 1.21.4 · Fabric</div></div><div style="display:flex;gap:10px">${sortMenu()}<button class="pill s" style="height:40px" data-a="drawer">Моя сборка · ${n}${upd?' · '+upd+' обн.':''}</button></div></div>
+ <div class="B"><div class="hero">${searchBox('Найти мод, шейдер или сборку')}</div>
+ <div class="tabs">${KINDS.map(k=>`<button class="${S.kind===k[0]?'on':''}" data-a="kind" data-id="${k[0]}">${k[1]}</button>`).join('')}</div>
+ ${chipsLine()}<div class="scroll" style="padding-bottom:90px;display:flex;flex-direction:column;gap:22px">${body}</div></div>
+ <div class="drawer ${S.drawer?'on':''}"><div class="card-h" style="padding:22px 20px 12px"><h2>Моя сборка</h2><button class="pill s" data-a="drawer">Закрыть</button></div><div class="sum"><div><b>${n}</b><span>модов</span></div><div><b>${upd}</b><span>обновлений</span></div></div><div class="scroll">${DATA.mods.filter(x=>x.inst).map(x=>`<div class="row">${ic(x,'sm')}<div class="m"><div class="n">${x.name}${x.upd?'<span class="tag upd">Обновление</span>':''}</div><div class="d">${x.ver}</div></div><button class="sw ${S.off.has(x.id)?'':'on'}" data-a="sw" data-id="${x.id}" aria-label="Включить или выключить"></button></div>`).join('')}</div></div>`}
+
+/* ---------- C ---------- */
+function viewC(){
+ const base=list();
+ let r=results();
+ if(S.scope==='inst')r=r.filter(x=>x.inst);
+ if(S.scope==='upd')r=r.filter(x=>x.upd);
+ const cnt=f=>base.filter(f).length;
+ const x=find(S.sel)&&base.includes(find(S.sel))?find(S.sel):r[0];
+ const det=x?`<div class="det"><div style="display:flex;gap:14px;align-items:center">${ic(x,'lg')}<div><h2>${x.name}</h2><div class="kicker">${x.author} · ${x.dl} загрузок</div></div></div><p>${x.desc}</p><div class="shot"></div>
+ <div class="kv"><div><span>Совместимость</span><b>${x.compat==='no'?'Нет':'Fabric 1.21.4'}</b></div><div><span>Версия</span><b>${x.ver||'Последняя'}</b></div><div><span>Зависимости</span><b>${x.dep||'Нет'}</b></div><div><span>На Mac</span><b>${x.mac?'Проверено':'Не проверялось'}</b></div></div>
+ ${x.inst?`<button class="pill ok" style="justify-content:center">Установлено${x.upd?' · есть обновление':''}</button>`:x.compat==='no'?'<button class="pill s" style="justify-content:center">Не подходит этой сборке</button>':`<button class="pill ${S.queue.has(x.id)?'s':'p'}" style="justify-content:center" data-a="q" data-id="${x.id}">${S.queue.has(x.id)?'Убрать из корзины':'Добавить в корзину'}</button>`}</div>`:'<div class="empty">Выберите мод в списке</div>';
+ return `<div class="head"><div><h1>Mods</h1><div class="sub">Для Survival · 1.21.4 · Fabric</div></div>${kindSeg()}</div>
+ <div class="C"><div class="card"><div class="fl scroll"><div class="lock"><span style="color:var(--ok)">●</span><span><b>Fabric 1.21.4</b><br><span class="kicker">фильтр задан сборкой</span></span></div>
+ <h3>Показать</h3>${[['all','Всё',base.length],['inst','В сборке',cnt(x=>x.inst)],['upd','Обновления',cnt(x=>x.upd)]].map(s=>`<button class="${S.scope===s[0]?'on':''}" data-a="scope" data-id="${s[0]}">${s[1]}<span>${s[2]}</span></button>`).join('')}
+ <h3>Категория</h3><button class="${S.cat==='all'?'on':''}" data-a="cat" data-id="all">Все</button>${cats().map(c=>`<button class="${S.cat===c?'on':''}" data-a="cat" data-id="${c}">${c}<span>${base.filter(x=>x.cat===c).length}</span></button>`).join('')}</div></div>
+ <div class="card"><div class="tools" style="display:flex;gap:10px;padding:16px 18px 12px">${searchBox('Поиск')}${sortMenu()}</div><div class="scroll" style="padding-bottom:80px">${r.length?r.map(x=>resultRow(x,true)).join(''):'<div class="empty">Ничего не найдено.</div>'}</div></div>
+ <div class="card scroll">${det}</div></div>`}
+
+function render(keepFocus){
+ $('#bar').innerHTML=Object.entries(VARS).map(([k,v])=>`<button class="v ${S.v===k?'on':''}" data-a="v" data-id="${k}">${k} · ${v[0]}</button>`).join('');
+ $('#note').textContent=VARS[S.v][1];
+ const had=document.activeElement&&document.activeElement.id==='q',pos=had?document.activeElement.selectionStart:0;
+ $('#page').innerHTML=(S.v==='A'?viewA():S.v==='B'?viewB():viewC())+basket();
+ if(had){const i=$('#q');i.focus();i.setSelectionRange(pos,pos)}}
+document.addEventListener('click',e=>{
+ const t=e.target.closest('[data-a]');
+ if(!t){if(S.menu){S.menu=false;render()}return}
+ const a=t.dataset.a,id=t.dataset.id;
+ if(a==='v'){S.v=id;S.menu=false;S.drawer=false;S.cat='all';S.q=''}
+ else if(a==='kind'){S.kind=id;S.cat='all';S.q='';S.sel=(results()[0]||{}).id}
+ else if(a==='cat')S.cat=id;
+ else if(a==='scope')S.scope=id;
+ else if(a==='menu'){S.menu=!S.menu}
+ else if(a==='sort'){S.sort=id;S.menu=false}
+ else if(a==='sel')S.sel=id;
+ else if(a==='drawer')S.drawer=!S.drawer;
+ else if(a==='sw'){S.off.has(id)?S.off.delete(id):S.off.add(id)}
+ else if(a==='q'){S.queue.has(id)?S.queue.delete(id):S.queue.add(id);if(S.v==='C')S.sel=id}
+ else if(a==='clear')S.queue.clear();
+ else if(a==='upd'){DATA.mods.forEach(x=>x.upd=false);toast('Моды обновлены')}
+ else if(a==='install'){const d=depNames(),n=S.queue.size;S.queue.forEach(i=>{find(i).inst=true;find(i).ver='последняя'});d.forEach(nm=>{const it=Object.values(DATA).flat().find(x=>x.name===nm);if(it)it.inst=true});S.queue.clear();toast(`Установлено: ${n+d.length}`)}
+ render()});
+document.addEventListener('input',e=>{if(e.target.id==='q'){S.q=e.target.value;render()}});
+render();
+</script>
+</body>
+</html>
