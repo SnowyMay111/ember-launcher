@@ -330,6 +330,12 @@ extension ModpackManager {
             return .failed(path: file.path, reason: "download host not allowed")
         }
 
+        // The .mrpack spec requires both hashes; a file without them cannot be verified, so nothing is downloaded.
+        guard let expectedSha1 = file.hashes["sha1"], !expectedSha1.isEmpty,
+              let expectedSha512 = file.hashes["sha512"], !expectedSha512.isEmpty else {
+            return .failed(path: file.path, reason: "missing hashes")
+        }
+
         let destURL = gameDir.appendingPathComponent(file.path)
         let fm = FileManager.default
         do {
@@ -337,21 +343,19 @@ extension ModpackManager {
             try await downloader.download(
                 url: downloadURL,
                 to: destURL,
-                sha1: file.hashes["sha1"],
+                sha1: expectedSha1,
                 size: file.fileSize
             )
 
-            if let expectedSha512 = file.hashes["sha512"], !expectedSha512.isEmpty {
-                do {
-                    let actualSha512 = try sha512Hex(of: destURL)
-                    if actualSha512.caseInsensitiveCompare(expectedSha512) != .orderedSame {
-                        try? fm.removeItem(at: destURL)
-                        return .failed(path: file.path, reason: "sha512 mismatch")
-                    }
-                } catch {
+            do {
+                let actualSha512 = try sha512Hex(of: destURL)
+                if actualSha512.caseInsensitiveCompare(expectedSha512) != .orderedSame {
                     try? fm.removeItem(at: destURL)
                     return .failed(path: file.path, reason: "sha512 mismatch")
                 }
+            } catch {
+                try? fm.removeItem(at: destURL)
+                return .failed(path: file.path, reason: "sha512 mismatch")
             }
             return .success(file: file, usedURL: downloadURL)
         } catch {
