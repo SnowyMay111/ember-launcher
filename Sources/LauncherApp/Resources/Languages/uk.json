@@ -601,5 +601,14 @@
   "No friends yet. Add someone by their tag.": "Друзів ще немає. Додайте когось за тегом.",
   "Sent": "Надіслані",
   "%d online": "У мережі: %d",
-  "Friends, %d online": "Друзі, у мережі: %d"
+  "Friends, %d online": "Друзі, у мережі: %d",
+  "Could not reach the lobby service.": "Не вдалося зв'язатися зі службою лобі.",
+  "No lobby with that code.": "Немає лобі з таким кодом.",
+  "This lobby has closed.": "Це лобі закрите.",
+  "You cannot join this lobby.": "Ви не можете увійти до цього лобі.",
+  "The lobby is full.": "Лобі заповнене.",
+  "Someone in the lobby already uses this nickname.": "Цей нік уже зайнятий у лобі.",
+  "The host is still starting the server. Try again in a moment.": "Хост ще запускає сервер. Спробуйте за хвилину.",
+  "Invitation sent.": "Запрошення надіслано.",
+  "You can only invite friends to your own lobby.": "Запрошувати можна лише друзів, і лише до свого лобі."
 }

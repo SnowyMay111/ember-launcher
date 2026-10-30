@@ -601,5 +601,14 @@
   "No friends yet. Add someone by their tag.": "Пока нет друзей. Добавьте кого-нибудь по тегу.",
   "Sent": "Отправленные",
   "%d online": "В сети: %d",
-  "Friends, %d online": "Друзья, в сети: %d"
+  "Friends, %d online": "Друзья, в сети: %d",
+  "Could not reach the lobby service.": "Не удалось связаться со службой лобби.",
+  "No lobby with that code.": "Нет лобби с таким кодом.",
+  "This lobby has closed.": "Это лобби закрыто.",
+  "You cannot join this lobby.": "Вы не можете войти в это лобби.",
+  "The lobby is full.": "Лобби заполнено.",
+  "Someone in the lobby already uses this nickname.": "Этот ник уже занят в лобби.",
+  "The host is still starting the server. Try again in a moment.": "Хост ещё запускает сервер. Попробуйте через момент.",
+  "Invitation sent.": "Приглашение отправлено.",
+  "You can only invite friends to your own lobby.": "Приглашать можно только друзей, и только в своё лобби."
 }

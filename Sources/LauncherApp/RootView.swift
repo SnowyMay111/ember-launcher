@@ -55,6 +55,7 @@ struct RootView: View {
         .environmentObject(AccountStore.shared)
         .environmentObject(EmberAccountStore.shared)
         .environmentObject(FriendsStore.shared)
+        .environmentObject(LobbyStore.shared)
         .environmentObject(player)
         .environmentObject(updates)
         .environmentObject(toasts)
@@ -63,6 +64,7 @@ struct RootView: View {
         .onAppear {
             updates.start()
             FriendsStore.shared.start { player.state == .running ? "playing" : nil }
+            LobbyStore.shared.start()
         }
         .onChange(of: player.isBusy) { _, busy in updates.gameIsBusy = busy }
         .onChange(of: settings.autoUpdate) { _, isOn in
