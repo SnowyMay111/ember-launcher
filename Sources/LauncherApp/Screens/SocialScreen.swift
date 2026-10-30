@@ -58,6 +58,7 @@ struct SocialScreen: View {
                         .cornerRadius(Theme.radiusCompact)
                     }
                     .buttonStyle(.plain)
+                    .soonPreview(badge: false)
                 }
                 .padding(.top, 12)
 
@@ -72,6 +73,7 @@ struct SocialScreen: View {
                     invitesPanel
                         .frame(maxWidth: .infinity)
                 }
+                .soonPreview()
             }
             .padding(.horizontal, 56)
             .padding(.bottom, 48)

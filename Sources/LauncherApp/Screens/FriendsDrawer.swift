@@ -126,6 +126,7 @@ struct FriendsDrawer: View {
                 .cornerRadius(10)
                 .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color(red: 59/255, green: 48/255, blue: 40/255), lineWidth: 1))
                 .padding(14)
+                .soonPreview(badge: false)
 
                 // Friends list
                 ScrollView(.vertical, showsIndicators: false) {
@@ -164,6 +165,7 @@ struct FriendsDrawer: View {
                     }
                     .padding(.vertical, 4)
                 }
+                .soonPreview()
 
                 Spacer(minLength: 8)
 
