@@ -12,6 +12,9 @@ final class SettingsStore: ObservableObject {
     @Published var windowWidth: String { didSet { defaults.set(windowWidth, forKey: "windowWidth") } }
     @Published var windowHeight: String { didSet { defaults.set(windowHeight, forKey: "windowHeight") } }
     @Published var closeOnStart: Bool { didSet { defaults.set(closeOnStart, forKey: "closeOnStart") } }
+    /// Menu-bar icon with the hosted server's status; the same key is read by `@AppStorage` in `LauncherApp`.
+    @Published var serverMenuBar: Bool { didSet { defaults.set(serverMenuBar, forKey: SettingsStore.serverMenuBarKey) } }
+    static let serverMenuBarKey = "serverMenuBar"
     @Published var showSnapshots: Bool { didSet { defaults.set(showSnapshots, forKey: "showSnapshots") } }
     @Published var autoUpdate: Bool { didSet { defaults.set(autoUpdate, forKey: "autoUpdate") } }
     @Published var backgroundAnimations: Bool { didSet { defaults.set(backgroundAnimations, forKey: "backgroundAnimations") } }
@@ -39,6 +42,7 @@ final class SettingsStore: ObservableObject {
         windowWidth = defaults.string(forKey: "windowWidth") ?? "1920"
         windowHeight = defaults.string(forKey: "windowHeight") ?? "1080"
         closeOnStart = defaults.object(forKey: "closeOnStart") as? Bool ?? true
+        serverMenuBar = defaults.object(forKey: SettingsStore.serverMenuBarKey) as? Bool ?? false
         showSnapshots = defaults.object(forKey: "showSnapshots") as? Bool ?? false
         autoUpdate = defaults.object(forKey: "autoUpdate") as? Bool ?? true
         backgroundAnimations = defaults.object(forKey: "backgroundAnimations") as? Bool ?? true

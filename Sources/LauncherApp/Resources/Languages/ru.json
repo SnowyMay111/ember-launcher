@@ -653,7 +653,6 @@
   "I accept the Minecraft EULA (aka.ms/MinecraftEULA)": "Я принимаю EULA Minecraft (aka.ms/MinecraftEULA)",
   "Join with a code": "Войти по коду",
   "Lobby code": "Код лобби",
-  "Join": "Войти",
   "Copy": "Копировать",
   "In the lobby": "В лобби",
   "Joined": "В лобби",
@@ -747,5 +746,16 @@
   "Waiting for the host to start the server…": "Ждём, когда хост запустит сервер…",
   "Who can add content": "Кто может добавлять контент",
   "You are not allowed to change this lobby's content.": "Вам нельзя изменять контент этого лобби.",
-  "added by %@": "добавлено %@"
+  "added by %@": "добавлено %@",
+  "Stop the server and quit?": "Остановить сервер и выйти?",
+  "The server is running and will be stopped.": "Сервер запущен и будет остановлен.",
+  "The server is running with %d players online. They will be disconnected.": "Сервер запущен, игроков онлайн: %d. Их отключат.",
+  "Stop and quit": "Остановить и выйти",
+  "Server running: %@": "Сервер запущен: %@",
+  "%d players online": "Игроков онлайн: %d",
+  "No server running": "Сервер не запущен",
+  "Open Ember": "Открыть Ember",
+  "Quit Ember": "Выйти из Ember",
+  "Server in the menu bar": "Сервер в строке меню",
+  "Show an Ember icon with the server's status while it runs. The server keeps running when you close the window.": "Значок Ember со статусом сервера. Сервер продолжает работать, когда окно закрыто."
 }

@@ -235,8 +235,11 @@ struct SettingsScreen: View {
                 SettingsRow(title: "Automatic updates", detail: "Keep Ember and game metadata current.") {
                     EmberToggle(label: "Automatic updates", isOn: $settings.autoUpdate)
                 }
-                SettingsRow(title: "Close launcher after start", detail: "Save resources while Minecraft is running.", isLast: true) {
+                SettingsRow(title: "Close launcher after start", detail: "Save resources while Minecraft is running.") {
                     EmberToggle(label: "Close launcher on start", isOn: $settings.closeOnStart)
+                }
+                SettingsRow(title: "Server in the menu bar", detail: "Show an Ember icon with the server's status while it runs. The server keeps running when you close the window.", isLast: true) {
+                    EmberToggle(label: "Server in the menu bar", isOn: $settings.serverMenuBar)
                 }
             }
 
