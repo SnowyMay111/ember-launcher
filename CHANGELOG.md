@@ -3,12 +3,19 @@
 All notable changes to Ember.
 Versions follow [Semantic Versioning](https://semver.org); downloads are on the [Releases](https://github.com/SnowyMay111/ember-launcher/releases) page.
 
-## [Unreleased]
+## [0.3.0] - 2026-11-02
 
 ### Added
 - CurseForge as a second catalog: Browse searches Modrinth and CurseForge in one list. Settings → Mod catalog picks both, Modrinth only or CurseForge only. Mods install with their dependencies; mods whose authors block downloads outside CurseForge show a link instead.
 - Social: real invitations from friends' lobbies (Accept / Later), a dot on the Social icon and a banner when a new invitation arrives, recent players with "Add friend" (kept on this Mac), a Join button on friends who host a lobby and a friend card with Join, Invite to my lobby and Remove.
 - Import CurseForge modpacks (.zip with manifest.json) through the same "Import modpack" button as .mrpack.
+- Servers screen redesign: one Panel tab with players, an "Allowed players" list (invite-only, friends who join are remembered, auto-invite on start) and the console; an Address row with Copy; world backups with one-click restore (the old world is parked in `backups/before-restore-*`).
+- Server in the menu bar: optional icon with status and a Stop button (Settings → Server in the menu bar); Ember asks before quitting while a server is running.
+- "Open Social" shortcut in Allowed players when you have no friends to add yet.
+
+### Fixed
+- Lobby Rules: the "Sync shaders" and "Sync resource packs" checkboxes had no visible labels.
+- Mods screen opened from a lobby: a compact "Back to the lobby" button with an arrow.
 
 ## [0.2.3] - 2026-10-30
 
