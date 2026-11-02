@@ -56,6 +56,13 @@ public struct ServerProfile: Codable, Equatable, Identifiable, Sendable {
     }
 }
 
+public struct WorldBackup: Equatable, Identifiable, Sendable {
+    public var id: String { url.lastPathComponent }
+    public let url: URL
+    public let date: Date
+    public let bytes: Int64
+}
+
 public struct ServerLibrary: Sendable {
     private let root: URL
     private static let profileFileName = "ember-server.json"
@@ -145,6 +152,76 @@ public struct ServerLibrary: Sendable {
         var profile = try decoder.decode(ServerProfile.self, from: data)
         profile.lastPlayed = date
         try save(profile)
+    }
+
+    private func backupsDirectory(for instanceName: String) -> URL {
+        directory(for: instanceName).appendingPathComponent("backups", isDirectory: true)
+    }
+
+    private func worldDirectory(for instanceName: String) -> URL {
+        directory(for: instanceName).appendingPathComponent(Self.worldFolderName, isDirectory: true)
+    }
+
+    private static func stamp(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd-HHmmss"
+        return formatter.string(from: date)
+    }
+
+    /// Copies the world into `backups/world-<time>`. The server should have flushed to disk (`save-all`) first.
+    @discardableResult
+    public func backupWorld(for instanceName: String, at date: Date = Date()) throws -> URL {
+        let source = worldDirectory(for: instanceName)
+        guard FileManager.default.fileExists(atPath: source.path) else {
+            throw CocoaError(.fileNoSuchFile)
+        }
+        let backups = backupsDirectory(for: instanceName)
+        try FileManager.default.createDirectory(at: backups, withIntermediateDirectories: true)
+        let target = backups.appendingPathComponent("world-\(Self.stamp(date))", isDirectory: true)
+        try FileManager.default.copyItem(at: source, to: target)
+        return target
+    }
+
+    public func listBackups(for instanceName: String) -> [WorldBackup] {
+        let fileManager = FileManager.default
+        let entries = (try? fileManager.contentsOfDirectory(
+            at: backupsDirectory(for: instanceName),
+            includingPropertiesForKeys: [.creationDateKey],
+            options: [.skipsHiddenFiles]
+        )) ?? []
+        return entries
+            .filter { $0.lastPathComponent.hasPrefix("world-") }
+            .map { url in
+                let date = (try? url.resourceValues(forKeys: [.creationDateKey]).creationDate) ?? .distantPast
+                return WorldBackup(url: url, date: date, bytes: Self.folderSize(url))
+            }
+            .sorted { $0.date > $1.date }
+    }
+
+    /// Puts a backup back as the world. The current world is moved to `backups/before-restore-<time>`, never deleted.
+    public func restoreBackup(_ backup: WorldBackup, for instanceName: String, at date: Date = Date()) throws {
+        let fileManager = FileManager.default
+        let world = worldDirectory(for: instanceName)
+        if fileManager.fileExists(atPath: world.path) {
+            let parked = backupsDirectory(for: instanceName).appendingPathComponent("before-restore-\(Self.stamp(date))", isDirectory: true)
+            try fileManager.createDirectory(at: parked.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try fileManager.moveItem(at: world, to: parked)
+        }
+        try fileManager.copyItem(at: backup.url, to: world)
+    }
+
+    private static func folderSize(_ url: URL) -> Int64 {
+        guard let enumerator = FileManager.default.enumerator(
+            at: url,
+            includingPropertiesForKeys: [.fileSizeKey],
+            options: [.skipsHiddenFiles]
+        ) else { return 0 }
+        var total: Int64 = 0
+        for case let file as URL in enumerator {
+            total += Int64((try? file.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0)
+        }
+        return total
     }
 
     public func worldFolderSize(for instanceName: String) -> Int64 {

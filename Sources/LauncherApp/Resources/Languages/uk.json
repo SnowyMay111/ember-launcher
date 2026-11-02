@@ -762,5 +762,18 @@
   "Only these friends can join, even when you are away from the game. Friends who join are added automatically.": "Заходити можуть лише ці друзі, навіть коли ви не в грі. Друзі, які заходили, додаються самі.",
   "Nobody is allowed yet.": "Поки нікого немає.",
   "Add a friend": "Додати друга",
-  "Choose…": "Вибрати…"
+  "Choose…": "Вибрати…",
+  "Panel": "Панель",
+  "Invite-only, %d allowed": "Лише за запрошенням, допущено: %d",
+  "Address": "Адреса",
+  "Copy address": "Скопіювати адресу",
+  "Waiting for the address…": "Чекаємо адресу…",
+  "Copies the world. Restoring keeps the current world in the backups folder.": "Копія світу. Під час відновлення поточний світ зберігається в теці бекапів.",
+  "World backup": "Бекап світу",
+  "Back up now": "Зробити бекап",
+  "Working…": "Працюю…",
+  "Backup saved.": "Бекап збережено.",
+  "Could not back up the world.": "Не вдалося зробити бекап світу.",
+  "Backup restored. The previous world is kept in the backups folder.": "Бекап відновлено. Попередній світ збережено в теці бекапів.",
+  "Could not restore the backup.": "Не вдалося відновити бекап."
 }

@@ -762,5 +762,18 @@
   "Only these friends can join, even when you are away from the game. Friends who join are added automatically.": "Заходить могут только эти друзья, даже когда вы не в игре. Друзья, которые заходили, добавляются сами.",
   "Nobody is allowed yet.": "Пока никого нет.",
   "Add a friend": "Добавить друга",
-  "Choose…": "Выбрать…"
+  "Choose…": "Выбрать…",
+  "Panel": "Панель",
+  "Invite-only, %d allowed": "Только по приглашению, допущено: %d",
+  "Address": "Адрес",
+  "Copy address": "Скопировать адрес",
+  "Waiting for the address…": "Ждём адрес…",
+  "Copies the world. Restoring keeps the current world in the backups folder.": "Копия мира. При восстановлении текущий мир сохраняется в папке бэкапов.",
+  "World backup": "Бэкап мира",
+  "Back up now": "Сделать бэкап",
+  "Working…": "Работаю…",
+  "Backup saved.": "Бэкап сохранён.",
+  "Could not back up the world.": "Не удалось сделать бэкап мира.",
+  "Backup restored. The previous world is kept in the backups folder.": "Бэкап восстановлен. Прежний мир сохранён в папке бэкапов.",
+  "Could not restore the backup.": "Не удалось восстановить бэкап."
 }
