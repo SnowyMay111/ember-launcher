@@ -9,6 +9,22 @@ struct ServerLibraryTests {
         return url
     }
 
+    @Test func trustedPlayersRoundTripAndOldProfilesLoad() throws {
+        let root = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let library = ServerLibrary(root: root)
+        let friend = TrustedPlayer(userID: "u1", tag: "alex#1234", name: "Alex")
+        try library.save(ServerProfile(instanceName: "a", name: "A", minecraftVersion: "1.21.1", loader: "fabric", maxPlayers: 8, trusted: [friend]))
+        #expect(library.profile(for: "a")?.trusted == [friend])
+
+        let old = root.appendingPathComponent("b", isDirectory: true)
+        try FileManager.default.createDirectory(at: old, withIntermediateDirectories: true)
+        let json = #"{"instanceName":"b","name":"B","minecraftVersion":"1.21.1","loader":"vanilla","maxPlayers":4}"#
+        try Data(json.utf8).write(to: old.appendingPathComponent("ember-server.json"))
+        #expect(library.profile(for: "b")?.trusted == [])
+    }
+
     @Test func testSaveAndListRoundTrip() throws {
         let root = try makeTempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }

@@ -218,7 +218,7 @@ struct ServersScreen: View {
             reuseBase: true,
             mcVersion: item.minecraftVersion,
             name: profile.name,
-            privacy: .friends,
+            privacy: .invite,
             maxPlayers: profile.maxPlayers,
             settings: settings,
             app: app,
@@ -338,6 +338,7 @@ private struct ServerPlayersTab: View {
     let profile: ServerProfile
     let running: Bool
     @ObservedObject private var host = LobbyHostController.shared
+    @EnvironmentObject private var friends: FriendsStore
     @Local private var healthPlayer = ""
     @Local private var healthValue = "20"
 
@@ -379,10 +380,61 @@ private struct ServerPlayersTab: View {
                     }
                 }
             }
-            Text(verbatim: L("The whitelist follows the lobby members."))
+            allowedSection
+        }
+    }
+
+    private var allowed: [TrustedPlayer] {
+        _ = host.trustedRevision
+        return host.trusted(for: profile.instanceName)
+    }
+
+    private var allowedSection: some View {
+        let list = allowed
+        let candidates = friends.friendsList.filter { friend in !list.contains { $0.userID == friend.userID } }
+        return VStack(alignment: .leading, spacing: 0) {
+            Text(verbatim: L("Allowed players"))
+                .font(Theme.font(size: 14, weight: .semibold))
+                .foregroundColor(Theme.text)
+                .padding(.top, 16)
+            Text(verbatim: L("Only these friends can join, even when you are away from the game. Friends who join are added automatically."))
                 .font(Theme.font(size: 12, weight: .regular))
                 .foregroundColor(Theme.textSecondary)
-                .padding(.top, 12)
+                .padding(.top, 4)
+                .padding(.bottom, 4)
+            if list.isEmpty {
+                note(L("Nobody is allowed yet."))
+            }
+            ForEach(list) { player in
+                row {
+                    Text(verbatim: player.name)
+                        .font(Theme.font(size: 13, weight: .medium))
+                        .foregroundColor(Theme.text)
+                    Text(verbatim: player.tag)
+                        .font(Theme.font(size: 12, weight: .regular))
+                        .foregroundColor(Theme.textSecondary)
+                    Spacer()
+                    action(L("Remove")) { host.disallow(userID: player.userID, on: profile.instanceName) }
+                }
+            }
+            if !candidates.isEmpty {
+                row {
+                    Text(verbatim: L("Add a friend"))
+                        .font(Theme.font(size: 13, weight: .regular))
+                        .foregroundColor(Theme.text)
+                    Spacer()
+                    EmberMenu(label: "Friend", value: L("Choose…"), minWidth: 160) {
+                        ForEach(candidates) { friend in
+                            Button(friend.displayName) {
+                                host.allow(
+                                    [TrustedPlayer(userID: friend.userID, tag: friend.tag, name: friend.displayName)],
+                                    on: profile.instanceName
+                                )
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 

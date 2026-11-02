@@ -1,5 +1,20 @@
 import Foundation
 
+/// A friend who may join a hosted server: invited automatically on every start.
+public struct TrustedPlayer: Codable, Equatable, Identifiable, Sendable {
+    public var id: String { userID }
+
+    public var userID: String
+    public var tag: String
+    public var name: String
+
+    public init(userID: String, tag: String, name: String) {
+        self.userID = userID
+        self.tag = tag
+        self.name = name
+    }
+}
+
 public struct ServerProfile: Codable, Equatable, Identifiable, Sendable {
     public var id: String { instanceName }
 
@@ -9,6 +24,7 @@ public struct ServerProfile: Codable, Equatable, Identifiable, Sendable {
     public var loader: String
     public var maxPlayers: Int
     public var lastPlayed: Date?
+    public var trusted: [TrustedPlayer]
 
     public init(
         instanceName: String,
@@ -16,7 +32,8 @@ public struct ServerProfile: Codable, Equatable, Identifiable, Sendable {
         minecraftVersion: String,
         loader: String,
         maxPlayers: Int,
-        lastPlayed: Date? = nil
+        lastPlayed: Date? = nil,
+        trusted: [TrustedPlayer] = []
     ) {
         self.instanceName = instanceName
         self.name = name
@@ -24,6 +41,18 @@ public struct ServerProfile: Codable, Equatable, Identifiable, Sendable {
         self.loader = loader
         self.maxPlayers = maxPlayers
         self.lastPlayed = lastPlayed
+        self.trusted = trusted
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        instanceName = try container.decode(String.self, forKey: .instanceName)
+        name = try container.decode(String.self, forKey: .name)
+        minecraftVersion = try container.decode(String.self, forKey: .minecraftVersion)
+        loader = try container.decode(String.self, forKey: .loader)
+        maxPlayers = try container.decode(Int.self, forKey: .maxPlayers)
+        lastPlayed = try container.decodeIfPresent(Date.self, forKey: .lastPlayed)
+        trusted = try container.decodeIfPresent([TrustedPlayer].self, forKey: .trusted) ?? []
     }
 }
 
@@ -85,6 +114,14 @@ public struct ServerLibrary: Sendable {
                 return lhs.name < rhs.name
             }
         }
+    }
+
+    public func profile(for instanceName: String) -> ServerProfile? {
+        let url = directory(for: instanceName).appendingPathComponent(Self.profileFileName)
+        guard let data = try? Data(contentsOf: url) else { return nil }
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return try? decoder.decode(ServerProfile.self, from: data)
     }
 
     public func save(_ profile: ServerProfile) throws {

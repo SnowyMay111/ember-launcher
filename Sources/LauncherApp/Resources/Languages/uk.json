@@ -757,5 +757,10 @@
   "Open Ember": "Відкрити Ember",
   "Quit Ember": "Вийти з Ember",
   "Server in the menu bar": "Сервер у рядку меню",
-  "Show an Ember icon with the server's status while it runs. The server keeps running when you close the window.": "Значок Ember зі статусом сервера. Сервер продовжує працювати, коли вікно закрите."
+  "Show an Ember icon with the server's status while it runs. The server keeps running when you close the window.": "Значок Ember зі статусом сервера. Сервер продовжує працювати, коли вікно закрите.",
+  "Allowed players": "Кому можна заходити",
+  "Only these friends can join, even when you are away from the game. Friends who join are added automatically.": "Заходити можуть лише ці друзі, навіть коли ви не в грі. Друзі, які заходили, додаються самі.",
+  "Nobody is allowed yet.": "Поки нікого немає.",
+  "Add a friend": "Додати друга",
+  "Choose…": "Вибрати…"
 }
