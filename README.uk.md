@@ -70,6 +70,10 @@
     <td align="center"><img src="docs/screenshots/versions.png" alt="Усі версії: встановлення однією кнопкою" width="430"><br><sub><b>Усі версії</b>: релізи, снапшоти, бети, альфи</sub></td>
   </tr>
   <tr>
+    <td align="center"><img src="docs/screenshots/social.png" alt="Social: друзі, запрошення, лобі" width="430"><br><sub><b>Social</b>: друзі, запрошення та лобі в одному місці</sub></td>
+    <td align="center"><img src="docs/screenshots/servers.png" alt="Servers: панель, дозволені гравці, консоль" width="430"><br><sub><b>Servers</b>: панель, дозволені гравці та консоль</sub></td>
+  </tr>
+  <tr>
     <td align="center" colspan="2"><img src="docs/screenshots/settings.png" alt="Налаштування на одній сторінці з прокруткою та бічним меню" width="430"><br><sub><b>Налаштування</b>: одна сторінка, бічне меню йде за вами</sub></td>
   </tr>
 </table>

@@ -70,6 +70,10 @@
     <td align="center"><img src="docs/screenshots/versions.png" alt="Все версии: установка одной кнопкой" width="430"><br><sub><b>Все версии</b>: релизы, снапшоты, беты, альфы</sub></td>
   </tr>
   <tr>
+    <td align="center"><img src="docs/screenshots/social.png" alt="Social: друзья, приглашения, лобби" width="430"><br><sub><b>Social</b>: друзья, приглашения и лобби в одном месте</sub></td>
+    <td align="center"><img src="docs/screenshots/servers.png" alt="Servers: панель, разрешённые игроки, консоль" width="430"><br><sub><b>Servers</b>: панель, разрешённые игроки и консоль</sub></td>
+  </tr>
+  <tr>
     <td align="center" colspan="2"><img src="docs/screenshots/settings.png" alt="Настройки на одной прокручиваемой странице с боковым меню" width="430"><br><sub><b>Настройки</b>: одна страница, боковое меню идёт за вами</sub></td>
   </tr>
 </table>
