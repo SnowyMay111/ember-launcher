@@ -180,7 +180,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) if you want to send a change.
 - [x] The Ember interface and name
 - [ ] Microsoft sign-in
 - [x] CurseForge as a second catalog
-- [ ] Apple notarization
 - [ ] Windows
 
 Found a bug or have an idea? [Open an issue](https://github.com/SnowyMay111/ember-launcher/issues/new/choose).

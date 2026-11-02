@@ -180,7 +180,6 @@ scripts/package-app.sh        # release build + dist/Ember-mac-arm64.zip
 - [x] Интерфейс и имя Ember
 - [ ] Вход через Microsoft
 - [x] CurseForge как второй каталог
-- [ ] Нотаризация Apple
 - [ ] Windows
 
 Нашли ошибку или есть идея? [Создайте issue](https://github.com/SnowyMay111/ember-launcher/issues/new/choose).
