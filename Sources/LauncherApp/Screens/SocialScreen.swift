@@ -8,6 +8,11 @@ struct SocialScreen: View {
     @EnvironmentObject var play: PlayController
     @ObservedObject private var lobbyStore = LobbyStore.shared
     @ObservedObject private var guest = LobbyGuestController.shared
+    @EnvironmentObject var toasts: ToastCenter
+    @ObservedObject private var invitesStore = InvitesStore.shared
+    @ObservedObject private var recentStore = RecentPlayersStore.shared
+    @Local private var joiningLobbyID: String? = nil
+    @Local private var pendingFriendTag: String? = nil
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -16,17 +21,12 @@ struct SocialScreen: View {
                 // Intro header
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(verbatim: "PLAY TOGETHER")
-                            .font(Theme.font(size: 10, weight: .medium, mono: true))
-                            .tracking(2.0)
-                            .foregroundColor(Color(red: 123/255, green: 119/255, blue: 113/255))
-
-                        Text(verbatim: "Social")
+                        Text(verbatim: L("Social"))
                             .font(Theme.font(size: 26, weight: .semibold))
                             .tracking(-0.8)
                             .foregroundColor(Theme.text)
 
-                        Text(verbatim: "A quiet place for friends, invitations, and temporary worlds.")
+                        Text(verbatim: L("A quiet place for friends, invitations, and temporary worlds."))
                             .font(Theme.font(size: 13, weight: .regular))
                             .foregroundColor(Theme.textSecondary)
                     }
@@ -62,14 +62,22 @@ struct SocialScreen: View {
 
                     invitesPanel
                         .frame(maxWidth: .infinity)
-                        .soonPreview()
                 }
             }
             .padding(.horizontal, 56)
             .padding(.bottom, 48)
         }
         .task {
+            InvitesStore.shared.markAllSeen()
             await FriendsStore.shared.refresh()
+        }
+        .onChange(of: invitesStore.invites.map(\.lobbyID)) { _, _ in
+            InvitesStore.shared.markAllSeen()
+        }
+        .onChange(of: store.message) { _, message in
+            guard pendingFriendTag != nil, let message else { return }
+            pendingFriendTag = nil
+            toasts.show(message, kind: .info)
         }
     }
 
@@ -232,14 +240,15 @@ struct SocialScreen: View {
     private var invitesPanel: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text(verbatim: "INVITES")
-                    .font(Theme.font(size: 10, weight: .medium, mono: true))
-                    .tracking(1.4)
-                    .foregroundColor(Color(red: 147/255, green: 112/255, blue: 91/255))
+                Text(verbatim: L("Invites"))
+                    .font(Theme.font(size: 13, weight: .semibold))
+                    .foregroundColor(Theme.text)
                 Spacer()
-                Text(verbatim: "1 new")
-                    .font(Theme.font(size: 11, weight: .medium))
-                    .foregroundColor(Theme.textSecondary)
+                if invitesStore.unseenCount > 0 {
+                    Text(verbatim: L("%d new", invitesStore.unseenCount))
+                        .font(Theme.font(size: 12, weight: .regular))
+                        .foregroundColor(Theme.textSecondary)
+                }
             }
             .padding(.horizontal, 16)
             .frame(height: 48)
@@ -248,80 +257,35 @@ struct SocialScreen: View {
             }
 
             VStack(alignment: .leading, spacing: 14) {
-                // Invite Card
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack(spacing: 10) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 6)
-                                .fill(Color(red: 89/255, green: 71/255, blue: 92/255))
-                                .frame(width: 32, height: 32)
-                            Text(verbatim: "N")
-                                .font(Theme.font(size: 12, weight: .bold))
-                                .foregroundColor(.white)
-                        }
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(verbatim: "North invited you")
-                                .font(Theme.font(size: 12, weight: .semibold))
-                                .foregroundColor(Theme.text)
-                            Text(verbatim: "Old Pines · Vanilla 1.21.4")
-                                .font(Theme.font(size: 10, weight: .regular))
-                                .foregroundColor(Theme.textSecondary)
-                        }
-                    }
-
-                    HStack(spacing: 8) {
-                        Button {
-                            // Accept
-                        } label: {
-                            Text(verbatim: "Accept")
-                                .font(Theme.font(size: 11, weight: .semibold))
-                                .foregroundColor(Color(red: 219/255, green: 163/255, blue: 116/255))
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 30)
-                                .background(Color(red: 38/255, green: 27/255, blue: 22/255))
-                                .cornerRadius(6)
-                                .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color(red: 96/255, green: 69/255, blue: 53/255), lineWidth: 1))
-                        }
-                        .buttonStyle(.plain)
-
-                        Button {
-                            // Later
-                        } label: {
-                            Text(verbatim: "Later")
-                                .font(Theme.font(size: 11, weight: .regular))
-                                .foregroundColor(Theme.textSecondary)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 30)
-                                .background(Color.clear)
-                                .cornerRadius(6)
-                                .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color(red: 54/255, green: 49/255, blue: 44/255), lineWidth: 1))
-                        }
-                        .buttonStyle(.plain)
-                    }
+                if invitesStore.invites.isEmpty {
+                    Text(verbatim: L("No invitations."))
+                        .font(Theme.font(size: 12, weight: .regular))
+                        .foregroundColor(Theme.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, 6)
                 }
-                .padding(12)
-                .background(Color(red: 21/255, green: 19/255, blue: 16/255))
-                .cornerRadius(10)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Theme.border, lineWidth: 1)
-                )
+                ForEach(invitesStore.invites) { lobby in
+                    inviteCard(lobby)
+                }
 
-                // Recent Players
+                // Recent players
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(verbatim: "RECENT PLAYERS")
-                        .font(Theme.font(size: 9, weight: .medium, mono: true))
-                        .tracking(1.2)
-                        .foregroundColor(Color(red: 117/255, green: 109/255, blue: 102/255))
+                    Text(verbatim: L("Recent players"))
+                        .font(Theme.font(size: 13, weight: .semibold))
+                        .foregroundColor(Theme.text)
 
-                    Text(verbatim: "Luna · 2 days ago")
-                        .font(Theme.font(size: 11, weight: .regular))
-                        .foregroundColor(Theme.textSecondary)
-
-                    Text(verbatim: "Rowan · 5 days ago")
-                        .font(Theme.font(size: 11, weight: .regular))
-                        .foregroundColor(Theme.textSecondary)
+                    if recentPlayers.isEmpty {
+                        Text(verbatim: L("Players you meet in lobbies show up here."))
+                            .font(Theme.font(size: 12, weight: .regular))
+                            .foregroundColor(Theme.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    } else {
+                        VStack(alignment: .leading, spacing: 2) {
+                            ForEach(recentPlayers, id: \.userID) { player in
+                                recentPlayerRow(player)
+                            }
+                        }
+                    }
                 }
                 .padding(.top, 8)
             }
@@ -333,5 +297,132 @@ struct SocialScreen: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(Theme.border, lineWidth: 1)
         )
+    }
+
+    private func inviteCard(_ lobby: VisibleLobby) -> some View {
+        let isJoining = joiningLobbyID == lobby.lobbyID
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color(red: 89/255, green: 71/255, blue: 92/255))
+                        .frame(width: 32, height: 32)
+                    Text(verbatim: String(lobby.hostName.prefix(1)).uppercased())
+                        .font(Theme.font(size: 12, weight: .bold))
+                        .foregroundColor(.white)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(verbatim: L("%@ invited you", lobby.hostName))
+                        .font(Theme.font(size: 13, weight: .semibold))
+                        .foregroundColor(Theme.text)
+                        .lineLimit(1)
+                    Text(verbatim: "\(lobby.name) · \(lobby.loader.capitalized) \(lobby.mcVersion)")
+                        .font(Theme.font(size: 12, weight: .regular))
+                        .foregroundColor(Theme.textSecondary)
+                        .lineLimit(1)
+                }
+            }
+
+            HStack(spacing: 8) {
+                Button {
+                    accept(lobby)
+                } label: {
+                    Text(verbatim: L("Accept"))
+                        .font(Theme.font(size: 12, weight: .semibold))
+                        .foregroundColor(Color(red: 219/255, green: 163/255, blue: 116/255))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 30)
+                        .background(Color(red: 38/255, green: 27/255, blue: 22/255))
+                        .cornerRadius(6)
+                        .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color(red: 96/255, green: 69/255, blue: 53/255), lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+                .disabled(joiningLobbyID != nil)
+                .opacity(isJoining ? 0.5 : 1)
+
+                Button {
+                    InvitesStore.shared.dismiss(lobby.lobbyID)
+                } label: {
+                    Text(verbatim: L("Later"))
+                        .font(Theme.font(size: 12, weight: .regular))
+                        .foregroundColor(Theme.textSecondary)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 30)
+                        .background(Color.clear)
+                        .cornerRadius(6)
+                        .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color(red: 54/255, green: 49/255, blue: 44/255), lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(12)
+        .background(Color(red: 21/255, green: 19/255, blue: 16/255))
+        .cornerRadius(10)
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Theme.border, lineWidth: 1)
+        )
+    }
+
+    private func recentPlayerRow(_ player: RecentPlayerRecord) -> some View {
+        HStack(spacing: 8) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(verbatim: player.name)
+                    .font(Theme.font(size: 13, weight: .semibold))
+                    .foregroundColor(Theme.text)
+                    .lineLimit(1)
+                Text(verbatim: "@\(player.tag) · \(relativeTime(player.lastSeen))")
+                    .font(Theme.font(size: 12, weight: .regular))
+                    .foregroundColor(Theme.textSecondary)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 6)
+
+            SmallFriendButton(title: L("Add friend")) {
+                pendingFriendTag = player.tag
+                store.sendRequest(tag: player.tag)
+            }
+
+            Button {
+                recentStore.remove(userID: player.userID)
+            } label: {
+                Image(systemName: "xmark")
+                    .font(Theme.font(size: 12, weight: .semibold))
+                    .foregroundColor(Theme.textSecondary)
+                    .frame(width: 22, height: 30)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help(L("Hide player"))
+            .accessibilityLabel(L("Hide player"))
+        }
+        .padding(.vertical, 4)
+    }
+
+    /// Recent players who are not already friends, newest first.
+    private var recentPlayers: [RecentPlayerRecord] {
+        let friendIDs = Set(store.friendsList.map(\.userID))
+        return Array(recentStore.players.filter { !friendIDs.contains($0.userID) }.prefix(8))
+    }
+
+    private func relativeTime(_ date: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .full
+        return formatter.localizedString(for: date, relativeTo: Date())
+    }
+
+    private func accept(_ lobby: VisibleLobby) {
+        guard joiningLobbyID == nil else { return }
+        let lobbyID = lobby.lobbyID
+        joiningLobbyID = lobbyID
+        Task {
+            let joined = await LobbyStore.shared.join(code: nil, lobbyID: lobbyID, nick: settings.nickname)
+            joiningLobbyID = nil
+            if !joined, let message = LobbyStore.shared.message {
+                toasts.show(message, kind: .info)
+            }
+        }
     }
 }

@@ -1145,3 +1145,22 @@ grant execute on function public.lobby_items_list(uuid) to authenticated;
 grant execute on function public.add_lobby_item(uuid, text, text, text, text) to authenticated;
 grant execute on function public.remove_lobby_item(uuid, uuid) to authenticated;
 grant execute on function public.reopen_lobby(uuid) to authenticated;
+
+-- Tag and display name of the joined members of a lobby, for "recent players" and adding friends.
+-- Only a joined member of that lobby may ask.
+create or replace function public.lobby_roster_tags(p_lobby uuid)
+returns table (user_id uuid, tag text, display_name text)
+language sql
+security definer
+stable
+set search_path = public
+as $$
+    select m.user_id, p.tag, p.display_name
+    from public.lobby_members m
+    join public.profiles p on p.id = m.user_id
+    where m.lobby_id = p_lobby
+      and m.state = 'joined'
+      and exists (select 1 from public.lobby_members me
+                  where me.lobby_id = p_lobby and me.user_id = auth.uid() and me.state = 'joined');
+$$;
+grant execute on function public.lobby_roster_tags(uuid) to authenticated;

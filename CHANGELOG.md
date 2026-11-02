@@ -5,6 +5,11 @@ Versions follow [Semantic Versioning](https://semver.org); downloads are on the 
 
 ## [Unreleased]
 
+### Added
+- CurseForge as a second catalog: Browse searches Modrinth and CurseForge in one list. Settings → Mod catalog picks both, Modrinth only or CurseForge only. Mods install with their dependencies; mods whose authors block downloads outside CurseForge show a link instead.
+- Social: real invitations from friends' lobbies (Accept / Later), a dot on the Social icon and a banner when a new invitation arrives, recent players with "Add friend" (kept on this Mac), a Join button on friends who host a lobby and a friend card with Join, Invite to my lobby and Remove.
+- Import CurseForge modpacks (.zip with manifest.json) through the same "Import modpack" button as .mrpack.
+
 ## [0.2.3] - 2026-10-30
 
 ### Added
