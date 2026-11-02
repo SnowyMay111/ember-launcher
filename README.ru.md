@@ -179,7 +179,7 @@ scripts/package-app.sh        # release build + dist/Ember-mac-arm64.zip
 - [x] Самообновление из GitHub Releases
 - [x] Интерфейс и имя Ember
 - [ ] Вход через Microsoft
-- [ ] CurseForge как второй каталог
+- [x] CurseForge как второй каталог
 - [ ] Нотаризация Apple
 - [ ] Windows
 

@@ -275,8 +275,15 @@ struct SettingsScreen: View {
 
         case .downloads:
             SettingsGroup(title: "FILES & NETWORK") {
-                SettingsRow(title: "Show snapshots", detail: "Include snapshot versions in the list.", isLast: true) {
+                SettingsRow(title: "Show snapshots", detail: "Include snapshot versions in the list.") {
                     EmberToggle(label: "Show snapshots", isOn: $settings.showSnapshots)
+                }
+                SettingsRow(title: "Mod catalog", detail: "Where Browse looks for mods and modpacks.", isLast: true) {
+                    EmberMenu(label: "Mod catalog", value: settings.catalogSource.displayName, minWidth: 170) {
+                        ForEach(CatalogSource.allCases, id: \.self) { source in
+                            Button(source.displayName) { settings.catalogSource = source }
+                        }
+                    }
                 }
             }
 
@@ -357,6 +364,16 @@ struct SettingsScreen: View {
             }
             .clipShape(RoundedRectangle(cornerRadius: Theme.radiusCard, style: .continuous))
             .glass()
+        }
+    }
+}
+
+extension CatalogSource {
+    var displayName: String {
+        switch self {
+        case .both: return L("Modrinth + CurseForge")
+        case .modrinth: return L("Modrinth only")
+        case .curseforge: return L("CurseForge only")
         }
     }
 }

@@ -94,6 +94,10 @@ extension ModpackManager {
         try extractWithinLimit(archive, to: tempDir)
         try validateNoSymbolicLinks(in: tempDir)
 
+        if let manifest = try Self.curseForgeManifest(in: tempDir) {
+            return try curseForgeSummary(manifest, in: tempDir)
+        }
+
         let (index, minecraftVersion, loader, loaderVersion) = try parseAndValidateIndex(in: tempDir)
 
         let clientFiles = index.files.filter { $0.env?.client != "unsupported" }
@@ -142,6 +146,18 @@ extension ModpackManager {
 
         try extractWithinLimit(archive, to: tempDir)
         try validateNoSymbolicLinks(in: tempDir)
+
+        if let manifest = try Self.curseForgeManifest(in: tempDir) {
+            return try await importCurseForgePack(
+                manifest,
+                extractedAt: tempDir,
+                name: name,
+                group: group,
+                memoryMB: memoryMB,
+                excludedPaths: excludedPaths,
+                progress: progress
+            )
+        }
 
         let (index, minecraftVersion, loader, loaderVersion) = try parseAndValidateIndex(in: tempDir)
 
@@ -429,7 +445,8 @@ extension ModpackManager {
             throw ModpackError.invalidArchive("symbolic links are not allowed")
         }
 
-        guard entries.contains("modrinth.index.json") else {
+        // CurseForge packs carry manifest.json instead; the format is decided after extraction.
+        guard entries.contains("modrinth.index.json") || entries.contains("manifest.json") else {
             throw ModpackError.invalidArchive("modrinth.index.json is missing")
         }
 
@@ -532,12 +549,16 @@ extension ModpackManager {
         return destStandardized.hasPrefix(prefix)
     }
 
-    /// Copies `overrides/` and then `client-overrides/` into the game directory (sync: directory enumeration is not allowed in async code).
-    func copyOverrides(from tempDir: URL, to gameDir: URL) throws -> (count: Int, warnings: [String]) {
+    /// Copies `folders` in order (by default `overrides/`, then `client-overrides/`) into the game directory (sync: directory enumeration is not allowed in async code).
+    func copyOverrides(
+        from tempDir: URL,
+        to gameDir: URL,
+        folders: [String] = ["overrides", "client-overrides"]
+    ) throws -> (count: Int, warnings: [String]) {
         let fm = FileManager.default
         var overrideFiles = 0
         var warnings: [String] = []
-        for folderName in ["overrides", "client-overrides"] {
+        for folderName in folders {
             let sourceFolder = tempDir.appendingPathComponent(folderName, isDirectory: true)
             var isDir: ObjCBool = false
             guard fm.fileExists(atPath: sourceFolder.path, isDirectory: &isDir), isDir.boolValue else {
@@ -589,10 +610,10 @@ extension ModpackManager {
         return (overrideFiles, warnings)
     }
 
-    private func countOverrideFiles(in directory: URL) -> Int {
+    func countOverrideFiles(in directory: URL, folders: [String] = ["overrides", "client-overrides"]) -> Int {
         let fm = FileManager.default
         var count = 0
-        for folder in ["overrides", "client-overrides"] {
+        for folder in folders {
             let folderURL = directory.appendingPathComponent(folder, isDirectory: true)
             var isDir: ObjCBool = false
             guard fm.fileExists(atPath: folderURL.path, isDirectory: &isDir), isDir.boolValue else {
@@ -623,10 +644,10 @@ extension ModpackManager {
         }
         return count
     }
-    private func countOverrideJars(in directory: URL) -> Int {
+    func countOverrideJars(in directory: URL, folders: [String] = ["overrides", "client-overrides"]) -> Int {
         let fm = FileManager.default
         var count = 0
-        for folder in ["overrides/mods", "client-overrides/mods"] {
+        for folder in folders.map({ $0 + "/mods" }) {
             let folderURL = directory.appendingPathComponent(folder, isDirectory: true)
             guard let enumerator = fm.enumerator(at: folderURL, includingPropertiesForKeys: [.isRegularFileKey], options: []) else {
                 continue

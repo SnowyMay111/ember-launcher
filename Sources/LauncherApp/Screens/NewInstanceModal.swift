@@ -112,7 +112,7 @@ struct NewInstanceModal: View {
                     if !isWizard || step == 1 {
                         HStack(spacing: 8) {
                             FilterChip(title: "Custom", isActive: mode == .custom) { mode = .custom }
-                            FilterChip(title: "Import .mrpack", isActive: mode == .mrpack) { mode = .mrpack }
+                            FilterChip(title: "Import modpack", isActive: mode == .mrpack) { mode = .mrpack }
                             FilterChip(title: "Describe with AI", isActive: mode == .ai) { mode = .ai }
                         }
                     }
@@ -363,7 +363,7 @@ struct NewInstanceModal: View {
             Text(tr: "Packs from Modrinth and other launchers work. Forge packs are not supported yet.").style(.secondary)
         }
         if !isImporting, importReport == nil {
-            SecondaryPill(title: pack == nil ? "Choose .mrpack file…" : "Choose another file…", action: choosePack)
+            SecondaryPill(title: pack == nil ? "Choose modpack file…" : "Choose another file…", action: choosePack)
         }
         if isImporting {
             Text(verbatim: importProgress).style(.secondary)
