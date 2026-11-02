@@ -387,6 +387,7 @@ private struct ServerPlayersTab: View {
     let running: Bool
     @ObservedObject private var host = LobbyHostController.shared
     @EnvironmentObject private var friends: FriendsStore
+    @EnvironmentObject private var app: AppState
     @Local private var healthPlayer = ""
     @Local private var healthValue = "20"
 
@@ -465,7 +466,17 @@ private struct ServerPlayersTab: View {
                     action(L("Remove")) { host.disallow(userID: player.userID, on: profile.instanceName) }
                 }
             }
-            if !candidates.isEmpty {
+            if candidates.isEmpty {
+                row {
+                    Text(verbatim: L(friends.friendsList.isEmpty ? "No friends to add yet." : "All your friends are already allowed."))
+                        .font(Theme.font(size: 13, weight: .regular))
+                        .foregroundColor(Theme.textSecondary)
+                    Spacer()
+                    if friends.friendsList.isEmpty {
+                        action(L("Open Social")) { app.screen = .social }
+                    }
+                }
+            } else {
                 row {
                     Text(verbatim: L("Add a friend"))
                         .font(Theme.font(size: 13, weight: .regular))
