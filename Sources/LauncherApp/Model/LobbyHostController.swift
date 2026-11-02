@@ -30,6 +30,8 @@ final class LobbyHostController: ObservableObject {
     @Published private(set) var roomInstance: String?
     @Published private(set) var startedAt: Date?
     @Published private(set) var errorMessage: String?
+    /// Bumped when a server's allowed-players list changes, so views re-read it.
+    @Published private(set) var trustedRevision = 0
 
     private let paths = LauncherPaths()
     private let launcher: GameLauncher
@@ -153,6 +155,9 @@ final class LobbyHostController: ObservableObject {
                 nick: settings.nickname
             )
             guard await lobbies.host(request) else { throw HostError.lobbyService }
+            if privacy == .invite {
+                for player in trusted(for: roomName) { lobbies.invite(userID: player.userID) }
+            }
 
             LobbyRoom.shared.attach(instance: roomName)
             roomInstance = roomName
@@ -239,7 +244,8 @@ final class LobbyHostController: ObservableObject {
                 minecraftVersion: instance.minecraftVersion,
                 loader: instance.loader == "fabric" ? "fabric" : "vanilla",
                 maxPlayers: maxPlayers,
-                lastPlayed: Date()
+                lastPlayed: Date(),
+                trusted: trusted(for: roomInstance)
             ))
             watch(nick: settings.nickname)
 
@@ -291,6 +297,41 @@ final class LobbyHostController: ObservableObject {
         }
     }
 
+
+    func trusted(for instanceName: String) -> [TrustedPlayer] {
+        library.profile(for: instanceName)?.trusted ?? []
+    }
+
+    /// Adds friends to a server's allowed list; a running server invites them at once.
+    func allow(_ players: [TrustedPlayer], on instanceName: String) {
+        guard var profile = library.profile(for: instanceName) else { return }
+        let known = Set(profile.trusted.map(\.userID))
+        let fresh = players.filter { !known.contains($0.userID) }
+        guard !fresh.isEmpty else { return }
+        profile.trusted += fresh
+        try? library.save(profile)
+        trustedRevision += 1
+        if runningInstance == instanceName {
+            for player in fresh { LobbyStore.shared.invite(userID: player.userID) }
+        }
+    }
+
+    /// Takes effect on the next start: an invite already sent to a running lobby stays valid.
+    func disallow(userID: String, on instanceName: String) {
+        guard var profile = library.profile(for: instanceName) else { return }
+        profile.trusted.removeAll { $0.userID == userID }
+        try? library.save(profile)
+        trustedRevision += 1
+    }
+
+    /// Friends who actually joined the hosted lobby are remembered for the next start.
+    func remember(_ tags: [LobbyMemberTag], selfID: String) {
+        guard let runningInstance else { return }
+        allow(
+            tags.filter { $0.userID != selfID }.map { TrustedPlayer(userID: $0.userID, tag: $0.tag, name: $0.displayName) },
+            on: runningInstance
+        )
+    }
 
     private func ingest(_ line: String) {
         logLines.append(line)

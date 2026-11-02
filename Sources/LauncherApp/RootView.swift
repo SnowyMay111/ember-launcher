@@ -8,6 +8,7 @@ struct RootView: View {
     @StateObject private var updates: UpdateController
     @StateObject private var toasts = ToastCenter()
     @StateObject private var dropdowns = DropdownHost()
+    @ObservedObject private var invites = InvitesStore.shared
 
     init() {
         let settings = SettingsStore()
@@ -69,6 +70,11 @@ struct RootView: View {
         .onChange(of: player.isBusy) { _, busy in updates.gameIsBusy = busy }
         .onChange(of: settings.autoUpdate) { _, isOn in
             if isOn { updates.autoUpdateEnabled() }
+        }
+        .onChange(of: invites.latestNew?.lobbyID) { _, lobbyID in
+            guard lobbyID != nil, let lobby = invites.latestNew else { return }
+            toasts.show(L("%@ invited you to %@", lobby.hostName, lobby.name), kind: .info)
+            invites.consumeLatestNew()
         }
         .background(WindowConfigurator())
         .frame(minWidth: 900, minHeight: 600)

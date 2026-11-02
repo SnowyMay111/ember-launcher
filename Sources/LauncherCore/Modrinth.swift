@@ -64,15 +64,25 @@ public struct ModrinthHit: Codable, Sendable, Equatable {
 public struct ModrinthSearchResult: Codable, Sendable, Equatable {
     public let hits: [ModrinthHit]
     public let totalHits: Int
+    /// What to pass as `offset` for the next page; nil means the number of hits loaded so far. Not coded.
+    public var nextOffset: Int? = nil
+    /// False when nothing is left to load; nil means "loaded < totalHits". Not coded.
+    public var hasMore: Bool? = nil
 
-    public init(hits: [ModrinthHit], totalHits: Int) {
+    public init(hits: [ModrinthHit], totalHits: Int, nextOffset: Int? = nil, hasMore: Bool? = nil) {
         self.hits = hits
         self.totalHits = totalHits
+        self.nextOffset = nextOffset
+        self.hasMore = hasMore
     }
 
     enum CodingKeys: String, CodingKey {
         case hits
         case totalHits = "total_hits"
+    }
+
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.hits == rhs.hits && lhs.totalHits == rhs.totalHits
     }
 }
 
@@ -287,11 +297,14 @@ public struct ModrinthProject: Codable, Sendable, Equatable {
     }
 }
 
+/// Facade over Modrinth and CurseForge; "cf:" ids go to CurseForge, everything else to Modrinth.
 public final class ModrinthClient: Sendable {
     public let downloader: Downloader
+    public let curseForge: CurseForgeClient
 
-    public init(downloader: Downloader = Downloader()) {
+    public init(downloader: Downloader = Downloader(), curseForge: CurseForgeClient? = nil) {
         self.downloader = downloader
+        self.curseForge = curseForge ?? CurseForgeClient(anonKey: EmberBackend.anonKey, downloader: downloader)
     }
 
     public func searchPage(
@@ -305,6 +318,172 @@ public final class ModrinthClient: Sendable {
         sortBy: String? = nil,
         limit: Int = 20,
         offset: Int = 0
+    ) async throws -> ModrinthSearchResult {
+        // Modrinth category slugs have no CurseForge equivalent.
+        let curseForgeApplies = categories.isEmpty && categoryGroups.isEmpty
+            && CurseForgeClient.classId(projectType: projectType) != nil
+        let empty = ModrinthSearchResult(hits: [], totalHits: 0)
+
+        switch CatalogSource.current {
+        case .modrinth:
+            break
+        case .curseforge:
+            guard curseForgeApplies else { return empty }
+            return try await curseForgeSearchPage(
+                query: query, projectType: projectType, gameVersion: gameVersion, loader: loader ?? loaders.first,
+                sortBy: sortBy, limit: limit, offset: offset
+            )
+        case .both where curseForgeApplies:
+            // `offset` is a cursor from packCursor here, not a plain position.
+            let quota = max(limit / 2, 1)
+            let (mOff, cOff) = Self.unpackCursor(offset)
+            async let modrinthTask = modrinthSearchPage(
+                query: query, projectType: projectType, gameVersion: gameVersion, loader: loader, loaders: loaders,
+                categories: categories, categoryGroups: categoryGroups, sortBy: sortBy, limit: quota, offset: mOff
+            )
+            async let curseTask = try? await curseForgeSearchPage(
+                query: query, projectType: projectType, gameVersion: gameVersion, loader: loader ?? loaders.first,
+                sortBy: sortBy, limit: quota, offset: cOff
+            )
+            var modrinth: ModrinthSearchResult?
+            var modrinthError: (any Error)?
+            do { modrinth = try await modrinthTask } catch { modrinthError = error }
+            var curse = await curseTask
+            if let modrinthError, curse == nil { throw modrinthError }
+
+            // One side ran out: fill the page from the other so it stays about `limit` long.
+            if let m = modrinth, let c = curse {
+                let modrinthDone = m.hits.count < quota && mOff + m.hits.count >= m.totalHits
+                let curseDone = c.hits.count < quota && cOff + c.hits.count >= c.totalHits
+                if modrinthDone, c.hits.count >= quota, let extra = try? await curseForgeSearchPage(
+                    query: query, projectType: projectType, gameVersion: gameVersion, loader: loader ?? loaders.first,
+                    sortBy: sortBy, limit: quota - m.hits.count, offset: cOff + c.hits.count
+                ) {
+                    curse = ModrinthSearchResult(hits: c.hits + extra.hits, totalHits: c.totalHits)
+                } else if curseDone, m.hits.count >= quota, let extra = try? await modrinthSearchPage(
+                    query: query, projectType: projectType, gameVersion: gameVersion, loader: loader, loaders: loaders,
+                    categories: categories, categoryGroups: categoryGroups, sortBy: sortBy,
+                    limit: quota - c.hits.count, offset: mOff + m.hits.count
+                ) {
+                    modrinth = ModrinthSearchResult(hits: m.hits + extra.hits, totalHits: m.totalHits)
+                }
+            }
+            return Self.assembleBothPage(
+                modrinth: modrinth, curseforge: curse, limit: limit, modrinthOffset: mOff, curseforgeOffset: cOff,
+                modrinthTotal: modrinth?.totalHits ?? 0, curseforgeTotal: curse?.totalHits ?? 0
+            )
+        case .both:
+            break
+        }
+
+        return try await modrinthSearchPage(
+            query: query, projectType: projectType, gameVersion: gameVersion, loader: loader, loaders: loaders,
+            categories: categories, categoryGroups: categoryGroups, sortBy: sortBy, limit: limit, offset: offset
+        )
+    }
+
+    /// Interleaves Modrinth and CurseForge hits, dropping CurseForge hits that look like the same mod (slug or title).
+    static func mergeSearchResults(modrinth: ModrinthSearchResult, curseforge: ModrinthSearchResult) -> ModrinthSearchResult {
+        let slugs = Set(modrinth.hits.map(\.slug))
+        let titles = Set(modrinth.hits.map { $0.title.lowercased() })
+        var hits: [ModrinthHit] = []
+        for index in 0..<max(modrinth.hits.count, curseforge.hits.count) {
+            if index < modrinth.hits.count {
+                hits.append(modrinth.hits[index])
+            }
+            if index < curseforge.hits.count {
+                let hit = curseforge.hits[index]
+                if !slugs.contains(hit.slug), !titles.contains(hit.title.lowercased()) {
+                    hits.append(hit)
+                }
+            }
+        }
+        return ModrinthSearchResult(hits: hits, totalHits: modrinth.totalHits + curseforge.totalHits)
+    }
+
+    static let cursorBase = 1_000_000
+
+    /// Packs the per-side offsets of a merged search into one `offset`; both must stay below `cursorBase`.
+    static func packCursor(modrinth: Int, curseforge: Int) -> Int {
+        min(max(modrinth, 0), cursorBase - 1) * cursorBase + min(max(curseforge, 0), cursorBase - 1)
+    }
+
+    static func unpackCursor(_ cursor: Int) -> (modrinth: Int, curseforge: Int) {
+        let value = max(cursor, 0)
+        return (value / cursorBase, value % cursorBase)
+    }
+
+    /// Final page of a merged search. A nil side failed: it keeps its offset and does not count towards `hasMore`.
+    /// Offsets advance by the raw hit counts, before duplicates are dropped.
+    static func assembleBothPage(
+        modrinth: ModrinthSearchResult?,
+        curseforge: ModrinthSearchResult?,
+        limit: Int,
+        modrinthOffset: Int,
+        curseforgeOffset: Int,
+        modrinthTotal: Int,
+        curseforgeTotal: Int
+    ) -> ModrinthSearchResult {
+        let empty = ModrinthSearchResult(hits: [], totalHits: 0)
+        let merged = mergeSearchResults(modrinth: modrinth ?? empty, curseforge: curseforge ?? empty)
+        let modrinthNext = modrinthOffset + (modrinth?.hits.count ?? 0)
+        let curseNext = curseforgeOffset + (curseforge?.hits.count ?? 0)
+        // An empty side is finished even if its total claims more, so a page can never repeat forever.
+        let modrinthMore = modrinth.map { !$0.hits.isEmpty && modrinthNext < modrinthTotal } ?? false
+        let curseMore = curseforge.map { !$0.hits.isEmpty && curseNext < curseforgeTotal } ?? false
+        return ModrinthSearchResult(
+            hits: merged.hits,
+            totalHits: (modrinth == nil ? 0 : modrinthTotal) + (curseforge == nil ? 0 : curseforgeTotal),
+            nextOffset: packCursor(modrinth: modrinthNext, curseforge: curseNext),
+            hasMore: modrinthMore || curseMore
+        )
+    }
+
+    /// Modrinth `index` to CurseForge `sortField`; nil follows Modrinth's default (relevance with a query, else downloads).
+    static func curseForgeSortField(sortBy: String?, query: String) -> Int {
+        switch sortBy ?? (query.isEmpty ? "downloads" : "relevance") {
+        case "downloads": return 6
+        case "follows": return 2
+        case "newest": return 11
+        case "updated": return 3
+        default: return query.isEmpty ? 2 : 1
+        }
+    }
+
+    private func curseForgeSearchPage(
+        query: String,
+        projectType: String,
+        gameVersion: String?,
+        loader: String?,
+        sortBy: String?,
+        limit: Int,
+        offset: Int
+    ) async throws -> ModrinthSearchResult {
+        guard let classId = CurseForgeClient.classId(projectType: projectType) else {
+            return ModrinthSearchResult(hits: [], totalHits: 0)
+        }
+        return try await curseForge.searchPage(
+            query: query,
+            classId: classId,
+            gameVersion: gameVersion,
+            loader: loader,
+            sortField: Self.curseForgeSortField(sortBy: sortBy, query: query),
+            limit: limit,
+            offset: offset
+        )
+    }
+
+    private func modrinthSearchPage(
+        query: String,
+        projectType: String,
+        gameVersion: String?,
+        loader: String?,
+        loaders: [String],
+        categories: [String],
+        categoryGroups: [[String]],
+        sortBy: String?,
+        limit: Int,
+        offset: Int
     ) async throws -> ModrinthSearchResult {
         var components = URLComponents(string: "https://api.modrinth.com/v2/search")
         var facets: [[String]] = []
@@ -369,6 +548,9 @@ public final class ModrinthClient: Sendable {
     }
 
     public func project(idOrSlug: String) async throws -> ModrinthProject {
+        if CurseForgeClient.isCurseForgeID(idOrSlug) {
+            return try await curseForge.project(id: idOrSlug)
+        }
         let escaped = idOrSlug.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? idOrSlug
         guard let url = URLComponents(string: "https://api.modrinth.com/v2/project/\(escaped)")?.url else {
             throw ModrinthError.badURL
@@ -377,6 +559,28 @@ public final class ModrinthClient: Sendable {
     }
 
     public func projects(ids: [String]) async throws -> [ModrinthProject] {
+        let curseIDs = ids.filter(CurseForgeClient.isCurseForgeID)
+        guard !curseIDs.isEmpty else {
+            return try await modrinthProjects(ids: ids)
+        }
+        async let modrinth = modrinthProjects(ids: ids.filter { !CurseForgeClient.isCurseForgeID($0) })
+        async let curse = curseForge.projects(ids: curseIDs)
+        let (modrinthList, curseList) = try await (modrinth, curse)
+
+        // Modrinth ids may be slugs; CurseForge projects only match by their "cf:" id.
+        var remaining = modrinthList + curseList
+        var ordered: [ModrinthProject] = []
+        for id in ids {
+            if let index = remaining.firstIndex(where: {
+                $0.id == id || (!CurseForgeClient.isCurseForgeID($0.id) && $0.slug == id)
+            }) {
+                ordered.append(remaining.remove(at: index))
+            }
+        }
+        return ordered + remaining
+    }
+
+    private func modrinthProjects(ids: [String]) async throws -> [ModrinthProject] {
         guard !ids.isEmpty else {
             return []
         }
@@ -428,6 +632,9 @@ public final class ModrinthClient: Sendable {
         gameVersion: String? = nil,
         loader: String? = nil
     ) async throws -> [ModrinthVersion] {
+        if CurseForgeClient.isCurseForgeID(idOrSlug) {
+            return try await curseForge.versions(project: idOrSlug, gameVersion: gameVersion, loader: loader)
+        }
         let escaped = idOrSlug.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? idOrSlug
         var components = URLComponents(string: "https://api.modrinth.com/v2/project/\(escaped)/version")
         var queryItems: [URLQueryItem] = []
@@ -480,6 +687,9 @@ public final class ModrinthClient: Sendable {
     }
 
     public func version(id: String) async throws -> ModrinthVersion {
+        if CurseForgeClient.isCurseForgeID(id) {
+            return try await curseForge.version(id: id)
+        }
         let escaped = id.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? id
         guard let url = URLComponents(string: "https://api.modrinth.com/v2/version/\(escaped)")?.url else {
             throw ModrinthError.badURL

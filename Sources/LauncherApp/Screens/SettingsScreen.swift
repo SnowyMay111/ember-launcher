@@ -235,8 +235,11 @@ struct SettingsScreen: View {
                 SettingsRow(title: "Automatic updates", detail: "Keep Ember and game metadata current.") {
                     EmberToggle(label: "Automatic updates", isOn: $settings.autoUpdate)
                 }
-                SettingsRow(title: "Close launcher after start", detail: "Save resources while Minecraft is running.", isLast: true) {
+                SettingsRow(title: "Close launcher after start", detail: "Save resources while Minecraft is running.") {
                     EmberToggle(label: "Close launcher on start", isOn: $settings.closeOnStart)
+                }
+                SettingsRow(title: "Server in the menu bar", detail: "Show an Ember icon with the server's status while it runs. The server keeps running when you close the window.", isLast: true) {
+                    EmberToggle(label: "Server in the menu bar", isOn: $settings.serverMenuBar)
                 }
             }
 
@@ -275,8 +278,15 @@ struct SettingsScreen: View {
 
         case .downloads:
             SettingsGroup(title: "FILES & NETWORK") {
-                SettingsRow(title: "Show snapshots", detail: "Include snapshot versions in the list.", isLast: true) {
+                SettingsRow(title: "Show snapshots", detail: "Include snapshot versions in the list.") {
                     EmberToggle(label: "Show snapshots", isOn: $settings.showSnapshots)
+                }
+                SettingsRow(title: "Mod catalog", detail: "Where Browse looks for mods and modpacks.", isLast: true) {
+                    EmberMenu(label: "Mod catalog", value: settings.catalogSource.displayName, minWidth: 170) {
+                        ForEach(CatalogSource.allCases, id: \.self) { source in
+                            Button(source.displayName) { settings.catalogSource = source }
+                        }
+                    }
                 }
             }
 
@@ -357,6 +367,16 @@ struct SettingsScreen: View {
             }
             .clipShape(RoundedRectangle(cornerRadius: Theme.radiusCard, style: .continuous))
             .glass()
+        }
+    }
+}
+
+extension CatalogSource {
+    var displayName: String {
+        switch self {
+        case .both: return L("Modrinth + CurseForge")
+        case .modrinth: return L("Modrinth only")
+        case .curseforge: return L("CurseForge only")
         }
     }
 }

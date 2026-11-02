@@ -2,7 +2,7 @@ import AppKit
 import LauncherCore
 import UniformTypeIdentifiers
 
-/// .mrpack export and import: the file panels, then `LauncherCore.ModpackManager` does the work.
+/// .mrpack export, .mrpack and CurseForge .zip import: the file panels, then `LauncherCore.ModpackManager` does the work.
 extension AppState {
     private static let mrpackType = UTType(filenameExtension: "mrpack") ?? .zip
 
@@ -17,11 +17,11 @@ extension AppState {
         return try await ModpackManager(store: store).export(instance: name, to: url)
     }
 
-    /// Lets the user pick a .mrpack file; nil when cancelled.
+    /// Lets the user pick a .mrpack or CurseForge .zip file; nil when cancelled.
     func chooseMrpack() -> URL? {
         let panel = NSOpenPanel()
-        panel.title = L("Import .mrpack")
-        panel.allowedContentTypes = [Self.mrpackType]
+        panel.title = L("Import modpack")
+        panel.allowedContentTypes = [Self.mrpackType, .zip]
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
         return panel.runModal() == .OK ? panel.url : nil

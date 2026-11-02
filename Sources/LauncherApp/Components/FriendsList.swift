@@ -159,7 +159,12 @@ private struct FriendListRow: View {
     let compact: Bool
     let remove: () -> Void
 
+    @EnvironmentObject var settings: SettingsStore
+    @EnvironmentObject var toasts: ToastCenter
+    @ObservedObject private var lobbyStore = LobbyStore.shared
     @Local private var isHovered = false
+    @Local private var isJoining = false
+    @Local private var showCard = false
 
     var body: some View {
         HStack(spacing: 10) {
@@ -187,6 +192,14 @@ private struct FriendListRow: View {
 
             Spacer()
 
+            if let lobby = hostedLobby {
+                SmallFriendButton(title: L("Join")) {
+                    join(lobby)
+                }
+                .disabled(isJoining)
+                .opacity(isJoining ? 0.5 : 1)
+            }
+
             if isHovered {
                 IconButton(
                     systemName: "person.badge.minus",
@@ -199,6 +212,114 @@ private struct FriendListRow: View {
         .padding(.vertical, compact ? 4 : 6)
         .contentShape(Rectangle())
         .onHover { isHovered = $0 }
+        .onTapGesture { showCard = true }
+        .popover(isPresented: $showCard, arrowEdge: .trailing) {
+            friendCard
+        }
+    }
+
+    private var friendCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                PlayerHead(
+                    name: entry.avatarName ?? entry.displayName,
+                    size: 40
+                )
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(verbatim: entry.displayName)
+                        .font(Theme.font(size: 14, weight: .semibold))
+                        .foregroundColor(Theme.text)
+                        .lineLimit(1)
+
+                    Text(verbatim: "@\(entry.tag)")
+                        .font(Theme.font(size: 12, weight: .regular))
+                        .foregroundColor(Theme.textSecondary)
+                        .lineLimit(1)
+                }
+            }
+
+            HStack(spacing: 5) {
+                Circle()
+                    .fill(entry.online ? Theme.success : Color(red: 77 / 255, green: 73 / 255, blue: 68 / 255))
+                    .frame(width: 7, height: 7)
+
+                Text(verbatim: presenceText)
+                    .font(Theme.font(size: 12, weight: .regular))
+                    .foregroundColor(Theme.textSecondary)
+                    .lineLimit(1)
+            }
+
+            if let activity = activityText {
+                Text(verbatim: activity)
+                    .font(Theme.font(size: 12, weight: .regular))
+                    .foregroundColor(Theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                if let lobby = hostedLobby {
+                    SmallFriendButton(title: L("Join")) {
+                        join(lobby)
+                    }
+                    .disabled(isJoining)
+                    .opacity(isJoining ? 0.5 : 1)
+                }
+
+                if lobbyStore.current?.isHost == true {
+                    SmallFriendButton(title: L("Invite to my lobby")) {
+                        lobbyStore.invite(userID: entry.userID)
+                        showCard = false
+                    }
+                }
+
+                SmallFriendButton(title: L("Remove friend")) {
+                    showCard = false
+                    remove()
+                }
+            }
+        }
+        .padding(14)
+        .frame(width: 240, alignment: .leading)
+    }
+
+    /// A visible, ready lobby this friend is hosting.
+    private var hostedLobby: VisibleLobby? {
+        lobbyStore.visible.first { $0.hostUser == entry.userID && $0.ready }
+    }
+
+    private var presenceText: String {
+        if entry.online {
+            return L("Online")
+        }
+
+        guard let lastSeenAt = entry.lastSeenAt else {
+            return L("Offline")
+        }
+
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .full
+        return L("Last seen %@", formatter.localizedString(for: lastSeenAt, relativeTo: Date()))
+    }
+
+    private var activityText: String? {
+        guard let activity = entry.activity, !activity.isEmpty else { return nil }
+        return activity == "playing" ? L("Playing Minecraft") : activity
+    }
+
+    private func join(_ lobby: VisibleLobby) {
+        guard !isJoining else { return }
+        let lobbyID = lobby.lobbyID
+        isJoining = true
+        Task {
+            let joined = await LobbyStore.shared.join(code: nil, lobbyID: lobbyID, nick: settings.nickname)
+            isJoining = false
+            if joined {
+                showCard = false
+            } else if let message = LobbyStore.shared.message {
+                toasts.show(message, kind: .info)
+            }
+        }
     }
 
     private var statusText: String {
@@ -219,7 +340,7 @@ private struct FriendListRow: View {
     }
 }
 
-private struct SmallFriendButton: View {
+struct SmallFriendButton: View {
     let title: String
     let action: () -> Void
 

@@ -9,15 +9,15 @@ struct ServersScreen: View {
     @ObservedObject private var host = LobbyHostController.shared
 
     private enum Tab: String, CaseIterable {
-        case console = "Console"
-        case players = "Players"
+        case panel = "Panel"
         case world = "World"
         case mods = "Mods"
     }
 
     @Local private var profiles: [ServerProfile] = []
     @Local private var selectedID: String?
-    @Local private var tab: Tab = .console
+    @Local private var tab: Tab = .panel
+    @EnvironmentObject private var lobbies: LobbyStore
 
     private var selected: ServerProfile? {
         profiles.first { $0.id == selectedID } ?? profiles.first
@@ -30,14 +30,17 @@ struct ServersScreen: View {
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
             listPanel.frame(width: 230)
-            Group {
-                if let profile = selected {
-                    detail(profile).id(profile.id)
-                } else {
-                    emptyState
+            ScrollView {
+                Group {
+                    if let profile = selected {
+                        detail(profile).id(profile.id)
+                    } else {
+                        emptyState
+                    }
                 }
+                .frame(maxWidth: .infinity, alignment: .topLeading)
             }
-            .frame(maxWidth: .infinity, alignment: .topLeading)
+            .scrollIndicators(.never)
         }
         .padding(.horizontal, 56)
         .padding(.top, 12)
@@ -145,6 +148,7 @@ struct ServersScreen: View {
         let running = isRunning(profile)
         return VStack(alignment: .leading, spacing: 14) {
             header(profile, running: running)
+            if running { addressRow }
             statsRow(profile, running: running)
             HStack(spacing: 4) {
                 ForEach(Tab.allCases, id: \.self) { item in
@@ -165,8 +169,7 @@ struct ServersScreen: View {
             .overlay(alignment: .bottom) { Rectangle().fill(Theme.border).frame(height: 1) }
 
             switch tab {
-            case .console: ServerConsoleTab(profile: profile, running: running)
-            case .players: ServerPlayersTab(profile: profile, running: running)
+            case .panel: panel(profile, running: running)
             case .world: ServerWorldTab(profile: profile, running: running)
             case .mods: ServerModsTab(profile: profile, running: running)
             }
@@ -182,7 +185,8 @@ struct ServersScreen: View {
                     .font(Theme.font(size: 18, weight: .semibold))
                     .foregroundColor(Theme.text)
                 Text(verbatim: "\(profile.loader.capitalized) \(profile.minecraftVersion) · "
-                     + (running ? L("Running") : L("Stopped")))
+                     + (running ? L("Running") : L("Stopped")) + " · "
+                     + L("Invite-only, %d allowed", profile.trusted.count))
                     .font(Theme.font(size: 12, weight: .regular))
                     .foregroundColor(Theme.textSecondary)
             }
@@ -203,6 +207,50 @@ struct ServersScreen: View {
         }
     }
 
+    /// The address friends can paste into Minecraft; published once the tunnel is up.
+    private var addressRow: some View {
+        HStack(spacing: 10) {
+            Text(verbatim: L("Address"))
+                .font(Theme.font(size: 12, weight: .regular))
+                .foregroundColor(Theme.textSecondary)
+            if let address = lobbies.current?.address {
+                Text(verbatim: address)
+                    .font(Theme.font(size: 13, weight: .medium))
+                    .foregroundColor(Theme.text)
+                    .textSelection(.enabled)
+                    .lineLimit(1)
+                Spacer()
+                SecondaryPill(title: L("Copy address"), height: 30) {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(address, forType: .string)
+                }
+            } else {
+                Text(verbatim: L("Waiting for the address…"))
+                    .font(Theme.font(size: 13, weight: .regular))
+                    .foregroundColor(Theme.textSecondary)
+                Spacer()
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.elevated))
+    }
+
+    private func panel(_ profile: ServerProfile, running: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            sectionTitle(L("Players"))
+            ServerPlayersTab(profile: profile, running: running)
+            sectionTitle(L("Console")).padding(.top, 14)
+            ServerConsoleTab(profile: profile, running: running)
+        }
+    }
+
+    private func sectionTitle(_ text: String) -> some View {
+        Text(verbatim: text)
+            .font(Theme.font(size: 15, weight: .semibold))
+            .foregroundColor(Theme.text)
+    }
+
     private func instance(for profile: ServerProfile) -> LibraryInstance? {
         app.instances.first { $0.name == profile.instanceName }
     }
@@ -218,7 +266,7 @@ struct ServersScreen: View {
             reuseBase: true,
             mcVersion: item.minecraftVersion,
             name: profile.name,
-            privacy: .friends,
+            privacy: .invite,
             maxPlayers: profile.maxPlayers,
             settings: settings,
             app: app,
@@ -338,6 +386,7 @@ private struct ServerPlayersTab: View {
     let profile: ServerProfile
     let running: Bool
     @ObservedObject private var host = LobbyHostController.shared
+    @EnvironmentObject private var friends: FriendsStore
     @Local private var healthPlayer = ""
     @Local private var healthValue = "20"
 
@@ -379,10 +428,61 @@ private struct ServerPlayersTab: View {
                     }
                 }
             }
-            Text(verbatim: L("The whitelist follows the lobby members."))
+            allowedSection
+        }
+    }
+
+    private var allowed: [TrustedPlayer] {
+        _ = host.trustedRevision
+        return host.trusted(for: profile.instanceName)
+    }
+
+    private var allowedSection: some View {
+        let list = allowed
+        let candidates = friends.friendsList.filter { friend in !list.contains { $0.userID == friend.userID } }
+        return VStack(alignment: .leading, spacing: 0) {
+            Text(verbatim: L("Allowed players"))
+                .font(Theme.font(size: 14, weight: .semibold))
+                .foregroundColor(Theme.text)
+                .padding(.top, 16)
+            Text(verbatim: L("Only these friends can join, even when you are away from the game. Friends who join are added automatically."))
                 .font(Theme.font(size: 12, weight: .regular))
                 .foregroundColor(Theme.textSecondary)
-                .padding(.top, 12)
+                .padding(.top, 4)
+                .padding(.bottom, 4)
+            if list.isEmpty {
+                note(L("Nobody is allowed yet."))
+            }
+            ForEach(list) { player in
+                row {
+                    Text(verbatim: player.name)
+                        .font(Theme.font(size: 13, weight: .medium))
+                        .foregroundColor(Theme.text)
+                    Text(verbatim: player.tag)
+                        .font(Theme.font(size: 12, weight: .regular))
+                        .foregroundColor(Theme.textSecondary)
+                    Spacer()
+                    action(L("Remove")) { host.disallow(userID: player.userID, on: profile.instanceName) }
+                }
+            }
+            if !candidates.isEmpty {
+                row {
+                    Text(verbatim: L("Add a friend"))
+                        .font(Theme.font(size: 13, weight: .regular))
+                        .foregroundColor(Theme.text)
+                    Spacer()
+                    EmberMenu(label: "Friend", value: L("Choose…"), minWidth: 160) {
+                        ForEach(candidates) { friend in
+                            Button(friend.displayName) {
+                                host.allow(
+                                    [TrustedPlayer(userID: friend.userID, tag: friend.tag, name: friend.displayName)],
+                                    on: profile.instanceName
+                                )
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -418,6 +518,9 @@ private struct ServerWorldTab: View {
     @Local private var gamemode = "survival"
     @Local private var pvp = true
     @Local private var maxPlayers = 4
+    @Local private var backups: [WorldBackup] = []
+    @Local private var backupNote = ""
+    @Local private var backupBusy = false
 
     private let difficulties = ["peaceful", "easy", "normal", "hard"]
     private let modes = ["survival", "creative", "adventure"]
@@ -485,8 +588,9 @@ private struct ServerWorldTab: View {
                     .foregroundColor(Theme.textSecondary)
                     .padding(.top, 10)
             }
+            backupsSection
         }
-        .task { load() }
+        .task { load(); backups = host.library.listBackups(for: profile.instanceName) }
     }
 
     private func row<Content: View>(_ title: String, @ViewBuilder _ content: () -> Content) -> some View {
@@ -499,6 +603,69 @@ private struct ServerWorldTab: View {
         }
         .padding(.vertical, 8)
         .overlay(alignment: .bottom) { Rectangle().fill(Theme.border).frame(height: 1) }
+    }
+
+    private var backupsSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(verbatim: L("Backups"))
+                .font(Theme.font(size: 15, weight: .semibold))
+                .foregroundColor(Theme.text)
+                .padding(.top, 20)
+            Text(verbatim: backupNote.isEmpty
+                 ? L("Copies the world. Restoring keeps the current world in the backups folder.")
+                 : backupNote)
+                .font(Theme.font(size: 12, weight: .regular))
+                .foregroundColor(Theme.textSecondary)
+                .padding(.top, 4)
+                .padding(.bottom, 4)
+            row(L("World backup")) {
+                SecondaryPill(title: backupBusy ? L("Working…") : L("Back up now"), height: 30, action: backUp)
+            }
+            ForEach(backups.prefix(6)) { backup in
+                row(backup.date.formatted(date: .abbreviated, time: .shortened)) {
+                    Text(verbatim: ByteCountFormatter.string(fromByteCount: backup.bytes, countStyle: .file))
+                        .font(Theme.font(size: 12, weight: .regular))
+                        .foregroundColor(Theme.textSecondary)
+                    if !running {
+                        SecondaryPill(title: L("Restore"), height: 30) { restore(backup) }
+                    }
+                }
+            }
+        }
+    }
+
+    private func backUp() {
+        guard !backupBusy else { return }
+        backupBusy = true
+        let library = host.library
+        let name = profile.instanceName
+        let wasRunning = running
+        Task {
+            if wasRunning {
+                host.send("save-off")
+                host.send("save-all flush")
+                try? await Task.sleep(nanoseconds: 3_000_000_000)
+            }
+            let result = await Task.detached { Result { try library.backupWorld(for: name) } }.value
+            if wasRunning { host.send("save-on") }
+            switch result {
+            case .success: backupNote = L("Backup saved.")
+            case .failure: backupNote = L("Could not back up the world.")
+            }
+            backups = library.listBackups(for: name)
+            backupBusy = false
+        }
+    }
+
+    private func restore(_ backup: WorldBackup) {
+        guard !running else { return }
+        do {
+            try host.library.restoreBackup(backup, for: profile.instanceName)
+            backupNote = L("Backup restored. The previous world is kept in the backups folder.")
+        } catch {
+            backupNote = L("Could not restore the backup.")
+        }
+        backups = host.library.listBackups(for: profile.instanceName)
     }
 
     private func ruleButton(_ title: String, _ name: String, _ value: Bool) -> some View {

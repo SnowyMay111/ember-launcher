@@ -3,6 +3,7 @@ import SwiftUI
 public struct SidebarNavigation: View {
     @EnvironmentObject private var app: AppState
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @ObservedObject private var invites = InvitesStore.shared
 
     public var compact: Bool
 
@@ -41,7 +42,8 @@ public struct SidebarNavigation: View {
                     screen: .social,
                     title: L("Social"),
                     systemName: "person.2",
-                    shortcutKey: "3"
+                    shortcutKey: "3",
+                    showsBadge: invites.unseenCount > 0
                 )
 
                 navButton(
@@ -99,13 +101,15 @@ public struct SidebarNavigation: View {
         screen: Screen,
         title: String,
         systemName: String,
-        shortcutKey: KeyEquivalent
+        shortcutKey: KeyEquivalent,
+        showsBadge: Bool = false
     ) -> some View {
         SidebarNavButton(
             title: title,
             systemName: systemName,
             shortcutKey: shortcutKey,
-            isSelected: app.screen == screen
+            isSelected: app.screen == screen,
+            showsBadge: showsBadge
         ) {
             switchScreen(to: screen)
         }
@@ -127,6 +131,7 @@ private struct SidebarNavButton: View {
     let systemName: String
     let shortcutKey: KeyEquivalent
     let isSelected: Bool
+    var showsBadge: Bool = false
     let action: () -> Void
 
     @Local private var isHovered: Bool = false
@@ -152,6 +157,14 @@ private struct SidebarNavButton: View {
                         .padding(-2)
                         .opacity(isFocused ? 1 : 0)
                 )
+                .overlay(alignment: .topTrailing) {
+                    if showsBadge {
+                        Circle()
+                            .fill(Theme.ember)
+                            .frame(width: 8, height: 8)
+                            .padding(10)
+                    }
+                }
         }
         .buttonStyle(SidebarNavButtonStyle())
         .focused($isFocused)
@@ -160,6 +173,7 @@ private struct SidebarNavButton: View {
         }
         .help(title)
         .accessibilityLabel(title)
+        .accessibilityValue(showsBadge ? L("New invitations") : "")
         .keyboardShortcut(shortcutKey, modifiers: .command)
     }
 

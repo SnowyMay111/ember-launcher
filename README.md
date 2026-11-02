@@ -179,7 +179,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) if you want to send a change.
 - [x] Self-update from GitHub Releases
 - [x] The Ember interface and name
 - [ ] Microsoft sign-in
-- [ ] CurseForge as a second catalog
+- [x] CurseForge as a second catalog
 - [ ] Apple notarization
 - [ ] Windows
 

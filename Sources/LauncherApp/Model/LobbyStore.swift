@@ -409,6 +409,10 @@ final class LobbyStore: ObservableObject {
     private func loadRoster(lobby: String, session: EmberSession) async {
         do {
             roster = try await lobbies.roster(lobby: lobby, session: session)
+            if let tags = try? await lobbies.rosterTags(lobby: lobby, session: session) {
+                RecentPlayersStore.shared.record(tags, selfID: session.userID)
+                if current?.isHost == true { LobbyHostController.shared.remember(tags, selfID: session.userID) }
+            }
         } catch {
             // Keep the existing roster/current state as is.
         }

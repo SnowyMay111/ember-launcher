@@ -228,6 +228,33 @@ public struct LobbyMember: Codable, Sendable, Identifiable, Equatable {
     }
 }
 
+/// A joined lobby member's public profile tag and display name, as returned by lobby_roster_tags.
+public struct LobbyMemberTag: Codable, Sendable, Equatable {
+    public let userID: String
+    public let tag: String
+    public let displayName: String
+
+    private enum CodingKeys: String, CodingKey {
+        case userID = "user_id"
+        case tag
+        case displayName = "display_name"
+    }
+
+    public init(userID: String, tag: String, displayName: String) {
+        self.userID = userID
+        self.tag = tag
+        self.displayName = displayName
+    }
+
+    // Profile fields may be null for incomplete profiles; decode those as empty strings.
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        userID = try container.decode(String.self, forKey: .userID)
+        tag = try container.decodeIfPresent(String.self, forKey: .tag) ?? ""
+        displayName = try container.decodeIfPresent(String.self, forKey: .displayName) ?? ""
+    }
+}
+
 /// A row of the visible_lobbies listing.
 public struct VisibleLobby: Codable, Sendable, Identifiable, Equatable {
     public let lobbyID: String
@@ -543,6 +570,17 @@ public struct EmberLobbies: Sendable {
         return try Self.decodeRoster(data)
     }
 
+    public func rosterTags(lobby: String, session: EmberSession) async throws -> [LobbyMemberTag] {
+        let data = try await auth.perform(
+            path: "rest/v1/rpc/lobby_roster_tags",
+            method: "POST",
+            body: try JSONEncoder().encode(LobbyBody(lobby: lobby)),
+            session: session,
+            prefer: nil
+        )
+        return try Self.decodeRosterTags(data)
+    }
+
     public func visibleLobbies(session: EmberSession) async throws -> [VisibleLobby] {
         let data = try await auth.perform(
             path: "rest/v1/rpc/visible_lobbies",
@@ -736,6 +774,15 @@ public struct EmberLobbies: Sendable {
     public static func decodeRoster(_ data: Data) throws -> [LobbyMember] {
         do {
             return try JSONDecoder().decode([LobbyMember].self, from: data)
+        } catch {
+            throw EmberAuthError.invalidResponse
+        }
+    }
+
+    /// Decodes a lobby_roster_tags response.
+    public static func decodeRosterTags(_ data: Data) throws -> [LobbyMemberTag] {
+        do {
+            return try JSONDecoder().decode([LobbyMemberTag].self, from: data)
         } catch {
             throw EmberAuthError.invalidResponse
         }

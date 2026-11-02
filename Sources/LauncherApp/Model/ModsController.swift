@@ -52,6 +52,8 @@ final class ModsController: ObservableObject {
             results = []
             categories = []
             totalHits = 0
+            searchNextOffset = nil
+            lastHasMore = nil
             compat = [:]
             contentCompat = [:]
             isChecking = false
@@ -97,6 +99,9 @@ final class ModsController: ObservableObject {
     private let manager: ModManager
     private let content: ContentInstaller
     private var searchCounter = 0
+    /// Cursor and end flag of the last search page; nil falls back to `results.count` and `totalHits`.
+    private var searchNextOffset: Int?
+    private var lastHasMore: Bool?
 
     init(app: AppState) {
         self.app = app
@@ -134,7 +139,7 @@ final class ModsController: ObservableObject {
     }
 
     var canLoadMore: Bool {
-        canBrowse && results.count < totalHits
+        canBrowse && (lastHasMore ?? (results.count < totalHits))
     }
 
     private var packLoaderFilter: [String] {
@@ -282,6 +287,8 @@ final class ModsController: ObservableObject {
         guard let instance = app.current else {
             results = []
             totalHits = 0
+            searchNextOffset = nil
+            lastHasMore = nil
             return
         }
 
@@ -306,6 +313,8 @@ final class ModsController: ObservableObject {
             guard searchCounter == searchID else { return }
             results = page.hits
             totalHits = page.totalHits
+            searchNextOffset = page.nextOffset
+            lastHasMore = page.hasMore
             compat = [:]
             isChecking = canInstall
             if canInstall {
@@ -368,6 +377,8 @@ final class ModsController: ObservableObject {
         guard canBrowse else {
             results = []
             totalHits = 0
+            searchNextOffset = nil
+            lastHasMore = nil
             return
         }
 
@@ -393,6 +404,8 @@ final class ModsController: ObservableObject {
             guard searchCounter == searchID else { return }
             results = page.hits
             totalHits = page.totalHits
+            searchNextOffset = page.nextOffset
+            lastHasMore = page.hasMore
             contentCompat = [:]
             isChecking = !needsFabric
             if !needsFabric {
@@ -424,7 +437,7 @@ final class ModsController: ObservableObject {
             }
         }
 
-        let offset = results.count
+        let offset = searchNextOffset ?? results.count
         let limit = 20
         let currentKind = self.kind
 
@@ -457,6 +470,8 @@ final class ModsController: ObservableObject {
 
             guard searchCounter == searchID else { return }
             totalHits = page.totalHits
+            searchNextOffset = page.nextOffset
+            lastHasMore = page.hasMore
 
             let existingIDs = Set(results.map(\.projectId))
             let newHits = page.hits.filter { !existingIDs.contains($0.projectId) }
