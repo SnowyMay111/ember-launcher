@@ -60,9 +60,22 @@ struct ModsScreen: View {
 
                 if lobbyRoom.instanceName != nil, lobbyRoom.instanceName == app.currentID {
                     HStack(spacing: 14) {
+                        Button { app.modal = .lobby } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "arrow.left")
+                                    .font(.system(size: 13, weight: .semibold))
+                                Text(tr: "Back to the lobby")
+                                    .style(.init(size: 13, weight: .medium, color: Theme.text))
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .background(Theme.surface)
+                            .clipShape(Capsule())
+                            .overlay(Capsule().strokeBorder(Theme.border, lineWidth: 1))
+                        }
+                        .buttonStyle(.plain)
                         Text(tr: "Everything you add here goes into the lobby and syncs with your friends.")
                             .style(.secondary)
-                        SecondaryPill(title: "Back to the lobby") { app.modal = .lobby }
                     }
                     .padding(.top, 12)
                 }
