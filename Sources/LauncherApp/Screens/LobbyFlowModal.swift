@@ -681,21 +681,29 @@ private struct LobbyRulesSection: View {
                     }
                 }
 
-                EmberCheckbox(
-                    label: "Sync shaders",
-                    isOn: Binding(
-                        get: { current.syncShaders },
-                        set: { updateSettings(current.editPolicy, $0, current.syncResourcePacks) }
+                HStack(spacing: 8) {
+                    EmberCheckbox(
+                        label: "Sync shaders",
+                        isOn: Binding(
+                            get: { current.syncShaders },
+                            set: { updateSettings(current.editPolicy, $0, current.syncResourcePacks) }
+                        )
                     )
-                )
+                    Text(tr: "Sync shaders")
+                        .style(.init(size: 13, weight: .regular, color: Theme.textSecondary))
+                }
 
-                EmberCheckbox(
-                    label: "Sync resource packs",
-                    isOn: Binding(
-                        get: { current.syncResourcePacks },
-                        set: { updateSettings(current.editPolicy, current.syncShaders, $0) }
+                HStack(spacing: 8) {
+                    EmberCheckbox(
+                        label: "Sync resource packs",
+                        isOn: Binding(
+                            get: { current.syncResourcePacks },
+                            set: { updateSettings(current.editPolicy, current.syncShaders, $0) }
+                        )
                     )
-                )
+                    Text(tr: "Sync resource packs")
+                        .style(.init(size: 13, weight: .regular, color: Theme.textSecondary))
+                }
             } else {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(tr: "Who can add content")
