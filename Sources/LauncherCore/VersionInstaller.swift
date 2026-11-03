@@ -251,8 +251,10 @@ public final class VersionInstaller: Sendable {
 
         let parent = try installFromLocalJSON(parentId)
 
-        let parentLibs = parent.libraries ?? []
-        let childLibs = child.libraries ?? []
+        // Libraries that do not apply here are dropped first: 1.12.2 lists LWJGL 2.9.4 (not for macOS) before 2.9.2 (macOS only),
+        // and merging by group:artifact would keep the first one and lose LWJGL on a Mac.
+        let parentLibs = (parent.libraries ?? []).filter { RuleEvaluator.isAllowed(rules: $0.rules) }
+        let childLibs = (child.libraries ?? []).filter { RuleEvaluator.isAllowed(rules: $0.rules) }
 
         let parentGAs = Set(parentLibs.map { Self.groupArtifact(for: $0) })
         let childGAs = Set(childLibs.map { Self.groupArtifact(for: $0) })

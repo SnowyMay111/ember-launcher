@@ -235,6 +235,26 @@ public struct DownloadArtifact: Codable, Sendable {
     }
 }
 
+extension DownloadArtifact {
+    /// Old Forge installers write the universal jar into the version JSON with `"url": ""`: the installer already put the file in place.
+    /// The empty URL becomes a placeholder, so decoding works and the downloader finds the file on disk (a missing file fails loudly).
+    private enum CodingKeys: String, CodingKey { case path, sha1, size, url }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let text = try container.decode(String.self, forKey: .url)
+        guard let url = URL(string: text.isEmpty ? "about:blank" : text) else {
+            throw DecodingError.dataCorruptedError(forKey: .url, in: container, debugDescription: "Invalid URL string.")
+        }
+        self.init(
+            path: try container.decodeIfPresent(String.self, forKey: .path),
+            sha1: try container.decode(String.self, forKey: .sha1),
+            size: try container.decode(Int.self, forKey: .size),
+            url: url
+        )
+    }
+}
+
 public struct LibraryDownloads: Codable, Sendable {
     public let artifact: DownloadArtifact?
     public let classifiers: [String: DownloadArtifact]?

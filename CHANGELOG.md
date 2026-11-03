@@ -5,6 +5,15 @@ Versions follow [Semantic Versioning](https://semver.org); downloads are on the 
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-11-03
+
+### Fixed
+- Modpacks: searching CurseForge packs works again. Packs such as "SevTech: Ages" are found, regular mods no longer show up in the modpack list, and "Any loader" no longer hides Forge packs.
+- Modpacks: the preview opens for CurseForge packs (lists their mods), and packs whose file names are not UTF-8 (zipped on Chinese Windows) unpack instead of failing.
+- Modpacks: installing a CurseForge pack uses the same CurseForge access as the catalog.
+- The Modpacks heading says which catalog is searched (Modrinth, CurseForge or both).
+- Old Forge versions (1.12.x): the version file no longer fails with "The data couldn't be read because it isn't in the correct format", and LWJGL 2 is kept on the classpath on a Mac. Note: Minecraft 1.12.2 itself still crashes on current macOS (LWJGL 2 limitation), this is not fixed yet.
+
 ## [0.4.0] - 2026-11-03
 
 ### Added
