@@ -19,6 +19,8 @@ final class SettingsStore: ObservableObject {
     @Published var joinOwnServer: Bool { didSet { defaults.set(joinOwnServer, forKey: "joinOwnServer") } }
     /// New servers start with "back up the world on stop" set to this.
     @Published var defaultServerBackup: Bool { didSet { defaults.set(defaultServerBackup, forKey: "defaultServerBackup") } }
+    /// After the game closes, copy singleplayer worlds that changed (the newest 5 copies per world are kept).
+    @Published var backupWorlds: Bool { didSet { defaults.set(backupWorlds, forKey: "backupWorlds") } }
     /// "system", "en", "ru" or "uk"; read once at launch by `localizer`, so a change applies after a restart.
     @Published var appLanguage: String { didSet { defaults.set(appLanguage, forKey: SettingsStore.appLanguageKey) } }
     static let appLanguageKey = "appLanguage"
@@ -59,6 +61,7 @@ final class SettingsStore: ObservableObject {
         javaPath = defaults.string(forKey: "javaPath") ?? ""
         globalJavaArgs = defaults.string(forKey: "globalJavaArgs") ?? ""
         defaultServerBackup = defaults.object(forKey: "defaultServerBackup") as? Bool ?? true
+        backupWorlds = defaults.object(forKey: "backupWorlds") as? Bool ?? true
         showSnapshots = defaults.object(forKey: "showSnapshots") as? Bool ?? false
         autoUpdate = defaults.object(forKey: "autoUpdate") as? Bool ?? true
         backgroundAnimations = defaults.object(forKey: "backgroundAnimations") as? Bool ?? true

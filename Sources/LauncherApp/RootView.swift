@@ -116,6 +116,8 @@ struct RootView: View {
                     }
                 case .gameLog(let name):
                     GameLogModal(name: name).id(name)
+                case .worlds(let name):
+                    WorldsModal(instanceName: name).id(name)
                 case .allVersions:
                     AllVersionsModal()
                 case .profile:

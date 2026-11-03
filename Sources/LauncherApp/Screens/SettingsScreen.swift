@@ -35,7 +35,7 @@ struct SettingsScreen: View {
             switch self {
             case .general: [("Player", ["Display name"]), ("Language", ["Language"]), ("Behavior", ["Automatic updates", "Close launcher after start"])]
             case .server: [("Hosting", ["Open Minecraft with my server", "Server in the menu bar", "Back up new servers"])]
-            case .game: [("Java and memory", ["Java runtime", "Java path", "Java arguments", "Memory allocation"]), ("Game window", ["Window size"])]
+            case .game: [("Java and memory", ["Java runtime", "Java path", "Java arguments", "Memory allocation"]), ("Game window", ["Window size"]), ("Worlds", ["Back up worlds"])]
             case .downloads: [("Files and network", ["Show snapshots", "Mod catalog"]), ("Storage", ["Data folder", "Game files", "Game versions and libraries", "Java runtimes"])]
             case .appearance: [("Atmosphere", ["Living background"])]
             case .ai: [("AI assistant", ["AI provider", "API key", "AI model", "Custom model ID"])]
@@ -300,6 +300,12 @@ struct SettingsScreen: View {
                         Text(verbatim: "×").style(.init(size: 14, weight: .regular, color: Theme.muted))
                         EmberInput(label: "Window height", text: $settings.windowHeight, width: 90, alignment: .center)
                     }
+                }
+            }
+
+            card("Worlds", rows: ["Back up worlds"]) {
+                SettingsRow(title: "Back up worlds", detail: "When the game closes, Ember copies worlds that changed and keeps the newest 5 copies of each. Restore from Instance settings > Worlds.", isLast: true) {
+                    EmberToggle(label: "Back up worlds", isOn: $settings.backupWorlds)
                 }
             }
 

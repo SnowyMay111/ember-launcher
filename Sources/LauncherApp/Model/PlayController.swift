@@ -224,10 +224,11 @@ final class PlayController: ObservableObject {
         let nickname = settings.nickname
         let hideLauncher = settings.closeOnStart
         let overrides = settings.launchOverrides
-        Task { await run(item, nickname: nickname, hideLauncher: hideLauncher, overrides: overrides, app: app, quickPlayServer: quickPlayServer) }
+        let backupWorlds = settings.backupWorlds
+        Task { await run(item, nickname: nickname, hideLauncher: hideLauncher, overrides: overrides, backupWorlds: backupWorlds, app: app, quickPlayServer: quickPlayServer) }
     }
 
-    private func run(_ item: LibraryInstance, nickname: String, hideLauncher: Bool, overrides: LaunchOverrides, app: AppState, quickPlayServer: String?) async {
+    private func run(_ item: LibraryInstance, nickname: String, hideLauncher: Bool, overrides: LaunchOverrides, backupWorlds: Bool, app: AppState, quickPlayServer: String?) async {
         do {
             let (account, warning) = try await AccountStore.shared.launchAccount(offlineName: nickname)
             if let warning {
@@ -284,6 +285,10 @@ final class PlayController: ObservableObject {
             }
             try? launcher.store.recordPlay(name: item.name, seconds: clock.take(), at: started)
             app.reload()
+            if backupWorlds {
+                let worlds = WorldBackups(store: launcher.store, instance: item.name)
+                Task.detached(priority: .utility) { worlds.backUpChangedWorlds(keep: 5) }
+            }
             if status != 0 {
                 diagnosis = await Self.diagnose(
                     logURL: command.logURL,

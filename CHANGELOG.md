@@ -6,6 +6,7 @@ Versions follow [Semantic Versioning](https://semver.org); downloads are on the 
 ## [Unreleased]
 
 ### Added
+- Singleplayer world backups: when the game closes, Ember copies worlds that changed and keeps the newest 5 copies of each (Settings > Game > Worlds, on by default; copies live in the instance's `world-backups` folder). Instance settings > Worlds: back up now, see the copies, restore one (the current world is parked as `before-restore`, never deleted).
 - Mods: "Update all" now shows progress (3 of 7), keeps going if one mod fails and tells you which ones failed and why; updates are looked for automatically when you open the Mods screen. Old files go to the Trash.
 - Servers redesign: server chips on top, a header card with status, Start / Join / Stop, address and stats (players, world size, last backup), quick tiles (invite friends, back up now, settings), tabs Overview / Settings / World / Mods; Overview shows players, allowed players as chips and a feed of what happens; the full console is collapsed until you open it.
 - Settings: new Game section (Java and memory, game window) in a better order; language picker (System / English / Русский / Українська); your own Java path and Java arguments for every instance; Storage card with the data folder and how much room games, versions and Java take.

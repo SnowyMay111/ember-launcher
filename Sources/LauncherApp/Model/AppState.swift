@@ -20,6 +20,7 @@ enum AppModal: Equatable {
     case newInstance
     case instanceSettings(String)
     case gameLog(String)
+    case worlds(String)
     case optimize(String)
     case changeVersion(String)
     case sessionHealth(String)
