@@ -5,6 +5,8 @@ Versions follow [Semantic Versioning](https://semver.org); downloads are on the 
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-03
+
 ### Added
 - Singleplayer world backups: when the game closes, Ember copies worlds that changed and keeps the newest 5 copies of each (Settings > Game > Worlds, on by default; copies live in the instance's `world-backups` folder). Instance settings > Worlds: back up now, see the copies, restore one (the current world is parked as `before-restore`, never deleted).
 - Mods: "Update all" now shows progress (3 of 7), keeps going if one mod fails and tells you which ones failed and why; updates are looked for automatically when you open the Mods screen. Old files go to the Trash.
