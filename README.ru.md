@@ -71,10 +71,10 @@
   </tr>
   <tr>
     <td align="center"><img src="docs/screenshots/social.png" alt="Social: друзья, приглашения, лобби" width="430"><br><sub><b>Social</b>: друзья, приглашения и лобби в одном месте</sub></td>
-    <td align="center"><img src="docs/screenshots/servers.png" alt="Servers: панель, разрешённые игроки, консоль" width="430"><br><sub><b>Servers</b>: панель, разрешённые игроки и консоль</sub></td>
+    <td align="center"><img src="docs/screenshots/servers.png" alt="Servers: чипы серверов, карточка статуса, быстрые действия, игроки и события" width="430"><br><sub><b>Servers</b>: карточка статуса, быстрые действия, игроки и что происходит</sub></td>
   </tr>
   <tr>
-    <td align="center" colspan="2"><img src="docs/screenshots/settings.png" alt="Настройки на одной прокручиваемой странице с боковым меню" width="430"><br><sub><b>Настройки</b>: одна страница, боковое меню идёт за вами</sub></td>
+    <td align="center" colspan="2"><img src="docs/screenshots/settings.png" alt="Настройки: разделы с иконками, поиск и карточки" width="430"><br><sub><b>Настройки</b>: разделы с иконками и поиск</sub></td>
   </tr>
 </table>
 

@@ -71,10 +71,10 @@ The full history is in the [changelog](CHANGELOG.md).
   </tr>
   <tr>
     <td align="center"><img src="docs/screenshots/social.png" alt="Social: friends, invitations, lobbies" width="430"><br><sub><b>Social</b>: friends, invitations and lobbies in one place</sub></td>
-    <td align="center"><img src="docs/screenshots/servers.png" alt="Servers: panel, allowed players, console" width="430"><br><sub><b>Servers</b>: a panel, allowed players and the console</sub></td>
+    <td align="center"><img src="docs/screenshots/servers.png" alt="Servers: server chips, status card, quick actions, players and activity" width="430"><br><sub><b>Servers</b>: status card, quick actions, players and what is happening</sub></td>
   </tr>
   <tr>
-    <td align="center" colspan="2"><img src="docs/screenshots/settings.png" alt="Settings on one scrolling page with a side navigation" width="430"><br><sub><b>Settings</b>: one page, a side menu that follows you</sub></td>
+    <td align="center" colspan="2"><img src="docs/screenshots/settings.png" alt="Settings with icon sections, search and plain cards" width="430"><br><sub><b>Settings</b>: sections with icons and a search field</sub></td>
   </tr>
 </table>
 
