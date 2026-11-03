@@ -238,15 +238,21 @@ final class LobbyHostController: ObservableObject {
             serverDirectory = directory
             runningInstance = roomInstance
             startedAt = Date()
-            try? library.save(ServerProfile(
+            // A saved profile keeps its own name and backup choice; only a new server takes the default from Settings.
+            var profile = library.profile(for: roomInstance) ?? ServerProfile(
                 instanceName: roomInstance,
                 name: name,
                 minecraftVersion: instance.minecraftVersion,
                 loader: instance.loader == "fabric" ? "fabric" : "vanilla",
                 maxPlayers: maxPlayers,
-                lastPlayed: Date(),
-                trusted: trusted(for: roomInstance)
-            ))
+                lastPlayed: nil,
+                autoBackup: settings.defaultServerBackup
+            )
+            profile.minecraftVersion = instance.minecraftVersion
+            profile.maxPlayers = maxPlayers
+            profile.lastPlayed = Date()
+            profile.trusted = trusted(for: roomInstance)
+            try? library.save(profile)
             watch(nick: settings.nickname)
 
             lobbies.startHosting(serverPort: UInt16(port))

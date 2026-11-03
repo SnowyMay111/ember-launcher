@@ -17,6 +17,8 @@ final class SettingsStore: ObservableObject {
     static let serverMenuBarKey = "serverMenuBar"
     /// Open Minecraft and join the hosted server as soon as it is up; off by default, the Join button does it by hand.
     @Published var joinOwnServer: Bool { didSet { defaults.set(joinOwnServer, forKey: "joinOwnServer") } }
+    /// New servers start with "back up the world on stop" set to this.
+    @Published var defaultServerBackup: Bool { didSet { defaults.set(defaultServerBackup, forKey: "defaultServerBackup") } }
     @Published var showSnapshots: Bool { didSet { defaults.set(showSnapshots, forKey: "showSnapshots") } }
     @Published var autoUpdate: Bool { didSet { defaults.set(autoUpdate, forKey: "autoUpdate") } }
     @Published var backgroundAnimations: Bool { didSet { defaults.set(backgroundAnimations, forKey: "backgroundAnimations") } }
@@ -46,6 +48,7 @@ final class SettingsStore: ObservableObject {
         closeOnStart = defaults.object(forKey: "closeOnStart") as? Bool ?? true
         serverMenuBar = defaults.object(forKey: SettingsStore.serverMenuBarKey) as? Bool ?? false
         joinOwnServer = defaults.object(forKey: "joinOwnServer") as? Bool ?? false
+        defaultServerBackup = defaults.object(forKey: "defaultServerBackup") as? Bool ?? true
         showSnapshots = defaults.object(forKey: "showSnapshots") as? Bool ?? false
         autoUpdate = defaults.object(forKey: "autoUpdate") as? Bool ?? true
         backgroundAnimations = defaults.object(forKey: "backgroundAnimations") as? Bool ?? true

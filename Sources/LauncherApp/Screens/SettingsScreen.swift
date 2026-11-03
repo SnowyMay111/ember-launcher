@@ -9,6 +9,7 @@ struct SettingsScreen: View {
 
     enum Section: String, CaseIterable, Identifiable {
         case general = "General"
+        case server = "Server"
         case java = "Java & memory"
         case downloads = "Downloads"
         case appearance = "Appearance"
@@ -17,41 +18,41 @@ struct SettingsScreen: View {
 
         var id: String { rawValue }
 
-        var tag: String {
+        var icon: String {
             switch self {
-            case .general: "GENERAL"
-            case .java: "JAVA & MEMORY"
-            case .downloads: "DOWNLOADS"
-            case .appearance: "APPEARANCE"
-            case .ai: "AI ASSISTANT"
-            case .about: "ABOUT EMBER"
+            case .general: "gearshape"
+            case .server: "server.rack"
+            case .java: "cpu"
+            case .downloads: "arrow.down.circle"
+            case .appearance: "paintpalette"
+            case .ai: "sparkles"
+            case .about: "info.circle"
             }
         }
 
-        var headline: String {
+        /// Cards of the section with the rows they hold: search looks through these titles.
+        var cards: [(title: String, rows: [String])] {
             switch self {
-            case .general: "Everything feels good."
-            case .java: "Runtime is balanced."
-            case .downloads: "Ready when you are."
-            case .appearance: "Make it feel like home."
-            case .ai: "Ready to create."
-            case .about: "Ember \(LauncherInfo.version)"
+            case .general: [("Player", ["Display name"]), ("Behavior", ["Automatic updates", "Close launcher after start"])]
+            case .server: [("Hosting", ["Open Minecraft with my server", "Server in the menu bar", "Back up new servers"])]
+            case .java: [("Performance", ["Java runtime", "Memory allocation", "Window size"])]
+            case .downloads: [("Files and network", ["Show snapshots", "Mod catalog"])]
+            case .appearance: [("Atmosphere", ["Living background"])]
+            case .ai: [("AI assistant", ["AI provider", "API key", "AI model", "Custom model ID"])]
+            case .about: [("About Ember", ["Check for updates", "Automatic updates"])]
             }
         }
 
-        var description: String {
-            switch self {
-            case .general: "Your profile, worlds, and launcher behavior in one calm place."
-            case .java: "Java 21 is healthy and memory is balanced for this Mac."
-            case .downloads: "Choose where game files live and how quietly they arrive."
-            case .appearance: "Tune motion and atmosphere without changing how Ember works."
-            case .ai: "Build pack suggestions and mod setups tailored to your play."
-            case .about: "A warm, native home for every Minecraft world."
-            }
+        func matches(_ query: String) -> Bool {
+            SettingsSearch.matches(rawValue, query: query)
+                || cards.contains { card in
+                    SettingsSearch.matches(card.title, query: query) || card.rows.contains { SettingsSearch.matches($0, query: query) }
+                }
         }
     }
 
     @Local private var selectedSection: Section = .general
+    @Local private var query = ""
 
     private var updateDetail: String {
         switch updates.checkStatus {
@@ -69,154 +70,126 @@ struct SettingsScreen: View {
         return L("Recommended: %d-%d GB", range.lowerBound / 1024, range.upperBound / 1024)
     }
 
+    private var isSearching: Bool { !query.trimmingCharacters(in: .whitespaces).isEmpty }
+
+    private var visibleSections: [Section] {
+        isSearching ? Section.allCases.filter { $0.matches(query) } : [selectedSection]
+    }
+
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 0) {
-                // Header
-                PageHeader(
-                    eyebrow: "YOUR SPACE",
-                    title: "Settings",
-                    subtitle: "A few thoughtful choices to make Ember feel like yours.",
-                    alignment: .leading
-                )
-                .padding(.bottom, 28)
+            HStack(alignment: .top, spacing: 28) {
+                navigation
+                    .frame(width: 210)
 
-                // Split layout
-                HStack(alignment: .top, spacing: 28) {
-                    // Navigation sidebar
-                    VStack(spacing: 6) {
-                        ForEach(Section.allCases) { sec in
-                            Button {
-                                withAnimation(.easeInOut(duration: 0.18)) {
-                                    selectedSection = sec
-                                }
-                            } label: {
-                                HStack {
-                                    Text(tr: sec.rawValue)
-                                        .font(Theme.font(size: 13, weight: .medium))
-                                        .foregroundColor(selectedSection == sec ? Theme.ember : Theme.textSecondary)
-                                    Spacer()
-                                }
-                                .padding(.horizontal, 14)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 42)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(selectedSection == sec ? Color(red: 24/255, green: 21/255, blue: 20/255) : Color.clear)
-                                )
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .stroke(selectedSection == sec ? Color(red: 60/255, green: 48/255, blue: 40/255) : Color.clear, lineWidth: 1)
-                                )
-                                .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-                        }
+                VStack(alignment: .leading, spacing: 16) {
+                    updateBanner
+                    if visibleSections.isEmpty {
+                        Text(verbatim: L("No settings match “%@”.", query))
+                            .font(Theme.font(size: 13, weight: .regular))
+                            .foregroundColor(Theme.textSecondary)
+                            .padding(.top, 8)
                     }
-                    .frame(width: 190)
-
-                    // Main content
-                    VStack(alignment: .leading, spacing: 18) {
-                        // Comfort card (only for sections other than about, which has its own unified card)
-                        if selectedSection != .about {
-                            comfortCard(for: selectedSection)
-                        }
-
-                        // Section body
-                        sectionBody(for: selectedSection)
+                    ForEach(visibleSections) { section in
+                        sectionBody(for: section)
                     }
-                    .frame(maxWidth: .infinity, alignment: .topLeading)
                 }
+                .environment(\.settingsQuery, query)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
             }
             .frame(maxWidth: 1120, alignment: .topLeading)
-            .padding(.top, 36)
+            .padding(.top, 24)
             .padding(.horizontal, 40)
             .padding(.bottom, 48)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
-    // MARK: - Comfort Card
+    // MARK: - Navigation
 
-    private func comfortCard(for sec: Section) -> some View {
-        HStack(spacing: 18) {
-            // Orb
-            ZStack {
-                RoundedRectangle(cornerRadius: 15)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color(red: 170/255, green: 103/255, blue: 191/255).opacity(0.22),
-                                Color(red: 229/255, green: 139/255, blue: 78/255).opacity(0.16)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
+    private var navigation: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            EmberInput(label: "Search settings", text: $query, placeholder: L("Search settings"))
+                .padding(.bottom, 8)
+            ForEach(Section.allCases) { section in
+                let isSelected = !isSearching && selectedSection == section
+                let dimmed = isSearching && !section.matches(query)
+                Button {
+                    query = ""
+                    withAnimation(.easeInOut(duration: 0.18)) { selectedSection = section }
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: section.icon)
+                            .font(.system(size: 14, weight: .medium))
+                            .frame(width: 20)
+                            .foregroundColor(isSelected ? Theme.ember : Theme.textSecondary)
+                        Text(tr: section.rawValue)
+                            .font(Theme.font(size: 14, weight: .medium))
+                            .foregroundColor(isSelected ? Theme.text : Theme.textSecondary)
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.horizontal, 12)
+                    .frame(height: 40)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(isSelected ? Theme.elevated : Color.clear)
                     )
-                    .frame(width: 54, height: 54)
-
-                Rectangle()
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color(red: 171/255, green: 115/255, blue: 195/255),
-                                Color(red: 233/255, green: 154/255, blue: 97/255)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .stroke(isSelected ? Theme.lineStrong : Color.clear, lineWidth: 1)
                     )
-                    .frame(width: 20, height: 20)
-                    .rotationEffect(.degrees(45))
-                    .shadow(color: Theme.ember.opacity(0.3), radius: 10)
+                    .opacity(dimmed ? 0.35 : 1)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
             }
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(sec.tag)
-                    .font(Theme.font(size: 9, weight: .medium, mono: true))
-                    .tracking(1.4)
-                    .foregroundColor(Color(red: 142/255, green: 105/255, blue: 126/255))
-
-                Text(sec.headline)
-                    .font(Theme.font(size: 15, weight: .semibold))
-                    .foregroundColor(Theme.text)
-
-                Text(sec.description)
-                    .font(Theme.font(size: 11, weight: .regular))
-                    .foregroundColor(Theme.textSecondary)
-                    .lineLimit(2)
-            }
-
-            Spacer()
-
-            Circle()
-                .fill(Color(red: 32/255, green: 39/255, blue: 25/255))
-                .frame(width: 26, height: 26)
-                .overlay(
-                    Image(systemName: "checkmark")
-                        .font(Theme.font(size: 11, weight: .bold))
-                        .foregroundColor(Theme.success)
-                )
         }
-        .padding(18)
-        .background(
-            RoundedRectangle(cornerRadius: 15)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color(red: 24/255, green: 20/255, blue: 23/255),
-                            Color(red: 23/255, green: 18/255, blue: 25/255),
-                            Color(red: 28/255, green: 20/255, blue: 32/255)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 15)
-                .stroke(Color(red: 58/255, green: 45/255, blue: 55/255), lineWidth: 1)
-        )
+    }
+
+    // MARK: - Update banner
+
+    @ViewBuilder
+    private var updateBanner: some View {
+        if !isSearching, let text = updateBannerText {
+            HStack(spacing: 14) {
+                Image(systemName: "arrow.down.circle.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(Theme.ember)
+                Text(verbatim: text)
+                    .font(Theme.font(size: 14, weight: .medium))
+                    .foregroundColor(Theme.text)
+                Spacer(minLength: 12)
+                if case .downloading(let fraction) = updates.state {
+                    ProgressView(value: fraction).frame(width: 120).tint(Theme.ember)
+                } else {
+                    PrimaryPill(title: updates.state == .ready ? L("Restart") : L("Update"), height: 36, horizontalPadding: 22) {
+                        updates.pillAction()
+                    }
+                }
+            }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 14)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Theme.ember.opacity(0.10))
+                    .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Theme.ember.opacity(0.45), lineWidth: 1))
+            )
+        }
+    }
+
+    private var updateBannerText: String? {
+        switch updates.state {
+        case .available(let info): return L("Version %@ is available.", info.version)
+        case .downloading: return L("Downloading the update…")
+        case .ready: return L("The update is ready.")
+        case .idle, .failed: return nil
+        }
+    }
+
+    // MARK: - Cards
+
+    private func card<Content: View>(_ title: String, rows: [String], @ViewBuilder _ content: @escaping () -> Content) -> some View {
+        SettingsCard(title: title, rows: rows, content: content)
     }
 
     // MARK: - Section Body
@@ -225,29 +198,36 @@ struct SettingsScreen: View {
     private func sectionBody(for sec: Section) -> some View {
         switch sec {
         case .general:
-            SettingsGroup(title: "PLAYER") {
-                SettingsRow(title: "Display name", detail: "Used for offline and local worlds.") {
+            card("Player", rows: ["Display name"]) {
+                SettingsRow(title: "Display name", detail: "Used for offline and local worlds.", isLast: true) {
                     EmberInput(label: "Nickname", text: $settings.nickname, width: 220)
                 }
             }
 
-            SettingsGroup(title: "BEHAVIOR") {
+            card("Behavior", rows: ["Automatic updates", "Close launcher after start"]) {
                 SettingsRow(title: "Automatic updates", detail: "Keep Ember and game metadata current.") {
                     EmberToggle(label: "Automatic updates", isOn: $settings.autoUpdate)
                 }
-                SettingsRow(title: "Close launcher after start", detail: "Save resources while Minecraft is running.") {
+                SettingsRow(title: "Close launcher after start", detail: "Save resources while Minecraft is running.", isLast: true) {
                     EmberToggle(label: "Close launcher on start", isOn: $settings.closeOnStart)
                 }
+            }
+
+        case .server:
+            card("Hosting", rows: ["Open Minecraft with my server", "Server in the menu bar", "Back up new servers"]) {
                 SettingsRow(title: "Open Minecraft with my server", detail: "Join your own server as soon as it starts. Off: start the server first, then press Join when you want to play.") {
                     EmberToggle(label: "Open Minecraft with my server", isOn: $settings.joinOwnServer)
                 }
-                SettingsRow(title: "Server in the menu bar", detail: "Show an Ember icon with the server's status while it runs. The server keeps running when you close the window.", isLast: true) {
+                SettingsRow(title: "Server in the menu bar", detail: "Show an Ember icon with the server's status while it runs. The server keeps running when you close the window.") {
                     EmberToggle(label: "Server in the menu bar", isOn: $settings.serverMenuBar)
+                }
+                SettingsRow(title: "Back up new servers", detail: "New servers copy the world each time they stop. You can change it for every server in Servers.", isLast: true) {
+                    EmberToggle(label: "Back up new servers", isOn: $settings.defaultServerBackup)
                 }
             }
 
         case .java:
-            SettingsGroup(title: "PERFORMANCE") {
+            card("Performance", rows: ["Java runtime", "Memory allocation", "Window size"]) {
                 SettingsRow(title: "Java runtime", detail: "Mojang Java 21 · Apple Silicon") {
                     MonoBadge(text: "Managed")
                 }
@@ -280,7 +260,7 @@ struct SettingsScreen: View {
             }
 
         case .downloads:
-            SettingsGroup(title: "FILES & NETWORK") {
+            card("Files and network", rows: ["Show snapshots", "Mod catalog"]) {
                 SettingsRow(title: "Show snapshots", detail: "Include snapshot versions in the list.") {
                     EmberToggle(label: "Show snapshots", isOn: $settings.showSnapshots)
                 }
@@ -294,14 +274,14 @@ struct SettingsScreen: View {
             }
 
         case .appearance:
-            SettingsGroup(title: "ATMOSPHERE") {
+            card("Atmosphere", rows: ["Living background"]) {
                 SettingsRow(title: "Living background", detail: "Glows, particles and world ambience.", isLast: true) {
                     EmberToggle(label: "Background animations", isOn: $settings.backgroundAnimations)
                 }
             }
 
         case .ai:
-            SettingsGroup(title: "AI ASSISTANT") {
+            card("AI assistant", rows: ["AI provider", "API key", "AI model", "Custom model ID"]) {
                 SettingsRow(title: "AI provider", detail: "Builds pack suggestions from your description.") {
                     EmberMenu(label: "AI provider", value: settings.aiProvider.displayName, minWidth: 150) {
                         ForEach(AIProviderKind.allCases, id: \.self) { kind in
@@ -326,39 +306,22 @@ struct SettingsScreen: View {
             }
 
         case .about:
-            VStack(alignment: .leading, spacing: 0) {
+            card("About Ember", rows: ["Check for updates", "Automatic updates"]) {
                 HStack(spacing: 18) {
                     EmberLogo(size: 54)
-
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(verbatim: "ABOUT EMBER")
-                            .font(Theme.font(size: 9, weight: .medium, mono: true))
-                            .tracking(1.4)
-                            .foregroundColor(Color(red: 142/255, green: 105/255, blue: 126/255))
-
                         Text(verbatim: "Ember \(LauncherInfo.version)")
                             .font(Theme.font(size: 16, weight: .bold))
                             .foregroundColor(Theme.text)
-
-                        Text(verbatim: "A warm, native home for every Minecraft world.")
-                            .font(Theme.font(size: 12, weight: .regular))
+                        Text(tr: "A warm, native home for every Minecraft world.")
+                            .font(Theme.font(size: 13, weight: .regular))
                             .foregroundColor(Theme.textSecondary)
                     }
-
                     Spacer()
-
-                    Circle()
-                        .fill(Color(red: 32/255, green: 39/255, blue: 25/255))
-                        .frame(width: 26, height: 26)
-                        .overlay(
-                            Image(systemName: "checkmark")
-                                .font(Theme.font(size: 11, weight: .bold))
-                                .foregroundColor(Theme.success)
-                        )
                 }
                 .padding(22)
-
-                Divider().background(Theme.border)
+                .background(Theme.surface)
+                .overlay(alignment: .bottom) { Theme.border.frame(height: 1) }
 
                 SettingsRow(title: L("Version %@", LauncherInfo.version), detail: updateDetail) {
                     SecondaryPill(title: updates.checkStatus == .checking ? "Checking…" : "Check for updates", action: updates.checkNow)
@@ -367,6 +330,31 @@ struct SettingsScreen: View {
                 SettingsRow(title: "Automatic updates", detail: "Keep the launcher up to date.", isLast: true) {
                     EmberToggle(label: "Update automatically", isOn: $settings.autoUpdate)
                 }
+            }
+        }
+    }
+}
+
+/// Group of settings rows under a sentence-case title; hides itself when the search matches none of its rows.
+struct SettingsCard<Content: View>: View {
+    let title: String
+    let rows: [String]
+    @ViewBuilder var content: () -> Content
+    @Environment(\.settingsQuery) private var query
+
+    var body: some View {
+        if SettingsSearch.matches(title, query: query) || rows.contains(where: { SettingsSearch.matches($0, query: query) }) {
+            VStack(alignment: .leading, spacing: 0) {
+                Text(tr: title)
+                    .font(Theme.font(size: 15, weight: .semibold))
+                    .foregroundColor(Theme.text)
+                    .padding(.horizontal, 24)
+                    .padding(.top, 18)
+                    .padding(.bottom, 12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Theme.surface)
+                    .overlay(alignment: .bottom) { Theme.border.frame(height: 1) }
+                content()
             }
             .clipShape(RoundedRectangle(cornerRadius: Theme.radiusCard, style: .continuous))
             .glass()

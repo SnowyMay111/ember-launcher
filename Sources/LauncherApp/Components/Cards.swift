@@ -436,8 +436,13 @@ struct SettingsRow<Control: View>: View {
     @ViewBuilder var control: () -> Control
 
     @Local private var isHovered = false
+    @Environment(\.settingsQuery) private var query
 
     var body: some View {
+        if SettingsSearch.matches(title, query: query) { row }
+    }
+
+    private var row: some View {
         HStack(spacing: 18) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(tr: title)
@@ -457,5 +462,26 @@ struct SettingsRow<Control: View>: View {
             }
         }
         .onHover { isHovered = $0 }
+    }
+}
+
+/// What the search field in Settings is looking for; rows and cards that do not match hide themselves.
+private struct SettingsQueryKey: EnvironmentKey {
+    static let defaultValue = ""
+}
+
+extension EnvironmentValues {
+    var settingsQuery: String {
+        get { self[SettingsQueryKey.self] }
+        set { self[SettingsQueryKey.self] = newValue }
+    }
+}
+
+enum SettingsSearch {
+    /// True for an empty query, or when the English or translated text contains it.
+    static func matches(_ text: String, query: String) -> Bool {
+        let needle = query.trimmingCharacters(in: .whitespaces).lowercased()
+        guard !needle.isEmpty else { return true }
+        return text.lowercased().contains(needle) || L(text).lowercased().contains(needle)
     }
 }
