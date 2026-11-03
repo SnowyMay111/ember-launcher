@@ -867,5 +867,9 @@
   "Managed": "Встроенная",
   "Creates a new instance from a modpack.": "Создаёт новую сборку из модпака.",
   "Find on CurseForge": "Найти на CurseForge",
-  "Find on Modrinth and CurseForge": "Найти на Modrinth и CurseForge"
+  "Find on Modrinth and CurseForge": "Найти на Modrinth и CurseForge",
+  "Custom window size": "Свой размер окна",
+  "Off: the game opens in its own default window. On: it opens at this size in pixels.": "Выкл: игра открывается в своём окне по умолчанию. Вкл: окно нужного размера в пикселях.",
+  "Borderless window": "Окно без рамок",
+  "No title bar and borders, for old Minecraft versions up to 1.16. Set the window size to your screen size to fill it without full screen mode.": "Без заголовка и рамок, для старого Minecraft до 1.16. Задай размер окна как у экрана, чтобы закрыть весь экран без полноэкранного режима."
 }

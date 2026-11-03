@@ -293,13 +293,19 @@ struct SettingsScreen: View {
                 }
             }
 
-            card("Game window", rows: ["Window size"]) {
-                SettingsRow(title: "Window size", detail: "Game window size at launch.", isLast: true) {
+            card("Game window", rows: ["Custom window size", "Borderless window"]) {
+                SettingsRow(title: "Custom window size", detail: "Off: the game opens in its own default window. On: it opens at this size in pixels.", isLast: false) {
                     HStack(spacing: 10) {
-                        EmberInput(label: "Window width", text: $settings.windowWidth, width: 90, alignment: .center)
-                        Text(verbatim: "×").style(.init(size: 14, weight: .regular, color: Theme.muted))
-                        EmberInput(label: "Window height", text: $settings.windowHeight, width: 90, alignment: .center)
+                        if settings.customWindow {
+                            EmberInput(label: "Window width", text: $settings.windowWidth, width: 90, alignment: .center)
+                            Text(verbatim: "×").style(.init(size: 14, weight: .regular, color: Theme.muted))
+                            EmberInput(label: "Window height", text: $settings.windowHeight, width: 90, alignment: .center)
+                        }
+                        EmberToggle(label: "Custom window size", isOn: $settings.customWindow)
                     }
+                }
+                SettingsRow(title: "Borderless window", detail: "No title bar and borders, for old Minecraft versions up to 1.16. Set the window size to your screen size to fill it without full screen mode.", isLast: true) {
+                    EmberToggle(label: "Borderless window", isOn: $settings.borderlessWindow)
                 }
             }
 

@@ -6,14 +6,30 @@ public struct LaunchOverrides: Equatable, Sendable {
     public var javaPath: String
     /// JVM arguments for every instance, separated by spaces.
     public var jvmArguments: String
+    /// Game window size in pixels; anything that is not a positive number leaves the game's own default.
+    public var windowWidth: String
+    public var windowHeight: String
+    /// Old Minecraft (LWJGL 2) opens its window without a title bar and borders; newer versions ignore the flag.
+    public var borderless: Bool
 
-    public init(javaPath: String = "", jvmArguments: String = "") {
+    public init(javaPath: String = "", jvmArguments: String = "", windowWidth: String = "", windowHeight: String = "", borderless: Bool = false) {
         self.javaPath = javaPath
         self.jvmArguments = jvmArguments
+        self.windowWidth = windowWidth
+        self.windowHeight = windowHeight
+        self.borderless = borderless
+    }
+
+    /// `--width W --height H` for the game, unless the size is unset or the build already carries one.
+    var windowArguments: [String] {
+        guard let width = Int(windowWidth.trimmingCharacters(in: .whitespaces)), width > 0,
+              let height = Int(windowHeight.trimmingCharacters(in: .whitespaces)), height > 0 else { return [] }
+        return ["--width", String(width), "--height", String(height)]
     }
 
     public var extraArguments: [String] {
-        jvmArguments.split(whereSeparator: { $0.isWhitespace }).map(String.init)
+        (borderless ? ["-Dorg.lwjgl.opengl.Window.undecorated=true"] : [])
+            + jvmArguments.split(whereSeparator: { $0.isWhitespace }).map(String.init)
     }
 
     /// The custom Java when the path points at an executable file.
@@ -24,9 +40,10 @@ public struct LaunchOverrides: Equatable, Sendable {
     }
 
     public func apply(to command: LaunchCommand) -> LaunchCommand {
-        LaunchCommand(
+        let window = command.arguments.contains("--width") ? [] : windowArguments
+        return LaunchCommand(
             executable: customJava ?? command.executable,
-            arguments: extraArguments + command.arguments,
+            arguments: extraArguments + command.arguments + window,
             workingDirectory: command.workingDirectory,
             logURL: command.logURL
         )

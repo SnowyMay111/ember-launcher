@@ -5,6 +5,14 @@ Versions follow [Semantic Versioning](https://semver.org); downloads are on the 
 
 ## [Unreleased]
 
+## [0.4.4] - 2026-11-04
+
+### Added
+- Settings > Game window: "Custom window size" (off by default) and "Borderless window" (off by default, old Minecraft up to 1.16). A borderless window set to your screen size fills the screen without full screen mode.
+
+### Fixed
+- The window size from Settings now reaches the game; before, it was saved but never passed on.
+
 ## [0.4.3] - 2026-11-03
 
 ### Fixed

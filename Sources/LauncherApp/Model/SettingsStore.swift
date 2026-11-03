@@ -9,6 +9,10 @@ final class SettingsStore: ObservableObject {
 
     @Published var nickname: String { didSet { defaults.set(nickname, forKey: "nickname") } }
     @Published var memoryGB: Double { didSet { defaults.set(memoryGB, forKey: "memoryGB") } }
+    /// Off by default: the game then opens in its own default window.
+    @Published var customWindow: Bool { didSet { defaults.set(customWindow, forKey: "customWindow") } }
+    /// Off by default: no title bar and borders on the game window (old Minecraft versions).
+    @Published var borderlessWindow: Bool { didSet { defaults.set(borderlessWindow, forKey: "borderlessWindow") } }
     @Published var windowWidth: String { didSet { defaults.set(windowWidth, forKey: "windowWidth") } }
     @Published var windowHeight: String { didSet { defaults.set(windowHeight, forKey: "windowHeight") } }
     @Published var closeOnStart: Bool { didSet { defaults.set(closeOnStart, forKey: "closeOnStart") } }
@@ -52,8 +56,11 @@ final class SettingsStore: ObservableObject {
         let clampedMemory = min(max(loadedMemory, SettingsStore.memoryRange.lowerBound), SettingsStore.memoryRange.upperBound)
         memoryGB = clampedMemory
         defaults.set(clampedMemory, forKey: "memoryGB")
-        windowWidth = defaults.string(forKey: "windowWidth") ?? "1920"
-        windowHeight = defaults.string(forKey: "windowHeight") ?? "1080"
+        customWindow = defaults.object(forKey: "customWindow") as? Bool ?? false
+        borderlessWindow = defaults.object(forKey: "borderlessWindow") as? Bool ?? false
+        let screen = NSScreen.main?.frame.size
+        windowWidth = defaults.string(forKey: "windowWidth") ?? String(Int(screen?.width ?? 1920))
+        windowHeight = defaults.string(forKey: "windowHeight") ?? String(Int(screen?.height ?? 1080))
         closeOnStart = defaults.object(forKey: "closeOnStart") as? Bool ?? true
         serverMenuBar = defaults.object(forKey: SettingsStore.serverMenuBarKey) as? Bool ?? false
         joinOwnServer = defaults.object(forKey: "joinOwnServer") as? Bool ?? false
@@ -74,7 +81,13 @@ final class SettingsStore: ObservableObject {
     }
 
     var launchOverrides: LaunchOverrides {
-        LaunchOverrides(javaPath: javaPath, jvmArguments: globalJavaArgs)
+        LaunchOverrides(
+            javaPath: javaPath,
+            jvmArguments: globalJavaArgs,
+            windowWidth: customWindow ? windowWidth : "",
+            windowHeight: customWindow ? windowHeight : "",
+            borderless: borderlessWindow
+        )
     }
 
     private static func aiModelKey(_ provider: AIProviderKind) -> String { "aiModel.\(provider.rawValue)" }

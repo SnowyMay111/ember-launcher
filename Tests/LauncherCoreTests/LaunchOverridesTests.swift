@@ -22,6 +22,25 @@ import Testing
         #expect(result.arguments == command.arguments)
     }
 
+    @Test func windowSizeGoesToTheGameAfterItsOwnArguments() {
+        let result = LaunchOverrides(windowWidth: "1710", windowHeight: " 1080 ").apply(to: command)
+        #expect(result.arguments == command.arguments + ["--width", "1710", "--height", "1080"])
+    }
+
+    @Test func badOrDuplicateWindowSizeIsLeftOut() {
+        #expect(LaunchOverrides(windowWidth: "abc", windowHeight: "1080").apply(to: command).arguments == command.arguments)
+        #expect(LaunchOverrides(windowWidth: "0", windowHeight: "0").apply(to: command).arguments == command.arguments)
+        let sized = LaunchCommand(executable: command.executable, arguments: command.arguments + ["--width", "854"],
+                                  workingDirectory: command.workingDirectory, logURL: command.logURL)
+        #expect(LaunchOverrides(windowWidth: "1710", windowHeight: "1080").apply(to: sized).arguments == sized.arguments)
+    }
+
+    @Test func borderlessAddsTheLWJGL2FlagBeforeOtherJVMArguments() {
+        let result = LaunchOverrides(jvmArguments: "-Dfoo=bar", borderless: true).apply(to: command)
+        #expect(result.arguments == ["-Dorg.lwjgl.opengl.Window.undecorated=true", "-Dfoo=bar"] + command.arguments)
+        #expect(LaunchOverrides().apply(to: command).arguments == command.arguments)
+    }
+
     @Test func diskUsageOfMissingFolderIsZero() {
         #expect(DiskUsage.size(of: URL(fileURLWithPath: "/no/such/folder")) == 0)
     }
