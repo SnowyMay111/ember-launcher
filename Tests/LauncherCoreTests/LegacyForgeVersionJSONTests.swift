@@ -40,6 +40,38 @@ struct LegacyVersionMergeTests {
         }
         let resolved = try VersionInstaller(paths: paths).resolve(versionId: "1.12.2-forge-1")
         let names = resolved.libraries.filter { RuleEvaluator.isAllowed(rules: $0.rules) }.map(\.name)
-        #expect(names == ["org.lwjgl.lwjgl:lwjgl:2.9.2-nightly-20140822"])
+        // On Apple Silicon LegacyMacArm swaps in the arm64 LWJGL 2.9.4; elsewhere the macOS-only 2.9.2 must survive the merge.
+        let jars = names.filter { $0.hasPrefix("org.lwjgl.lwjgl:lwjgl:") }
+        #if arch(arm64)
+        #expect(jars == ["org.lwjgl.lwjgl:lwjgl:2.9.4-nightly-20150209"])
+        #else
+        #expect(jars == ["org.lwjgl.lwjgl:lwjgl:2.9.2-nightly-20140822"])
+        #endif
+    }
+}
+
+struct LegacyMacArmTests {
+    private func lib(_ name: String) -> Library { Library(name: name) }
+
+    @Test func appleSiliconSwapsLWJGL2ForTheArm64Build() {
+        let libs = [lib("a:first:1"), lib("org.lwjgl.lwjgl:lwjgl:2.9.2-nightly-20140822"), lib("org.lwjgl.lwjgl:lwjgl_util:2.9.2-nightly-20140822"),
+                    lib("org.lwjgl.lwjgl:lwjgl-platform:2.9.2-nightly-20140822"), lib("b:last:1")]
+        let patched = LegacyMacArm.patched(libs, hostIsArm64: true)
+        #expect(patched.map(\.name).first == "a:first:1")
+        #expect(patched.map(\.name).last == "b:last:1")
+        #expect(patched.contains { $0.name == "org.lwjgl.lwjgl:lwjgl:2.9.4-nightly-20150209" })
+        #expect(!patched.contains { $0.name.contains("2.9.2") })
+        #expect(LegacyMacArm.isPatched(patched))
+        let natives = patched.first { $0.name.contains("mmachina") }
+        #expect(natives?.nativeClassifier == "natives-osx")
+        #expect(natives?.resolvedArtifact?.url.host == "github.com")
+    }
+
+    @Test func intelAndModernVersionsAreLeftAlone() {
+        let legacy = [lib("org.lwjgl.lwjgl:lwjgl:2.9.2-nightly-20140822")]
+        #expect(LegacyMacArm.patched(legacy, hostIsArm64: false).map(\.name) == legacy.map(\.name))
+        let modern = [lib("org.lwjgl:lwjgl:3.3.3")]
+        #expect(LegacyMacArm.patched(modern, hostIsArm64: true).map(\.name) == modern.map(\.name))
+        #expect(!LegacyMacArm.isPatched(modern))
     }
 }

@@ -5,6 +5,9 @@ Versions follow [Semantic Versioning](https://semver.org); downloads are on the 
 
 ## [Unreleased]
 
+### Fixed
+- Minecraft 1.12.2 and older (LWJGL 2) now start on Apple Silicon Macs: Ember downloads Azul Zulu 8 for arm64 and an arm64 build of LWJGL 2 (MinecraftMachina, as in ManyMC and Prism) and uses them for these versions. Tested with Forge 1.12.2 (SevTech: Ages).
+
 ## [0.4.1] - 2026-11-03
 
 ### Fixed

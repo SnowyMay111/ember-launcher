@@ -244,7 +244,7 @@ public final class VersionInstaller: Sendable {
                 assetIndex: child.assetIndex,
                 assets: child.assets,
                 downloads: child.downloads,
-                libraries: child.libraries ?? [],
+                libraries: LegacyMacArm.patched(child.libraries ?? []),
                 javaVersion: child.javaVersion
             )
         }
@@ -318,7 +318,7 @@ public final class VersionInstaller: Sendable {
             assetIndex: child.assetIndex ?? parent.assetIndex,
             assets: child.assets ?? parent.assets,
             downloads: child.downloads ?? parent.downloads,
-            libraries: mergedLibs,
+            libraries: LegacyMacArm.patched(mergedLibs),
             javaVersion: child.javaVersion ?? parent.javaVersion
         )
     }

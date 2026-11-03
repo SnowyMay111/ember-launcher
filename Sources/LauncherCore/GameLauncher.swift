@@ -226,6 +226,11 @@ public final class GameLauncher: Sendable {
         let version = try resolveInstalled(instance)
         let defaultComponent = version.javaVersion?.component ?? (version.arguments == nil ? "jre-legacy" : "java-runtime-delta")
         let component = version.javaVersion?.component ?? defaultComponent
+        if LegacyMacArm.isPatched(version.libraries) {
+            // The arm64 LWJGL is not part of what the Mojang or Forge installers fetched.
+            try await installer.installLibraries(of: version) { progress?($0) }
+            return try await runtimeManager.ensureNativeLegacyJava(progress: progress)
+        }
         let hasArm64Natives = version.libraries.contains {
             $0.name.contains("natives-macos-arm64") || ($0.downloads?.classifiers?["natives-macos-arm64"] != nil)
         }

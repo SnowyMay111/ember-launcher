@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(CryptoKit)
+import CryptoKit
+#endif
 
 public enum JavaRuntimeError: Error, LocalizedError, Sendable {
     case unsupportedPlatform(String)
@@ -191,6 +194,54 @@ public final class JavaRuntimeManager: Sendable {
             throw JavaRuntimeError.javaBinaryNotFound(runtimeDir.path)
         }
 
+        return javaURL
+    }
+
+    /// Azul Zulu 8 for Apple Silicon (Mojang ships no arm64 Java 8): the Java that versions up to 1.16 use together with the arm64 LWJGL 2.
+    public func ensureNativeLegacyJava(progress: (@Sendable (DownloadProgress) -> Void)? = nil) async throws -> URL {
+        let runtimeDir = paths.runtimes.appendingPathComponent("jre-legacy-arm64", isDirectory: true)
+        let marker = runtimeDir.appendingPathComponent(".installed")
+        let fileManager = FileManager.default
+        if fileManager.fileExists(atPath: marker.path), let javaURL = findJavaBinary(in: runtimeDir) {
+            return javaURL
+        }
+
+        struct Listing: Decodable { let package_uuid: String; let download_url: URL }
+        struct Detail: Decodable { let sha256_hash: String?; let download_url: URL }
+        let listURL = URL(string: "https://api.azul.com/metadata/v1/zulu/packages/?java_version=8&os=macos&arch=aarch64&java_package_type=jre&archive_type=zip&latest=true&release_status=ga&availability_types=CA&javafx_bundled=false&page_size=1")!
+        guard let listing = try await downloader.fetchJSON([Listing].self, from: listURL).first else {
+            throw JavaRuntimeError.componentNotFound("Zulu 8 for arm64")
+        }
+        let detail = try await downloader.fetchJSON(Detail.self, from: URL(string: "https://api.azul.com/metadata/v1/zulu/packages/\(listing.package_uuid)")!)
+        guard detail.download_url.host == "cdn.azul.com" else {
+            throw JavaRuntimeError.componentNotFound("Zulu 8 for arm64")
+        }
+
+        try paths.ensureDirectories()
+        let work = paths.runtimes.appendingPathComponent("jre-legacy-arm64.download", isDirectory: true)
+        try? fileManager.removeItem(at: work)
+        try fileManager.createDirectory(at: work, withIntermediateDirectories: true, attributes: nil)
+        defer { try? fileManager.removeItem(at: work) }
+
+        let archive = work.appendingPathComponent("zulu.zip")
+        try await downloader.download(url: detail.download_url, to: archive, sha1: nil, size: nil)
+        #if canImport(CryptoKit)
+        if let expected = detail.sha256_hash, !expected.isEmpty {
+            let actual = SHA256.hash(data: try Data(contentsOf: archive, options: .mappedIfSafe)).map { String(format: "%02x", $0) }.joined()
+            guard actual.caseInsensitiveCompare(expected) == .orderedSame else {
+                throw JavaRuntimeError.javaBinaryNotFound("Zulu 8 download failed its checksum")
+            }
+        }
+        #endif
+
+        let unpacked = work.appendingPathComponent("unpacked", isDirectory: true)
+        try ZipArchive.extract(archive, to: unpacked)
+        try? fileManager.removeItem(at: runtimeDir)
+        try fileManager.moveItem(at: unpacked, to: runtimeDir)
+        try Data().write(to: marker)
+        guard let javaURL = findJavaBinary(in: runtimeDir) else {
+            throw JavaRuntimeError.javaBinaryNotFound(runtimeDir.path)
+        }
         return javaURL
     }
 
