@@ -238,6 +238,9 @@ struct SettingsScreen: View {
                 SettingsRow(title: "Close launcher after start", detail: "Save resources while Minecraft is running.") {
                     EmberToggle(label: "Close launcher on start", isOn: $settings.closeOnStart)
                 }
+                SettingsRow(title: "Open Minecraft with my server", detail: "Join your own server as soon as it starts. Off: start the server first, then press Join when you want to play.") {
+                    EmberToggle(label: "Open Minecraft with my server", isOn: $settings.joinOwnServer)
+                }
                 SettingsRow(title: "Server in the menu bar", detail: "Show an Ember icon with the server's status while it runs. The server keeps running when you close the window.", isLast: true) {
                     EmberToggle(label: "Server in the menu bar", isOn: $settings.serverMenuBar)
                 }

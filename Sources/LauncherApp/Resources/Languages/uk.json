@@ -756,6 +756,8 @@
   "No server running": "Сервер не запущений",
   "Open Ember": "Відкрити Ember",
   "Quit Ember": "Вийти з Ember",
+  "Open Minecraft with my server": "Відкривати Minecraft разом із моїм сервером",
+  "Join your own server as soon as it starts. Off: start the server first, then press Join when you want to play.": "Заходити на свій сервер одразу після запуску. Вимкнено: спершу запустіть сервер, а коли захочете грати, натисніть «Увійти».",
   "Server in the menu bar": "Сервер у рядку меню",
   "Show an Ember icon with the server's status while it runs. The server keeps running when you close the window.": "Значок Ember зі статусом сервера. Сервер продовжує працювати, коли вікно закрите.",
   "Allowed players": "Кому можна заходити",

@@ -149,6 +149,7 @@ struct ServersScreen: View {
         return VStack(alignment: .leading, spacing: 14) {
             header(profile, running: running)
             if running { addressRow }
+            joinOption
             statsRow(profile, running: running)
             HStack(spacing: 4) {
                 ForEach(Tab.allCases, id: \.self) { item in
@@ -192,6 +193,9 @@ struct ServersScreen: View {
             }
             Spacer()
             if running {
+                PrimaryPill(title: L("Join"), showsPlay: true, height: 36, isDisabled: play.isBusy || host.state != .running) {
+                    host.play(settings: settings, app: app, play: play)
+                }
                 SecondaryPill(title: L("Stop"), height: 36) { host.stopRunningServer() }
             } else {
                 PrimaryPill(title: L("Start"), height: 36, isDisabled: !canStart(profile)) { start(profile) }
@@ -204,6 +208,15 @@ struct ServersScreen: View {
                     .foregroundColor(Theme.textSecondary)
                     .offset(y: 18)
             }
+        }
+    }
+
+    private var joinOption: some View {
+        HStack(spacing: 8) {
+            EmberCheckbox(label: "Open Minecraft with my server", isOn: $settings.joinOwnServer)
+            Text(verbatim: L("Open Minecraft with my server"))
+                .font(Theme.font(size: 13, weight: .regular))
+                .foregroundColor(Theme.textSecondary)
         }
     }
 

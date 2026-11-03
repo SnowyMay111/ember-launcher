@@ -9,6 +9,7 @@ struct RootView: View {
     @StateObject private var toasts = ToastCenter()
     @StateObject private var dropdowns = DropdownHost()
     @ObservedObject private var invites = InvitesStore.shared
+    @ObservedObject private var host = LobbyHostController.shared
 
     init() {
         let settings = SettingsStore()
@@ -68,6 +69,10 @@ struct RootView: View {
             LobbyStore.shared.start()
         }
         .onChange(of: player.isBusy) { _, busy in updates.gameIsBusy = busy }
+        .onChange(of: host.state) { _, state in
+            guard state == .running, settings.joinOwnServer else { return }
+            host.play(settings: settings, app: app, play: player)
+        }
         .onChange(of: settings.autoUpdate) { _, isOn in
             if isOn { updates.autoUpdateEnabled() }
         }

@@ -3,6 +3,11 @@
 All notable changes to Ember.
 Versions follow [Semantic Versioning](https://semver.org); downloads are on the [Releases](https://github.com/SnowyMay111/ember-launcher/releases) page.
 
+## [Unreleased]
+
+### Added
+- Your own server no longer opens Minecraft by itself: Servers has a Join button while it runs. "Open Minecraft with my server" (Servers screen and Settings) joins automatically on start; off by default.
+
 ## [0.3.0] - 2026-11-02
 
 ### Added
