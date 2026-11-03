@@ -330,7 +330,7 @@ public final class ModrinthClient: Sendable {
         case .curseforge:
             guard curseForgeApplies else { return empty }
             return try await curseForgeSearchPage(
-                query: query, projectType: projectType, gameVersion: gameVersion, loader: loader ?? loaders.first,
+                query: query, projectType: projectType, gameVersion: gameVersion, loader: loader ?? Self.singleLoader(loaders),
                 sortBy: sortBy, limit: limit, offset: offset
             )
         case .both where curseForgeApplies:
@@ -342,7 +342,7 @@ public final class ModrinthClient: Sendable {
                 categories: categories, categoryGroups: categoryGroups, sortBy: sortBy, limit: quota, offset: mOff
             )
             async let curseTask = try? await curseForgeSearchPage(
-                query: query, projectType: projectType, gameVersion: gameVersion, loader: loader ?? loaders.first,
+                query: query, projectType: projectType, gameVersion: gameVersion, loader: loader ?? Self.singleLoader(loaders),
                 sortBy: sortBy, limit: quota, offset: cOff
             )
             var modrinth: ModrinthSearchResult?
@@ -356,7 +356,7 @@ public final class ModrinthClient: Sendable {
                 let modrinthDone = m.hits.count < quota && mOff + m.hits.count >= m.totalHits
                 let curseDone = c.hits.count < quota && cOff + c.hits.count >= c.totalHits
                 if modrinthDone, c.hits.count >= quota, let extra = try? await curseForgeSearchPage(
-                    query: query, projectType: projectType, gameVersion: gameVersion, loader: loader ?? loaders.first,
+                    query: query, projectType: projectType, gameVersion: gameVersion, loader: loader ?? Self.singleLoader(loaders),
                     sortBy: sortBy, limit: quota - m.hits.count, offset: cOff + c.hits.count
                 ) {
                     curse = ModrinthSearchResult(hits: c.hits + extra.hits, totalHits: c.totalHits)
@@ -448,6 +448,11 @@ public final class ModrinthClient: Sendable {
         case "updated": return 3
         default: return query.isEmpty ? 2 : 1
         }
+    }
+
+    /// CurseForge takes one loader per search; with several allowed ("any loader") it must not be narrowed to the first, which hid every Forge pack.
+    static func singleLoader(_ loaders: [String]) -> String? {
+        loaders.count == 1 ? loaders.first : nil
     }
 
     private func curseForgeSearchPage(

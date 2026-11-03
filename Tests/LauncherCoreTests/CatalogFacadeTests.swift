@@ -151,6 +151,12 @@ struct CatalogFacadeTests {
         #expect(result.hasMore == true)
     }
 
+    @Test func anyLoaderDoesNotNarrowCurseForgeToTheFirstLoader() {
+        #expect(ModrinthClient.singleLoader(["fabric", "quilt", "forge", "neoforge"]) == nil)
+        #expect(ModrinthClient.singleLoader(["forge"]) == "forge")
+        #expect(ModrinthClient.singleLoader([]) == nil)
+    }
+
     @Test func sortFieldMapping() {
         #expect(ModrinthClient.curseForgeSortField(sortBy: "relevance", query: "sodium") == 1)
         #expect(ModrinthClient.curseForgeSortField(sortBy: "relevance", query: "") == 2)
