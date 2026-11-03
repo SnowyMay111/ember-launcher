@@ -256,7 +256,7 @@ extension ModpackManager {
         let unique = entries.filter { seen.insert($0.fileID).inserted }
         guard !unique.isEmpty else { return ([], [], []) }
 
-        let curseForge = CurseForgeClient(downloader: downloader)
+        let curseForge = client.curseForge
         let fileIDs = unique.map(\.fileID)
         let projectIDs = Array(Set(unique.map(\.projectID)))
         async let filesTask = curseForge.files(ids: fileIDs)
@@ -323,5 +323,52 @@ extension ModpackManager {
             }
             return .failed(path: item.path, reason: error.localizedDescription)
         }
+    }
+}
+
+extension ModpackManager {
+    /// Preview entries for a CurseForge pack: one per mod file, paths as the importer will write them.
+    func curseForgePreview(
+        _ manifest: CurseForgePackManifest,
+        extractedAt tempDir: URL,
+        archive: URL,
+        workDir: URL
+    ) async throws -> ModpackPreview {
+        let summary = try curseForgeSummary(manifest, in: tempDir)
+        var seen = Set<Int>()
+        let unique = (manifest.files ?? []).filter { seen.insert($0.fileID).inserted }
+        var entries: [ModpackPreviewEntry] = []
+        if !unique.isEmpty {
+            let curseForge = client.curseForge
+            async let filesTask = curseForge.files(ids: unique.map(\.fileID))
+            async let modsTask = curseForge.mods(numericIDs: Array(Set(unique.map(\.projectID))))
+            let files = Dictionary(try await filesTask.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+            let mods = Dictionary(try await modsTask.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+            for entry in unique {
+                guard let file = files[entry.fileID], ModrinthFile.isSafeFilename(file.fileName) else { continue }
+                let mod = mods[entry.projectID]
+                // Files the author does not allow third-party launchers to download are reported by the importer.
+                if file.downloadUrl == nil, mod?.allowModDistribution == false { continue }
+                let path = "\(Self.curseForgeFolder(classId: mod?.classId))/\(file.fileName)"
+                entries.append(ModpackPreviewEntry(
+                    id: path,
+                    path: path,
+                    fileName: file.fileName,
+                    kind: ModpackPreviewKind(path: path),
+                    projectId: "cf:\(entry.projectID)",
+                    versionId: "cf:\(entry.projectID):\(file.id)",
+                    title: mod.map { $0.name.isEmpty ? $0.slug : $0.name } ?? (file.fileName as NSString).deletingPathExtension,
+                    summary: mod?.summary,
+                    iconURL: mod.flatMap { CurseForgeClient.iconURL(of: $0) },
+                    size: Int64(file.fileLength),
+                    requiredBy: []
+                ))
+            }
+        }
+        entries.sort { lhs, rhs in
+            if lhs.kind != rhs.kind { return lhs.kind.sortOrder < rhs.kind.sortOrder }
+            return lhs.title.lowercased() < rhs.title.lowercased()
+        }
+        return ModpackPreview(summary: summary, archive: archive, workDir: workDir, entries: entries)
     }
 }

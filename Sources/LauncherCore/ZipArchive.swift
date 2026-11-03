@@ -78,11 +78,21 @@ public enum ZipArchive: Sendable {
         if let maxBytes {
             abortWhen = { directorySize(directory) > maxBytes }
         }
-        let result = try run(
-            executable: "/usr/bin/unzip",
-            arguments: ["-q", "-o", archive.path, "-d", directory.path],
-            abortWhen: abortWhen
-        )
+        let result: (stdout: String, stderr: String, aborted: Bool)
+        do {
+            result = try run(
+                executable: "/usr/bin/unzip",
+                arguments: ["-q", "-o", archive.path, "-d", directory.path],
+                abortWhen: abortWhen
+            )
+        } catch ZipArchiveError.toolFailed {
+            // unzip cannot write file names that are not valid UTF-8 (packs zipped on Chinese Windows); bsdtar re-encodes them.
+            result = try run(
+                executable: "/usr/bin/bsdtar",
+                arguments: ["-xf", archive.path, "-C", directory.path],
+                abortWhen: abortWhen
+            )
+        }
         if result.aborted { throw ZipArchiveError.tooLarge(maxBytes ?? 0) }
         if let maxBytes, directorySize(directory) > maxBytes { throw ZipArchiveError.tooLarge(maxBytes) }
         // Ensure extracted items are owner-readable and owner-writable (e.g. Windows archives with 0000 mode).
@@ -152,12 +162,17 @@ public enum ZipArchive: Sendable {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: executable)
         process.arguments = arguments
+        // An app started from Finder has no locale; unzip then turns every non-ASCII file name into "?" and fails on the collisions.
+        var environment = ProcessInfo.processInfo.environment
+        environment["LC_ALL"] = "en_US.UTF-8"
+        process.environment = environment
         if let currentDirectoryURL = currentDirectoryURL {
             process.currentDirectoryURL = currentDirectoryURL
         }
 
         let stdoutPipe = Pipe()
         let stderrPipe = Pipe()
+        process.standardInput = FileHandle.nullDevice
         process.standardOutput = stdoutPipe
         process.standardError = stderrPipe
 
@@ -209,8 +224,9 @@ public enum ZipArchive: Sendable {
             throw ZipArchiveError.toolFailed(trimmed)
         }
 
-        let stdoutText = String(data: stdoutData, encoding: .utf8) ?? ""
-        let stderrText = String(data: stderrData, encoding: .utf8) ?? ""
+        // Lossy on purpose: names zipped on Chinese Windows are not valid UTF-8, and a nil here used to read as an empty archive.
+        let stdoutText = String(decoding: stdoutData, as: UTF8.self)
+        let stderrText = String(decoding: stderrData, as: UTF8.self)
         return (stdoutText, stderrText, false)
     }
     #endif

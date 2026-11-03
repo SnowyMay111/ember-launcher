@@ -145,6 +145,9 @@ extension ModpackManager {
 
         try extractWithinLimit(archive, to: tempDir)
         try validateNoSymbolicLinks(in: tempDir)
+        if let manifest = try Self.curseForgeManifest(in: tempDir) {
+            return try await curseForgePreview(manifest, extractedAt: tempDir, archive: archive, workDir: workDir)
+        }
         let (index, _, _, _) = try parseAndValidateIndex(in: tempDir)
 
         let clientFiles = index.files.filter { $0.env?.client != "unsupported" }

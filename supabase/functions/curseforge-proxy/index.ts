@@ -31,11 +31,16 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const key = Deno.env.get("CURSEFORGE_API_KEY");
   if (!key) return new Response(JSON.stringify({ error: "not configured" }), { status: 503, headers: CORS });
 
-  // CurseForge answers 403 for /v1/mods/search and 200 for /v1/mods/search/, so the search path gets a slash.
-  const upstreamPath = path === "/v1/mods/search" ? "/v1/mods/search/" : path;
-  const upstream = await fetch(UPSTREAM + upstreamPath + url.search, {
+  // Not "/v1/mods/search/": that path is served from a cache that ignores searchFilter, sortField and sortOrder,
+  // so every query came back with the same wrong page. The plain path needs a User-Agent to get past the 403.
+  const upstream = await fetch(UPSTREAM + path + url.search, {
     method: req.method,
-    headers: { "x-api-key": key, accept: "application/json", "content-type": "application/json" },
+    headers: {
+      "x-api-key": key,
+      accept: "application/json",
+      "content-type": "application/json",
+      "user-agent": "Ember-Launcher/1.0 (+https://github.com/SnowyMay111/ember-launcher)",
+    },
     body: req.method === "POST" ? await req.text() : undefined,
   });
   return new Response(await upstream.text(), {
