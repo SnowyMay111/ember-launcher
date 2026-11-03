@@ -793,5 +793,21 @@
   "Backup saved.": "Бэкап сохранён.",
   "Could not back up the world.": "Не удалось сделать бэкап мира.",
   "Backup restored. The previous world is kept in the backups folder.": "Бэкап восстановлен. Прежний мир сохранён в папке бэкапов.",
-  "Could not restore the backup.": "Не удалось восстановить бэкап."
+  "Could not restore the backup.": "Не удалось восстановить бэкап.",
+  "Last backup": "Последний бэкап",
+  "Never": "Никогда",
+  "Invite friends": "Позвать друзей",
+  "Choose who can join": "Кому можно заходить",
+  "Copy the world": "Сохранить копию мира",
+  "Difficulty, mode, backups": "Сложность, режим, бэкапы",
+  "What is happening": "Что происходит",
+  "Nothing yet.": "Пока ничего.",
+  "Start the server to see what happens.": "Запустите сервер, чтобы видеть события.",
+  "%@ joined": "%@ зашёл",
+  "%@ left": "%@ вышел",
+  "World saved": "Мир сохранён",
+  "Server started": "Сервер запущен",
+  "Full console": "Полная консоль",
+  "More": "Ещё",
+  "+ From friends": "+ Из друзей"
 }

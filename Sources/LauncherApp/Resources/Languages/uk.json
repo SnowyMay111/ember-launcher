@@ -793,5 +793,21 @@
   "Backup saved.": "Бекап збережено.",
   "Could not back up the world.": "Не вдалося зробити бекап світу.",
   "Backup restored. The previous world is kept in the backups folder.": "Бекап відновлено. Попередній світ збережено в теці бекапів.",
-  "Could not restore the backup.": "Не вдалося відновити бекап."
+  "Could not restore the backup.": "Не вдалося відновити бекап.",
+  "Last backup": "Останній бекап",
+  "Never": "Ніколи",
+  "Invite friends": "Покликати друзів",
+  "Choose who can join": "Кому можна заходити",
+  "Copy the world": "Зберегти копію світу",
+  "Difficulty, mode, backups": "Складність, режим, бекапи",
+  "What is happening": "Що відбувається",
+  "Nothing yet.": "Поки нічого.",
+  "Start the server to see what happens.": "Запустіть сервер, щоб бачити події.",
+  "%@ joined": "%@ зайшов",
+  "%@ left": "%@ вийшов",
+  "World saved": "Світ збережено",
+  "Server started": "Сервер запущено",
+  "Full console": "Повна консоль",
+  "More": "Ще",
+  "+ From friends": "+ З друзів"
 }
