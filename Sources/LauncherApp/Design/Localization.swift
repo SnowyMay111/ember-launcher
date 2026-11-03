@@ -3,7 +3,12 @@ import LauncherCore
 
 nonisolated(unsafe) public let localizer = Localizer(
     directory: Bundle.module.url(forResource: "Languages", withExtension: nil),
-    preferredLanguages: Locale.preferredLanguages
+    preferredLanguages: {
+        switch UserDefaults.standard.string(forKey: SettingsStore.appLanguageKey) ?? "system" {
+        case "en", "ru", "uk": return [UserDefaults.standard.string(forKey: SettingsStore.appLanguageKey)!]
+        default: return Locale.preferredLanguages
+        }
+    }()
 )
 
 public func L(_ key: String) -> String {

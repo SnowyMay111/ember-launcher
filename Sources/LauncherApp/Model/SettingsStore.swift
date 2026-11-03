@@ -19,6 +19,13 @@ final class SettingsStore: ObservableObject {
     @Published var joinOwnServer: Bool { didSet { defaults.set(joinOwnServer, forKey: "joinOwnServer") } }
     /// New servers start with "back up the world on stop" set to this.
     @Published var defaultServerBackup: Bool { didSet { defaults.set(defaultServerBackup, forKey: "defaultServerBackup") } }
+    /// "system", "en", "ru" or "uk"; read once at launch by `localizer`, so a change applies after a restart.
+    @Published var appLanguage: String { didSet { defaults.set(appLanguage, forKey: SettingsStore.appLanguageKey) } }
+    static let appLanguageKey = "appLanguage"
+    /// A `java` executable used instead of the managed runtime; empty keeps the managed one.
+    @Published var javaPath: String { didSet { defaults.set(javaPath, forKey: "javaPath") } }
+    /// JVM arguments added to every instance.
+    @Published var globalJavaArgs: String { didSet { defaults.set(globalJavaArgs, forKey: "globalJavaArgs") } }
     @Published var showSnapshots: Bool { didSet { defaults.set(showSnapshots, forKey: "showSnapshots") } }
     @Published var autoUpdate: Bool { didSet { defaults.set(autoUpdate, forKey: "autoUpdate") } }
     @Published var backgroundAnimations: Bool { didSet { defaults.set(backgroundAnimations, forKey: "backgroundAnimations") } }
@@ -48,6 +55,9 @@ final class SettingsStore: ObservableObject {
         closeOnStart = defaults.object(forKey: "closeOnStart") as? Bool ?? true
         serverMenuBar = defaults.object(forKey: SettingsStore.serverMenuBarKey) as? Bool ?? false
         joinOwnServer = defaults.object(forKey: "joinOwnServer") as? Bool ?? false
+        appLanguage = defaults.string(forKey: SettingsStore.appLanguageKey) ?? "system"
+        javaPath = defaults.string(forKey: "javaPath") ?? ""
+        globalJavaArgs = defaults.string(forKey: "globalJavaArgs") ?? ""
         defaultServerBackup = defaults.object(forKey: "defaultServerBackup") as? Bool ?? true
         showSnapshots = defaults.object(forKey: "showSnapshots") as? Bool ?? false
         autoUpdate = defaults.object(forKey: "autoUpdate") as? Bool ?? true
@@ -58,6 +68,10 @@ final class SettingsStore: ObservableObject {
         // "aiModel" is the pre-per-provider key; it belonged to whichever provider was chosen then.
         aiModel = defaults.string(forKey: SettingsStore.aiModelKey(provider)) ?? defaults.string(forKey: "aiModel") ?? ""
         hasAIKey = KeychainStore.exists(provider.rawValue)
+    }
+
+    var launchOverrides: LaunchOverrides {
+        LaunchOverrides(javaPath: javaPath, jvmArguments: globalJavaArgs)
     }
 
     private static func aiModelKey(_ provider: AIProviderKind) -> String { "aiModel.\(provider.rawValue)" }

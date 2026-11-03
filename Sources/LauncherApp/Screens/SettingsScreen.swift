@@ -9,8 +9,8 @@ struct SettingsScreen: View {
 
     enum Section: String, CaseIterable, Identifiable {
         case general = "General"
+        case game = "Game"
         case server = "Server"
-        case java = "Java & memory"
         case downloads = "Downloads"
         case appearance = "Appearance"
         case ai = "AI"
@@ -22,7 +22,7 @@ struct SettingsScreen: View {
             switch self {
             case .general: "gearshape"
             case .server: "server.rack"
-            case .java: "cpu"
+            case .game: "gamecontroller"
             case .downloads: "arrow.down.circle"
             case .appearance: "paintpalette"
             case .ai: "sparkles"
@@ -33,10 +33,10 @@ struct SettingsScreen: View {
         /// Cards of the section with the rows they hold: search looks through these titles.
         var cards: [(title: String, rows: [String])] {
             switch self {
-            case .general: [("Player", ["Display name"]), ("Behavior", ["Automatic updates", "Close launcher after start"])]
+            case .general: [("Player", ["Display name"]), ("Language", ["Language"]), ("Behavior", ["Automatic updates", "Close launcher after start"])]
             case .server: [("Hosting", ["Open Minecraft with my server", "Server in the menu bar", "Back up new servers"])]
-            case .java: [("Performance", ["Java runtime", "Memory allocation", "Window size"])]
-            case .downloads: [("Files and network", ["Show snapshots", "Mod catalog"])]
+            case .game: [("Java and memory", ["Java runtime", "Java path", "Java arguments", "Memory allocation"]), ("Game window", ["Window size"])]
+            case .downloads: [("Files and network", ["Show snapshots", "Mod catalog"]), ("Storage", ["Data folder", "Game files", "Game versions and libraries", "Java runtimes"])]
             case .appearance: [("Atmosphere", ["Living background"])]
             case .ai: [("AI assistant", ["AI provider", "API key", "AI model", "Custom model ID"])]
             case .about: [("About Ember", ["Check for updates", "Automatic updates"])]
@@ -68,6 +68,30 @@ struct SettingsScreen: View {
     private var recommendedMemoryText: String {
         let range = JVMArgumentsBuilder.memoryRecommendation(isModded: false).recommendedRangeMB
         return L("Recommended: %d-%d GB", range.lowerBound / 1024, range.upperBound / 1024)
+    }
+
+    /// The language the running app was started with; a different pick needs a restart.
+    private var launchLanguage: String {
+        localizer.language ?? (UserDefaults.standard.string(forKey: SettingsStore.appLanguageKey) == "en" ? "en" : "system")
+    }
+
+    private func languageName(_ code: String) -> String {
+        switch code {
+        case "en": "English"
+        case "ru": "Русский"
+        case "uk": "Українська"
+        default: L("System")
+        }
+    }
+
+    private func relaunch() {
+        let url = Bundle.main.bundleURL
+        guard url.pathExtension == "app" else { return }
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/bin/sh")
+        task.arguments = ["-c", "sleep 1; open -n \"\(url.path)\""]
+        try? task.run()
+        NSApp.terminate(nil)
     }
 
     private var isSearching: Bool { !query.trimmingCharacters(in: .whitespaces).isEmpty }
@@ -204,6 +228,21 @@ struct SettingsScreen: View {
                 }
             }
 
+            card("Language", rows: ["Language"]) {
+                SettingsRow(title: "Language", detail: "Follows your Mac by default. Ember restarts to apply a change.", isLast: true) {
+                    HStack(spacing: 10) {
+                        EmberMenu(label: "Language", value: languageName(settings.appLanguage), minWidth: 160) {
+                            ForEach(["system", "en", "ru", "uk"], id: \.self) { code in
+                                Button(languageName(code)) { settings.appLanguage = code }
+                            }
+                        }
+                        if settings.appLanguage != launchLanguage {
+                            SecondaryPill(title: L("Restart"), height: 34) { relaunch() }
+                        }
+                    }
+                }
+            }
+
             card("Behavior", rows: ["Automatic updates", "Close launcher after start"]) {
                 SettingsRow(title: "Automatic updates", detail: "Keep Ember and game metadata current.") {
                     EmberToggle(label: "Automatic updates", isOn: $settings.autoUpdate)
@@ -226,10 +265,16 @@ struct SettingsScreen: View {
                 }
             }
 
-        case .java:
-            card("Performance", rows: ["Java runtime", "Memory allocation", "Window size"]) {
+        case .game:
+            card("Java and memory", rows: ["Java runtime", "Java path", "Java arguments", "Memory allocation"]) {
                 SettingsRow(title: "Java runtime", detail: "Mojang Java 21 · Apple Silicon") {
                     MonoBadge(text: "Managed")
+                }
+                SettingsRow(title: "Java path", detail: "Use your own Java instead of the managed one. Leave empty for the managed one.") {
+                    EmberInput(label: "Java path", text: $settings.javaPath, width: 260, placeholder: "/Library/Java/…/bin/java")
+                }
+                SettingsRow(title: "Java arguments", detail: "Added to every instance, separated by spaces. Instance settings can add more.") {
+                    EmberInput(label: "Java arguments", text: $settings.globalJavaArgs, width: 260, placeholder: "-XX:+UseG1GC")
                 }
 
                 VStack(spacing: 0) {
@@ -240,16 +285,15 @@ struct SettingsScreen: View {
                     VStack(alignment: .leading, spacing: Theme.Space.s) {
                         MemoryPresetsGrid(memoryGB: $settings.memoryGB)
                         Text(recommendedMemoryText)
-                            .style(.init(size: 11.5, weight: .regular, color: Theme.textSecondary))
+                            .style(.init(size: 12, weight: .regular, color: Theme.textSecondary))
                     }
                     .padding(.horizontal, 24)
                     .padding(.bottom, 16)
                     .background(Theme.surface)
                 }
-                .overlay(alignment: .bottom) {
-                    Theme.border.frame(height: 1)
-                }
+            }
 
+            card("Game window", rows: ["Window size"]) {
                 SettingsRow(title: "Window size", detail: "Game window size at launch.", isLast: true) {
                     HStack(spacing: 10) {
                         EmberInput(label: "Window width", text: $settings.windowWidth, width: 90, alignment: .center)
@@ -271,6 +315,10 @@ struct SettingsScreen: View {
                         }
                     }
                 }
+            }
+
+            card("Storage", rows: ["Data folder", "Game files", "Game versions and libraries", "Java runtimes"]) {
+                StorageRows()
             }
 
         case .appearance:
@@ -369,5 +417,41 @@ extension CatalogSource {
         case .modrinth: return L("Modrinth only")
         case .curseforge: return L("CurseForge only")
         }
+    }
+}
+
+/// Where Ember keeps its files and how much room each part takes.
+private struct StorageRows: View {
+    @EnvironmentObject var app: AppState
+    @Local private var sizes: [String: Int64] = [:]
+
+    var body: some View {
+        SettingsRow(title: "Data folder", detail: app.paths.root.path) {
+            SecondaryPill(title: L("Show in Finder"), height: 34) { NSWorkspace.shared.open(app.paths.root) }
+        }
+        .task { await measure() }
+        sizeRow("Game files", "Worlds, mods and settings of your instances.", key: "instances")
+        sizeRow("Game versions and libraries", "Downloaded Minecraft versions, libraries and assets. Re-downloaded when needed.", key: "versions")
+        sizeRow("Java runtimes", "Java downloaded by Ember.", key: "runtimes", isLast: true)
+    }
+
+    private func sizeRow(_ title: String, _ detail: String, key: String, isLast: Bool = false) -> some View {
+        SettingsRow(title: title, detail: detail, isLast: isLast) {
+            Text(verbatim: sizes[key].map { ByteCountFormatter.string(fromByteCount: $0, countStyle: .file) } ?? "…")
+                .font(Theme.font(size: 13, weight: .medium))
+                .foregroundColor(Theme.text)
+        }
+    }
+
+    private func measure() async {
+        let paths = app.paths
+        let result = await Task.detached {
+            [
+                "instances": DiskUsage.size(of: paths.instances),
+                "versions": DiskUsage.size(of: paths.versions) + DiskUsage.size(of: paths.libraries) + DiskUsage.size(of: paths.assetsRoot),
+                "runtimes": DiskUsage.size(of: paths.runtimes),
+            ]
+        }.value
+        sizes = result
     }
 }

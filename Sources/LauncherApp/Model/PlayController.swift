@@ -223,17 +223,18 @@ final class PlayController: ObservableObject {
         launchNotice = nil
         let nickname = settings.nickname
         let hideLauncher = settings.closeOnStart
-        Task { await run(item, nickname: nickname, hideLauncher: hideLauncher, app: app, quickPlayServer: quickPlayServer) }
+        let overrides = settings.launchOverrides
+        Task { await run(item, nickname: nickname, hideLauncher: hideLauncher, overrides: overrides, app: app, quickPlayServer: quickPlayServer) }
     }
 
-    private func run(_ item: LibraryInstance, nickname: String, hideLauncher: Bool, app: AppState, quickPlayServer: String?) async {
+    private func run(_ item: LibraryInstance, nickname: String, hideLauncher: Bool, overrides: LaunchOverrides, app: AppState, quickPlayServer: String?) async {
         do {
             let (account, warning) = try await AccountStore.shared.launchAccount(offlineName: nickname)
             if let warning {
                 launchNotice = warning
             }
             try paths.ensureDirectories()
-            let command = try await prepareCommand(item.name, account: account, quickPlayServer: quickPlayServer)
+            let command = overrides.apply(to: try await prepareCommand(item.name, account: account, quickPlayServer: quickPlayServer))
             let process = try launcher.launch(command)
             let started = Date()
             let isRunningBox = AtomicBool(true)
