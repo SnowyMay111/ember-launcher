@@ -284,15 +284,15 @@ public final class CurseForgeClient: Sendable {
 
     // MARK: - API
 
-    public func searchPage(
+    static func searchQuery(
         query: String,
-        classId: Int = CurseForgeClient.classMod,
-        gameVersion: String? = nil,
-        loader: String? = nil,
-        sortField: Int = 2,
-        limit: Int = 20,
-        offset: Int = 0
-    ) async throws -> ModrinthSearchResult {
+        classId: Int,
+        gameVersion: String?,
+        loader: String?,
+        sortField: Int,
+        limit: Int,
+        offset: Int
+    ) -> [URLQueryItem] {
         var items = [
             URLQueryItem(name: "gameId", value: String(Self.gameId)),
             URLQueryItem(name: "classId", value: String(classId))
@@ -309,12 +309,31 @@ public final class CurseForgeClient: Sendable {
         items += [
             URLQueryItem(name: "sortField", value: String(sortField)),
             URLQueryItem(name: "sortOrder", value: "desc"),
-            URLQueryItem(name: "pageSize", value: String(limit)),
-            URLQueryItem(name: "index", value: String(offset))
+            URLQueryItem(name: "pageSize", value: String(limit))
         ]
+        // An explicit `index=0` makes CurseForge answer with a wrong, tiny result set (SevTech: Ages vanishes), so the first page omits it.
+        if offset > 0 {
+            items.append(URLQueryItem(name: "index", value: String(offset)))
+        }
+        return items
+    }
+
+    public func searchPage(
+        query: String,
+        classId: Int = CurseForgeClient.classMod,
+        gameVersion: String? = nil,
+        loader: String? = nil,
+        sortField: Int = 2,
+        limit: Int = 20,
+        offset: Int = 0
+    ) async throws -> ModrinthSearchResult {
+        let items = Self.searchQuery(
+            query: query, classId: classId, gameVersion: gameVersion, loader: loader,
+            sortField: sortField, limit: limit, offset: offset
+        )
         let envelope = try await fetch([CurseForgeMod].self, path: "v1/mods/search", query: items)
         return ModrinthSearchResult(
-            hits: envelope.data.map(Self.mapMod),
+            hits: envelope.data.filter { $0.classId == nil || $0.classId == classId }.map(Self.mapMod),
             totalHits: envelope.pagination?.totalCount ?? envelope.data.count
         )
     }
@@ -345,8 +364,7 @@ public final class CurseForgeClient: Sendable {
             items.append(URLQueryItem(name: "modLoaderType", value: String(type)))
         }
         items += [
-            URLQueryItem(name: "pageSize", value: "50"),
-            URLQueryItem(name: "index", value: "0")
+            URLQueryItem(name: "pageSize", value: "50")
         ]
         async let mod = mod(numericID: modId)
         async let files = fetch([CurseForgeFile].self, path: "v1/mods/\(modId)/files", query: items)

@@ -207,4 +207,16 @@ struct CurseForgeTests {
         #expect(CurseForgeClient.loaderName(6) == "neoforge")
         #expect(CurseForgeClient.loaderName(0) == nil)
     }
+
+    @Test func firstSearchPageOmitsIndex() {
+        let first = CurseForgeClient.searchQuery(
+            query: "SevTech: Ages", classId: 4471, gameVersion: nil, loader: nil, sortField: 1, limit: 10, offset: 0
+        )
+        #expect(!first.contains { $0.name == "index" })
+        #expect(first.contains { $0.name == "searchFilter" && $0.value == "SevTech: Ages" })
+        let next = CurseForgeClient.searchQuery(
+            query: "SevTech: Ages", classId: 4471, gameVersion: nil, loader: nil, sortField: 1, limit: 10, offset: 10
+        )
+        #expect(next.contains { $0.name == "index" && $0.value == "10" })
+    }
 }

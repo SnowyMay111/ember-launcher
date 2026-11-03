@@ -17,7 +17,7 @@ struct ModsScreen: View {
     }
 
     private var subtitle: String {
-        if mods.kind == .modpack { return "Creates a new instance from a Modrinth pack." }
+        if mods.kind == .modpack { return "Creates a new instance from a modpack." }
         guard let current = app.current else { return "Pick an instance in Library first." }
         switch mods.kind {
         case .shader:
@@ -417,11 +417,19 @@ struct ModsScreen: View {
         }
     }
 
+    private var browseTitle: String {
+        switch CatalogSource.current {
+        case .modrinth: return "Find on Modrinth"
+        case .curseforge: return "Find on CurseForge"
+        case .both: return "Find on Modrinth and CurseForge"
+        }
+    }
+
     private var browsePanel: some View {
         panel {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 10) {
-                    Text(tr: "Find on Modrinth").style(.init(size: 16, weight: .semibold))
+                    Text(tr: browseTitle).style(.init(size: 16, weight: .semibold))
                     Spacer(minLength: 16)
                     if mods.totalHits > 0 {
                         Text(verbatim: L("%d results", mods.totalHits)).style(.init(size: 12, color: Theme.textMuted))

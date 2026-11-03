@@ -864,5 +864,8 @@
   "Follows your Mac by default. Ember restarts to apply a change.": "По умолчанию как на вашем Mac. Для смены Ember перезапустится.",
   "Memory allocation": "Выделенная память",
   "Java runtime": "Среда Java",
-  "Managed": "Встроенная"
+  "Managed": "Встроенная",
+  "Creates a new instance from a modpack.": "Создаёт новую сборку из модпака.",
+  "Find on CurseForge": "Найти на CurseForge",
+  "Find on Modrinth and CurseForge": "Найти на Modrinth и CurseForge"
 }
