@@ -25,6 +25,8 @@ public struct ServerProfile: Codable, Equatable, Identifiable, Sendable {
     public var maxPlayers: Int
     public var lastPlayed: Date?
     public var trusted: [TrustedPlayer]
+    /// Copy the world into `backups/` every time the server stops.
+    public var autoBackup: Bool
 
     public init(
         instanceName: String,
@@ -33,7 +35,8 @@ public struct ServerProfile: Codable, Equatable, Identifiable, Sendable {
         loader: String,
         maxPlayers: Int,
         lastPlayed: Date? = nil,
-        trusted: [TrustedPlayer] = []
+        trusted: [TrustedPlayer] = [],
+        autoBackup: Bool = false
     ) {
         self.instanceName = instanceName
         self.name = name
@@ -42,6 +45,7 @@ public struct ServerProfile: Codable, Equatable, Identifiable, Sendable {
         self.maxPlayers = maxPlayers
         self.lastPlayed = lastPlayed
         self.trusted = trusted
+        self.autoBackup = autoBackup
     }
 
     public init(from decoder: Decoder) throws {
@@ -53,6 +57,7 @@ public struct ServerProfile: Codable, Equatable, Identifiable, Sendable {
         maxPlayers = try container.decode(Int.self, forKey: .maxPlayers)
         lastPlayed = try container.decodeIfPresent(Date.self, forKey: .lastPlayed)
         trusted = try container.decodeIfPresent([TrustedPlayer].self, forKey: .trusted) ?? []
+        autoBackup = try container.decodeIfPresent(Bool.self, forKey: .autoBackup) ?? false
     }
 }
 
@@ -67,6 +72,7 @@ public struct ServerLibrary: Sendable {
     private let root: URL
     private static let profileFileName = "ember-server.json"
     private static let worldFolderName = "world"
+    private static let autoBackupPrefix = "world-auto-"
 
     public init(root: URL) {
         self.root = root
@@ -154,6 +160,36 @@ public struct ServerLibrary: Sendable {
         try save(profile)
     }
 
+    /// Changes the name shown in Ember; the folder and the instance link stay as they are.
+    public func rename(_ instanceName: String, to name: String) throws {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, var profile = profile(for: instanceName) else { throw CocoaError(.fileNoSuchFile) }
+        profile.name = trimmed
+        try save(profile)
+    }
+
+    public func setAutoBackup(_ instanceName: String, _ isOn: Bool) throws {
+        guard var profile = profile(for: instanceName) else { throw CocoaError(.fileNoSuchFile) }
+        profile.autoBackup = isOn
+        try save(profile)
+    }
+
+    /// Takes the server's folder (world, backups, settings) out of the list. It goes to the Trash by default, so it can be put back.
+    public func remove(
+        _ instanceName: String,
+        trash: (URL) throws -> Void = { try FileManager.default.trashItem(at: $0, resultingItemURL: nil) }
+    ) throws {
+        try trash(directory(for: instanceName))
+    }
+
+    /// Keeps the newest `keep` automatic backups; hand-made ones and `before-restore-*` are never touched.
+    public func pruneAutomaticBackups(for instanceName: String, keep: Int) {
+        let automatic = listBackups(for: instanceName).filter { $0.url.lastPathComponent.hasPrefix(Self.autoBackupPrefix) }
+        for old in automatic.dropFirst(max(keep, 0)) {
+            try? FileManager.default.removeItem(at: old.url)
+        }
+    }
+
     private func backupsDirectory(for instanceName: String) -> URL {
         directory(for: instanceName).appendingPathComponent("backups", isDirectory: true)
     }
@@ -171,14 +207,14 @@ public struct ServerLibrary: Sendable {
 
     /// Copies the world into `backups/world-<time>`. The server should have flushed to disk (`save-all`) first.
     @discardableResult
-    public func backupWorld(for instanceName: String, at date: Date = Date()) throws -> URL {
+    public func backupWorld(for instanceName: String, at date: Date = Date(), automatic: Bool = false) throws -> URL {
         let source = worldDirectory(for: instanceName)
         guard FileManager.default.fileExists(atPath: source.path) else {
             throw CocoaError(.fileNoSuchFile)
         }
         let backups = backupsDirectory(for: instanceName)
         try FileManager.default.createDirectory(at: backups, withIntermediateDirectories: true)
-        let target = backups.appendingPathComponent("world-\(Self.stamp(date))", isDirectory: true)
+        let target = backups.appendingPathComponent((automatic ? Self.autoBackupPrefix : "world-") + Self.stamp(date), isDirectory: true)
         try FileManager.default.copyItem(at: source, to: target)
         return target
     }

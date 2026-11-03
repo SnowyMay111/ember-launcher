@@ -47,6 +47,34 @@ struct ServerLibraryTests {
         #expect(library.profile(for: "b")?.trusted == [])
     }
 
+    @Test func renameAutoBackupAndRemove() throws {
+        let root = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let library = ServerLibrary(root: root)
+        try library.save(ServerProfile(instanceName: "a", name: "A", minecraftVersion: "1.21.1", loader: "fabric", maxPlayers: 8))
+        try library.rename("a", to: "  Home world ")
+        try library.setAutoBackup("a", true)
+        #expect(library.profile(for: "a")?.name == "Home world")
+        #expect(library.profile(for: "a")?.autoBackup == true)
+        #expect(throws: (any Error).self) { try library.rename("a", to: "   ") }
+
+        let world = library.directory(for: "a").appendingPathComponent("world", isDirectory: true)
+        try FileManager.default.createDirectory(at: world, withIntermediateDirectories: true)
+        for offset in 0..<4 {
+            try library.backupWorld(for: "a", at: Date(timeIntervalSince1970: 1_700_000_000 + Double(offset) * 10), automatic: true)
+        }
+        try library.backupWorld(for: "a", at: Date(timeIntervalSince1970: 1_600_000_000))
+        library.pruneAutomaticBackups(for: "a", keep: 2)
+        let names = library.listBackups(for: "a").map { $0.url.lastPathComponent }
+        #expect(names.filter { $0.hasPrefix("world-auto-") }.count == 2)
+        #expect(names.contains { !$0.hasPrefix("world-auto-") })
+
+        var trashed: URL?
+        try library.remove("a") { trashed = $0 }
+        #expect(trashed == library.directory(for: "a"))
+    }
+
     @Test func testSaveAndListRoundTrip() throws {
         let root = try makeTempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }

@@ -9,7 +9,8 @@ struct ServersScreen: View {
     @ObservedObject private var host = LobbyHostController.shared
 
     private enum Tab: String, CaseIterable {
-        case panel = "Panel"
+        case panel = "Overview"
+        case settings = "Settings"
         case world = "World"
         case mods = "Mods"
     }
@@ -17,6 +18,7 @@ struct ServersScreen: View {
     @Local private var profiles: [ServerProfile] = []
     @Local private var selectedID: String?
     @Local private var tab: Tab = .panel
+    @Local private var consoleOpen = false
     @EnvironmentObject private var lobbies: LobbyStore
 
     private var selected: ServerProfile? {
@@ -97,9 +99,10 @@ struct ServersScreen: View {
                                 .font(Theme.font(size: 13, weight: .medium))
                                 .foregroundColor(Theme.text)
                                 .lineLimit(1)
-                            Text(verbatim: "\(profile.loader.capitalized) \(profile.minecraftVersion)")
+                            Text(verbatim: listSubtitle(profile))
                                 .font(Theme.font(size: 12, weight: .regular))
-                                .foregroundColor(Theme.textSecondary)
+                                .foregroundColor(isRunning(profile) ? Theme.success : Theme.textSecondary)
+                                .lineLimit(1)
                         }
                         Spacer(minLength: 0)
                     }
@@ -142,82 +145,138 @@ struct ServersScreen: View {
             .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Theme.border, lineWidth: 1))
     }
 
+    private func listSubtitle(_ profile: ServerProfile) -> String {
+        if isRunning(profile) { return L("Running · %d online", host.players.count) }
+        return "\(profile.loader.capitalized) \(profile.minecraftVersion)"
+    }
+
     // MARK: - Detail
 
     private func detail(_ profile: ServerProfile) -> some View {
         let running = isRunning(profile)
         return VStack(alignment: .leading, spacing: 14) {
-            header(profile, running: running)
-            if running { addressRow }
-            joinOption
-            statsRow(profile, running: running)
-            HStack(spacing: 4) {
-                ForEach(Tab.allCases, id: \.self) { item in
-                    Button { tab = item } label: {
-                        Text(verbatim: L(item.rawValue))
-                            .font(Theme.font(size: 13, weight: .medium))
-                            .foregroundColor(tab == item ? Theme.text : Theme.textSecondary)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 7)
-                            .overlay(alignment: .bottom) {
-                                Rectangle().fill(tab == item ? Theme.ember : Color.clear).frame(height: 2)
-                            }
+            hero(profile, running: running)
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(spacing: 4) {
+                    ForEach(Tab.allCases, id: \.self) { item in
+                        Button { tab = item } label: {
+                            Text(verbatim: L(item.rawValue))
+                                .font(Theme.font(size: 13, weight: .medium))
+                                .foregroundColor(tab == item ? Theme.text : Theme.textSecondary)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 7)
+                                .overlay(alignment: .bottom) {
+                                    Rectangle().fill(tab == item ? Theme.ember : Color.clear).frame(height: 2)
+                                }
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
+                    Spacer()
                 }
-                Spacer()
-            }
-            .overlay(alignment: .bottom) { Rectangle().fill(Theme.border).frame(height: 1) }
+                .overlay(alignment: .bottom) { Rectangle().fill(Theme.border).frame(height: 1) }
 
-            switch tab {
-            case .panel: panel(profile, running: running)
-            case .world: ServerWorldTab(profile: profile, running: running)
-            case .mods: ServerModsTab(profile: profile, running: running)
-            }
-        }
-        .padding(18)
-        .background(panelBackground)
-    }
-
-    private func header(_ profile: ServerProfile, running: Bool) -> some View {
-        HStack(alignment: .center, spacing: 10) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(verbatim: profile.name)
-                    .font(Theme.font(size: 18, weight: .semibold))
-                    .foregroundColor(Theme.text)
-                Text(verbatim: "\(profile.loader.capitalized) \(profile.minecraftVersion) · "
-                     + (running ? L("Running") : L("Stopped")) + " · "
-                     + L("Invite-only, %d allowed", profile.trusted.count))
-                    .font(Theme.font(size: 12, weight: .regular))
-                    .foregroundColor(Theme.textSecondary)
-            }
-            Spacer()
-            if running {
-                PrimaryPill(title: L("Join"), showsPlay: true, height: 36, isDisabled: play.isBusy || host.state != .running) {
-                    host.play(settings: settings, app: app, play: play)
+                switch tab {
+                case .panel: panel(profile, running: running)
+                case .settings:
+                    ServerWorldTab(part: .settings, profile: profile, running: running, onChanged: reload) {
+                        selectedID = nil
+                        reload()
+                    }
+                case .world:
+                    ServerWorldTab(part: .world, profile: profile, running: running, onChanged: reload, onDeleted: {})
+                case .mods:
+                    ServerModsTab(profile: profile, running: running)
                 }
-                SecondaryPill(title: L("Stop"), height: 36) { host.stopRunningServer() }
-            } else {
-                PrimaryPill(title: L("Start"), height: 36, isDisabled: !canStart(profile)) { start(profile) }
             }
-        }
-        .overlay(alignment: .bottomLeading) {
-            if !running, !host.eulaAccepted {
-                Text(verbatim: L("Accept the Minecraft EULA in Create lobby first."))
-                    .font(Theme.font(size: 12, weight: .regular))
-                    .foregroundColor(Theme.textSecondary)
-                    .offset(y: 18)
-            }
+            .padding(18)
+            .background(panelBackground)
         }
     }
 
-    private var joinOption: some View {
-        HStack(spacing: 8) {
-            EmberCheckbox(label: "Open Minecraft with my server", isOn: $settings.joinOwnServer)
-            Text(verbatim: L("Open Minecraft with my server"))
-                .font(Theme.font(size: 13, weight: .regular))
-                .foregroundColor(Theme.textSecondary)
+    // MARK: - Hero
+
+    private func hero(_ profile: ServerProfile, running: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(verbatim: profile.name)
+                        .font(Theme.font(size: 22, weight: .semibold))
+                        .foregroundColor(Theme.text)
+                        .lineLimit(1)
+                    Text(verbatim: "\(profile.loader.capitalized) \(profile.minecraftVersion) · " + lastPlayedText(profile))
+                        .font(Theme.font(size: 13, weight: .regular))
+                        .foregroundColor(Theme.textSecondary)
+                }
+                Spacer(minLength: 12)
+                statusBadge(running: running)
+            }
+
+            HStack(spacing: 10) {
+                if running {
+                    PrimaryPill(title: L("Join"), showsPlay: true, height: 40, isDisabled: play.isBusy || host.state != .running) {
+                        host.play(settings: settings, app: app, play: play)
+                    }
+                    SecondaryPill(title: L("Stop"), height: 40) { host.stopRunningServer() }
+                } else {
+                    PrimaryPill(title: L("Start"), height: 40, isDisabled: !canStart(profile)) { start(profile) }
+                }
+                if let progress = progressText {
+                    ProgressView().controlSize(.small)
+                    Text(verbatim: progress)
+                        .font(Theme.font(size: 13, weight: .regular))
+                        .foregroundColor(Theme.textSecondary)
+                } else if !running, !host.eulaAccepted {
+                    Text(verbatim: L("Accept the Minecraft EULA in Create lobby first."))
+                        .font(Theme.font(size: 13, weight: .regular))
+                        .foregroundColor(Theme.textSecondary)
+                }
+                Spacer(minLength: 0)
+            }
+
+            if running { addressRow }
+            statsRow(profile, running: running)
+            HStack(spacing: 8) {
+                EmberCheckbox(label: "Open Minecraft with my server", isOn: $settings.joinOwnServer)
+                Text(verbatim: L("Open Minecraft with my server"))
+                    .font(Theme.font(size: 13, weight: .regular))
+                    .foregroundColor(Theme.textSecondary)
+            }
+            .padding(.top, -6)
         }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Theme.surface)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(running ? Theme.success.opacity(0.45) : Theme.border, lineWidth: 1)
+                )
+        )
+    }
+
+    private var progressText: String? {
+        if case .preparing(let text) = host.state { return text }
+        return nil
+    }
+
+    private func statusBadge(running: Bool) -> some View {
+        let starting = progressText != nil
+        let color = running ? Theme.success : (starting ? Theme.ember : Theme.textMuted)
+        let text = running ? L("Running") : (starting ? L("Starting…") : L("Stopped"))
+        return HStack(spacing: 7) {
+            Circle().fill(color).frame(width: 8, height: 8)
+            Text(verbatim: text)
+                .font(Theme.font(size: 13, weight: .medium))
+                .foregroundColor(Theme.text)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(Capsule().fill(Theme.elevated))
+    }
+
+    private func lastPlayedText(_ profile: ServerProfile) -> String {
+        guard let date = profile.lastPlayed else { return L("Never started") }
+        return L("Last started %@", date.formatted(.relative(presentation: .named)))
     }
 
     /// The address friends can paste into Minecraft; published once the tunnel is up.
@@ -253,9 +312,33 @@ struct ServersScreen: View {
         VStack(alignment: .leading, spacing: 8) {
             sectionTitle(L("Players"))
             ServerPlayersTab(profile: profile, running: running)
-            sectionTitle(L("Console")).padding(.top, 14)
-            ServerConsoleTab(profile: profile, running: running)
+            Button { consoleOpen.toggle() } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(Theme.textSecondary)
+                        .rotationEffect(.degrees(consoleOpen ? 90 : 0))
+                    Text(verbatim: L("Console"))
+                        .font(Theme.font(size: 15, weight: .semibold))
+                        .foregroundColor(Theme.text)
+                    if !consoleOpen, running, let last = host.logLines.last {
+                        Text(verbatim: last)
+                            .font(Theme.font(size: 12, weight: .regular, mono: true))
+                            .foregroundColor(Theme.textSecondary)
+                            .lineLimit(1)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(.vertical, 6)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 14)
+            if consoleOpen {
+                ServerConsoleTab(profile: profile, running: running)
+            }
         }
+        .animation(.easeInOut(duration: 0.2), value: consoleOpen)
     }
 
     private func sectionTitle(_ text: String) -> some View {
@@ -535,8 +618,16 @@ private struct ServerPlayersTab: View {
 // MARK: - World
 
 private struct ServerWorldTab: View {
+    enum Part { case settings, world }
+
+    let part: Part
     let profile: ServerProfile
     let running: Bool
+    let onChanged: () -> Void
+    let onDeleted: () -> Void
+    @Local private var newName = ""
+    @Local private var autoBackup = false
+    @Local private var settingsNote = ""
     @ObservedObject private var host = LobbyHostController.shared
     @Local private var difficulty = "easy"
     @Local private var gamemode = "survival"
@@ -559,6 +650,9 @@ private struct ServerWorldTab: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
+            switch part {
+            case .settings:
+                nameRow
             row(L("Difficulty")) {
                 EmberMenu(label: "Difficulty", value: L(difficulty.capitalized), minWidth: 160) {
                     ForEach(difficulties, id: \.self) { value in
@@ -587,6 +681,28 @@ private struct ServerWorldTab: View {
                     }
                 }
             }
+                row(L("Back up on stop")) {
+                    EmberToggle(label: "Back up on stop", isOn: Binding(
+                        get: { autoBackup },
+                        set: {
+                            autoBackup = $0
+                            try? host.library.setAutoBackup(profile.instanceName, $0)
+                            onChanged()
+                        }
+                    ))
+                }
+                Text(verbatim: L("Copies the world each time the server stops and keeps the last 5 copies."))
+                    .font(Theme.font(size: 12, weight: .regular))
+                    .foregroundColor(Theme.textSecondary)
+                    .padding(.top, 8)
+            Text(verbatim: running
+                 ? L("Game mode, PvP and max players apply after a restart.")
+                 : L("Changes are saved right away."))
+                .font(Theme.font(size: 12, weight: .regular))
+                .foregroundColor(Theme.textSecondary)
+                .padding(.top, 10)
+                manageSection
+            case .world:
             if running {
                 ForEach(rules, id: \.name) { rule in
                     row(L(rule.title)) {
@@ -602,19 +718,71 @@ private struct ServerWorldTab: View {
                     weatherButton(L("Clear"), "clear")
                     weatherButton(L("Rain"), "rain")
                 }
-                Text(verbatim: L("Game mode, PvP and max players apply after a restart."))
-                    .font(Theme.font(size: 12, weight: .regular))
-                    .foregroundColor(Theme.textSecondary)
-                    .padding(.top, 10)
             } else {
                 Text(verbatim: L("Rules, time and weather can be changed while the server is running."))
                     .font(Theme.font(size: 12, weight: .regular))
                     .foregroundColor(Theme.textSecondary)
                     .padding(.top, 10)
             }
-            backupsSection
+                backupsSection
+            }
         }
-        .task { load(); backups = host.library.listBackups(for: profile.instanceName) }
+        .task {
+            load()
+            newName = profile.name
+            autoBackup = profile.autoBackup
+            backups = host.library.listBackups(for: profile.instanceName)
+        }
+    }
+
+    private var nameRow: some View {
+        row(L("Name")) {
+            EmberInput(label: "Server name", text: $newName, width: 220)
+            SecondaryPill(title: L("Save"), height: 30) {
+                try? host.library.rename(profile.instanceName, to: newName)
+                onChanged()
+            }
+            .disabled(newName.trimmingCharacters(in: .whitespaces).isEmpty || newName == profile.name)
+        }
+    }
+
+    private var manageSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(verbatim: L("Manage"))
+                .font(Theme.font(size: 15, weight: .semibold))
+                .foregroundColor(Theme.text)
+                .padding(.top, 20)
+            row(L("Server folder")) {
+                SecondaryPill(title: L("Show in Finder"), height: 30) { NSWorkspace.shared.open(directory) }
+            }
+            row(L("Delete server")) {
+                SecondaryPill(title: L("Move to Trash"), height: 30, action: confirmDelete)
+                    .disabled(running)
+            }
+            Text(verbatim: running
+                 ? L("Stop the server before deleting it.")
+                 : (settingsNote.isEmpty
+                    ? L("The world and its backups go to the Trash, so you can put them back. The game instance stays in the Library.")
+                    : settingsNote))
+                .font(Theme.font(size: 12, weight: .regular))
+                .foregroundColor(Theme.textSecondary)
+                .padding(.top, 8)
+        }
+    }
+
+    private func confirmDelete() {
+        let alert = NSAlert()
+        alert.messageText = L("Move “%@” to the Trash?", profile.name)
+        alert.informativeText = L("The world and its backups go to the Trash, so you can put them back. The game instance stays in the Library.")
+        alert.addButton(withTitle: L("Move to Trash"))
+        alert.addButton(withTitle: L("Cancel"))
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        do {
+            try host.library.remove(profile.instanceName)
+            onDeleted()
+        } catch {
+            settingsNote = L("Could not move the server to the Trash.")
+        }
     }
 
     private func row<Content: View>(_ title: String, @ViewBuilder _ content: () -> Content) -> some View {

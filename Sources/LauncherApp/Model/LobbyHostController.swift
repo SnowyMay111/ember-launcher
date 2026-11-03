@@ -400,6 +400,7 @@ final class LobbyHostController: ObservableObject {
             self.terminateWatch = nil
         }
         let running = server
+        let stoppedInstance = runningInstance
         server = nil
         serverDirectory = nil
         runningInstance = nil
@@ -407,6 +408,13 @@ final class LobbyHostController: ObservableObject {
         tracker.reset()
         players = []
         await running?.stop()
+        if running != nil, let stoppedInstance, library.profile(for: stoppedInstance)?.autoBackup == true {
+            let library = library
+            await Task.detached {
+                _ = try? library.backupWorld(for: stoppedInstance, automatic: true)
+                library.pruneAutomaticBackups(for: stoppedInstance, keep: 5)
+            }.value
+        }
     }
 
     private enum HostError: LocalizedError {

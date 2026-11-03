@@ -6,6 +6,8 @@ Versions follow [Semantic Versioning](https://semver.org); downloads are on the 
 ## [Unreleased]
 
 ### Added
+- Servers redesign: a header card with status, Start / Join / Stop, address and stats; tabs Overview / Settings / World / Mods; the console is collapsed until you open it; the list shows who is online.
+- Server settings in one place: rename, difficulty, game mode, PvP, max players, automatic world backup on stop (keeps the last 5), show in Finder and Move to Trash (the world and backups can be put back).
 - Your own server no longer opens Minecraft by itself: Servers has a Join button while it runs. "Open Minecraft with my server" (Servers screen and Settings) joins automatically on start; off by default.
 
 ## [0.3.0] - 2026-11-02
