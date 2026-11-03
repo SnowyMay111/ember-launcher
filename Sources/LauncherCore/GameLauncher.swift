@@ -289,6 +289,10 @@ public final class GameLauncher: Sendable {
             .joined(separator: "\n")
         let needsNativesExtract = (try? String(contentsOf: nativesMarker, encoding: .utf8)) != nativesStamp
         var nativesOK = true
+        if needsNativesExtract, let stale = try? fm.contentsOfDirectory(at: nativesDir, includingPropertiesForKeys: nil) {
+            // Libraries swapped for other builds (arm64 LWJGL, java-objc-bridge) must not meet the old ones left in the folder.
+            for item in stale { try? fm.removeItem(at: item) }
+        }
 
         for library in version.libraries {
             guard RuleEvaluator.isAllowed(rules: library.rules),

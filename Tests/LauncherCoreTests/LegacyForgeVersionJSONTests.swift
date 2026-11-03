@@ -55,7 +55,7 @@ struct LegacyMacArmTests {
 
     @Test func appleSiliconSwapsLWJGL2ForTheArm64Build() {
         let libs = [lib("a:first:1"), lib("org.lwjgl.lwjgl:lwjgl:2.9.2-nightly-20140822"), lib("org.lwjgl.lwjgl:lwjgl_util:2.9.2-nightly-20140822"),
-                    lib("org.lwjgl.lwjgl:lwjgl-platform:2.9.2-nightly-20140822"), lib("net.java.dev.jna:jna:4.4.0"), lib("b:last:1")]
+                    lib("org.lwjgl.lwjgl:lwjgl-platform:2.9.2-nightly-20140822"), lib("net.java.dev.jna:jna:4.4.0"), Library(name: "ca.weblite:java-objc-bridge:1.0.0", natives: ["osx": "natives-osx"]), lib("ca.weblite:java-objc-bridge:1.0.0"), lib("b:last:1")]
         let patched = LegacyMacArm.patched(libs, hostIsArm64: true)
         #expect(patched.map(\.name).first == "a:first:1")
         #expect(patched.map(\.name).last == "b:last:1")
@@ -63,6 +63,8 @@ struct LegacyMacArmTests {
         #expect(!patched.contains { $0.name.contains("2.9.2") })
         #expect(patched.map(\.name).contains("net.java.dev.jna:jna:5.8.0"))
         #expect(!patched.contains { $0.name == "net.java.dev.jna:jna:4.4.0" })
+        #expect(patched.map(\.name).contains("ca.weblite:java-objc-bridge:1.1.0-mmachina.1"))
+        #expect(patched.filter { $0.name.hasPrefix("ca.weblite:java-objc-bridge") }.count == 1)
         #expect(LegacyMacArm.isPatched(patched))
         let natives = patched.first { $0.name.contains("mmachina") }
         #expect(natives?.nativeClassifier == "natives-osx")

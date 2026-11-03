@@ -30,7 +30,17 @@ enum LegacyMacArm {
         let insertAt = min(libraries[..<first].filter { !isLWJGL2($0) }.count, result.count)
         result.insert(contentsOf: replacements, at: insertAt)
         // JNA 4.x has no arm64 library (Minecraft 1.12 died in `Native.<clinit>` with a dlopen error); 5.8.0 has one.
-        return result.map { $0.name.hasPrefix("net.java.dev.jna:jna:") ? jna : $0 }
+        // The narrator loads libjcocoa out of the java-objc-bridge jar; 1.0.0 has only an Intel one, Maven's 1.1 is Java 11 code.
+        // MinecraftMachina's 1.1.0 build is Java 8 and universal.
+        var objcAdded = false
+        return result.compactMap { library in
+            if library.name.hasPrefix("net.java.dev.jna:jna:") { return jna }
+            if library.name.hasPrefix("ca.weblite:java-objc-bridge:") {
+                defer { objcAdded = true }
+                return objcAdded ? nil : objcBridge
+            }
+            return library
+        }
     }
 
     private static let jna = Library(
@@ -39,6 +49,15 @@ enum LegacyMacArm {
             path: "net/java/dev/jna/jna/5.8.0/jna-5.8.0.jar",
             sha1: "3551d8d827e54858214107541d3aff9c615cb615", size: 1729586,
             url: URL(string: "https://repo1.maven.org/maven2/net/java/dev/jna/jna/5.8.0/jna-5.8.0.jar")!
+        ))
+    )
+
+    private static let objcBridge = Library(
+        name: "ca.weblite:java-objc-bridge:1.1.0-mmachina.1",
+        downloads: LibraryDownloads(artifact: DownloadArtifact(
+            path: "ca/weblite/java-objc-bridge/1.1.0-mmachina.1/java-objc-bridge-1.1.0-mmachina.1.jar",
+            sha1: "369a83621e3c65496348491e533cb97fe5f2f37d", size: 91947,
+            url: URL(string: "https://github.com/MinecraftMachina/Java-Objective-C-Bridge/releases/download/1.1.0-mmachina.1/java-objc-bridge-1.1.jar")!
         ))
     )
 
