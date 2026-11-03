@@ -5,6 +5,9 @@ Versions follow [Semantic Versioning](https://semver.org); downloads are on the 
 
 ## [Unreleased]
 
+### Fixed
+- Minecraft 1.12.2 and older on Apple Silicon: the game no longer closes with code 255 right after start (JNA 4 had no arm64 library; Ember now uses JNA 5.8.0 for these versions).
+
 ## [0.4.2] - 2026-11-03
 
 ### Fixed

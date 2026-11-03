@@ -29,8 +29,18 @@ enum LegacyMacArm {
         var result = libraries.filter { !isLWJGL2($0) }
         let insertAt = min(libraries[..<first].filter { !isLWJGL2($0) }.count, result.count)
         result.insert(contentsOf: replacements, at: insertAt)
-        return result
+        // JNA 4.x has no arm64 library (Minecraft 1.12 died in `Native.<clinit>` with a dlopen error); 5.8.0 has one.
+        return result.map { $0.name.hasPrefix("net.java.dev.jna:jna:") ? jna : $0 }
     }
+
+    private static let jna = Library(
+        name: "net.java.dev.jna:jna:5.8.0",
+        downloads: LibraryDownloads(artifact: DownloadArtifact(
+            path: "net/java/dev/jna/jna/5.8.0/jna-5.8.0.jar",
+            sha1: "3551d8d827e54858214107541d3aff9c615cb615", size: 1729586,
+            url: URL(string: "https://repo1.maven.org/maven2/net/java/dev/jna/jna/5.8.0/jna-5.8.0.jar")!
+        ))
+    )
 
     private static var replacements: [Library] {
         let base = "org/lwjgl/lwjgl"
