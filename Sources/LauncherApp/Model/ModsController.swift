@@ -29,6 +29,9 @@ final class ModsController: ObservableObject {
     @Published var isSearching: Bool = false
     @Published var updates: [ModUpdate] = []
     @Published var isCheckingUpdates: Bool = false
+    /// (done, total) while "Update all" runs.
+    @Published var updateProgress: (done: Int, total: Int)?
+    private var autoCheckedInstance: String?
     @Published var busy: Set<String> = []
     @Published var message: String?
     @Published var sort: BrowseSort? = .downloads
@@ -754,9 +757,31 @@ final class ModsController: ObservableObject {
     }
 
     func applyAll() async {
+        guard let name = instanceName, !updates.isEmpty, updateProgress == nil else { return }
         let pending = updates
-        for update in pending {
-            await apply(update)
+        updateProgress = (0, pending.count)
+        defer { updateProgress = nil }
+
+        let report = await manager.applyAll(pending, instance: name) { [weak self] done, total in
+            Task { @MainActor in self?.updateProgress = (done, total) }
         }
+        reload()
+        app.reload()
+        let doneTitles = Set(report.updated)
+        updates.removeAll { doneTitles.contains($0.record.title) }
+
+        var lines = [L("Updated %d mods.", report.updated.count)]
+        for failure in report.failed {
+            lines.append(L("Could not update %@: %@", failure.title, failure.reason))
+        }
+        message = lines.joined(separator: "\n")
+    }
+
+    /// Looks for updates once per instance when the screen opens, without any message.
+    func autoCheckUpdates() async {
+        guard let name = instanceName, kind == .mod, autoCheckedInstance != name else { return }
+        autoCheckedInstance = name
+        guard let found = try? await manager.updates(instance: name), instanceName == name else { return }
+        updates = found
     }
 }

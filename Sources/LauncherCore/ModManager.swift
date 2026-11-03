@@ -87,6 +87,27 @@ public struct ModUpdate: Sendable, Equatable {
     }
 }
 
+/// Outcome of updating several mods in one go.
+public struct ModUpdateReport: Sendable, Equatable {
+    public struct Failure: Sendable, Equatable {
+        public var title: String
+        public var reason: String
+
+        public init(title: String, reason: String) {
+            self.title = title
+            self.reason = reason
+        }
+    }
+
+    public var updated: [String] = []
+    public var failed: [Failure] = []
+
+    public init(updated: [String] = [], failed: [Failure] = []) {
+        self.updated = updated
+        self.failed = failed
+    }
+}
+
 public struct ModUpgradeCheck: Sendable, Equatable {
     public var record: ModRecord
     public var targetVersion: ModrinthVersion?
@@ -435,6 +456,27 @@ public final class ModManager: Sendable {
             }
         }
         return updates
+    }
+
+    /// Applies every update one by one; one failure does not stop the rest.
+    /// `progress` gets (done so far, total) before each mod and once at the end.
+    public func applyAll(
+        _ updates: [ModUpdate],
+        instance name: String,
+        progress: (@Sendable (Int, Int) -> Void)? = nil
+    ) async -> ModUpdateReport {
+        var report = ModUpdateReport()
+        for (index, update) in updates.enumerated() {
+            progress?(index, updates.count)
+            do {
+                try await apply(update: update, instance: name)
+                report.updated.append(update.record.title)
+            } catch {
+                report.failed.append(.init(title: update.record.title, reason: error.localizedDescription))
+            }
+        }
+        progress?(updates.count, updates.count)
+        return report
     }
 
     public func apply(update: ModUpdate, instance name: String) async throws {

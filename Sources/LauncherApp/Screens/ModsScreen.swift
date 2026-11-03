@@ -123,11 +123,13 @@ struct ModsScreen: View {
             app.activeMods = mods
             mods.reload()
             if mods.results.isEmpty { runSearch(delay: 0) }
+            Task { await mods.autoCheckUpdates() }
         }
         .onChange(of: app.currentID) { _, _ in
             queue = []
             mods.reload()
             runSearch(delay: 0)
+            Task { await mods.autoCheckUpdates() }
         }
         .onChange(of: query) { _, _ in runSearch(delay: 350) }
         .onChange(of: mods.kind) { _, _ in
@@ -223,7 +225,9 @@ struct ModsScreen: View {
                 }
                 Spacer(minLength: 8)
                 if mods.kind == .mod, mods.canInstall, !mods.installed.isEmpty {
-                    if !mods.updates.isEmpty {
+                    if let progress = mods.updateProgress {
+                        PrimaryPill(title: L("Updating %d of %d…", min(progress.done + 1, progress.total), progress.total), height: 32, horizontalPadding: 16, isDisabled: true)
+                    } else if !mods.updates.isEmpty {
                         PrimaryPill(title: L("Update all (%d)", mods.updates.count), height: 32, horizontalPadding: 16) {
                             Task { await mods.applyAll() }
                         }

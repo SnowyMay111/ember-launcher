@@ -6,6 +6,7 @@ Versions follow [Semantic Versioning](https://semver.org); downloads are on the 
 ## [Unreleased]
 
 ### Added
+- Mods: "Update all" now shows progress (3 of 7), keeps going if one mod fails and tells you which ones failed and why; updates are looked for automatically when you open the Mods screen. Old files go to the Trash.
 - Servers redesign: server chips on top, a header card with status, Start / Join / Stop, address and stats (players, world size, last backup), quick tiles (invite friends, back up now, settings), tabs Overview / Settings / World / Mods; Overview shows players, allowed players as chips and a feed of what happens; the full console is collapsed until you open it.
 - Settings: new Game section (Java and memory, game window) in a better order; language picker (System / English / Русский / Українська); your own Java path and Java arguments for every instance; Storage card with the data folder and how much room games, versions and Java take.
 - Settings redesign: sections with icons, a search field, cards with plain titles, an update banner with an Update button, and a new Server section (open Minecraft with my server, menu bar icon, back up new servers by default).
