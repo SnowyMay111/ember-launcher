@@ -2,7 +2,7 @@
 # Собирает релизную Ember.app и кладёт zip для друзей в dist/. Запуск из корня проекта:
 #   scripts/package-app.sh
 # Подпись локальная (ad-hoc), без нотаризации: на чужом Маке при первом запуске нужно «ПКМ → Открыть»
-# или `xattr -dr com.apple.quarantine /Applications/Ember.app`. Для публичного релиза нужны Developer ID и нотаризация.
+# или `xattr -dr com.apple.quarantine /Applications/Ember.app`.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

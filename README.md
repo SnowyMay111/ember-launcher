@@ -52,7 +52,7 @@ The full history is in the [changelog](CHANGELOG.md).
 - **Know why the game crashed.** Live game log, crash analyzer that names the guilty mod or setting, a session health report.
 - **Share packs.** Import and export `.mrpack` files, including Forge and NeoForge packs.
 - **A tidy library.** Group your instances, open a details panel (overview, mods, worlds, logs), and delete instances or downloaded game versions safely: a version that an instance still uses is protected.
-- **Skins.** Import 64×64 PNG skins, preview them from the front and the back, keep a collection on your Mac. The game applies the chosen skin after Microsoft sign-in, which is not available yet.
+- **Skins.** Import 64×64 PNG skins, preview them from the front and the back, keep a collection on your Mac. The game applies the chosen skin after you sign in with Microsoft.
 - **Looks good, stays quiet.** The warm dark Ember interface with an animated backdrop (one switch turns the animations off to save battery), English / Russian / Ukrainian.
 - **Updates itself.** The launcher checks GitHub Releases on start; when a new version is out a button appears, one click downloads and installs it.
 - Offline nickname by default.
@@ -92,7 +92,7 @@ You need a Mac with an Apple chip (M1 or newer) and macOS 14 or newer. You do **
 
 1. Download **`Ember-mac-arm64.zip`** from the [latest release](https://github.com/SnowyMay111/ember-launcher/releases/latest) and unzip it.
 2. Drag **`Ember.app`** into your **Applications** folder.
-3. First launch only: the app is not notarized by Apple yet, so macOS will refuse to open it. Open **Terminal**, paste this and press Enter:
+3. First launch only: the app is not notarized by Apple, so macOS will refuse to open it. Open **Terminal**, paste this and press Enter:
 
    ```bash
    xattr -dr com.apple.quarantine /Applications/Ember.app
@@ -121,13 +121,13 @@ Yes. It is open source under the [MIT License](LICENSE). Minecraft itself is not
 <details>
 <summary><b>Do I need to own Minecraft?</b></summary>
 
-The offline nickname mode is meant for single-player, LAN and offline servers. To play on official servers, please buy the game. Microsoft sign-in is on the roadmap.
+The offline nickname mode is meant for single-player, LAN and offline servers. To play on official servers, buy the game and sign in with your Microsoft account.
 </details>
 
 <details>
 <summary><b>macOS says the app cannot be opened. Is it safe?</b></summary>
 
-The build is signed locally but not yet notarized by Apple (that needs a paid developer account), so Gatekeeper blocks the first launch. The `xattr` command in [Install](#install) removes the quarantine flag; the source is in this repository if you want to check or build it yourself.
+The build is signed locally and not notarized by Apple, so Gatekeeper blocks the first launch. The `xattr` command in [Install](#install) removes the quarantine flag; the source is in this repository if you want to check or build it yourself.
 </details>
 
 <details>
@@ -182,7 +182,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) if you want to send a change.
 - [x] `.mrpack` import and export
 - [x] Self-update from GitHub Releases
 - [x] The Ember interface and name
-- [ ] Microsoft sign-in
+- [x] Microsoft sign-in
 - [x] CurseForge as a second catalog
 - [ ] Windows
 

@@ -39,7 +39,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 PLIST
 
 # Подпись: EMBER_SIGN_IDENTITY (SHA-1 отпечаток или имя), иначе сертификат "Ember Signing" из связки ключей,
-# иначе ad-hoc ("-"), чтобы приложение запускалось на Apple Silicon. Нотаризация позже.
+# иначе ad-hoc ("-"), чтобы приложение запускалось на Apple Silicon.
 SIGN_IDENTITY="${EMBER_SIGN_IDENTITY:-}"
 if [ -z "$SIGN_IDENTITY" ]; then
     SIGN_IDENTITY="$(security find-certificate -c "Ember Signing" -Z 2>/dev/null | sed -n 's/^SHA-1 hash: //p' | head -n 1)"

@@ -24,4 +24,4 @@ softwareupdate --install-rosetta --agree-to-license
 
 # Ember: install (Mac)
 
-Needs an Apple Silicon Mac, macOS 14+. Download `Ember-mac-arm64.zip` from GitHub Releases, unzip, drag `Ember.app` to Applications, then run once in Terminal: `xattr -dr com.apple.quarantine /Applications/Ember.app` (the app is not Apple-notarized yet). Old versions (before 1.18) need Rosetta: `softwareupdate --install-rosetta --agree-to-license`.
+Needs an Apple Silicon Mac, macOS 14+. Download `Ember-mac-arm64.zip` from GitHub Releases, unzip, drag `Ember.app` to Applications, then run once in Terminal: `xattr -dr com.apple.quarantine /Applications/Ember.app` (the app is not Apple-notarized). Old versions (before 1.18) need Rosetta: `softwareupdate --install-rosetta --agree-to-license`.
