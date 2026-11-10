@@ -39,18 +39,10 @@ final class SkinStore: ObservableObject {
 
     /// Loads skins metadata from disk and reads the equipped skin ID from UserDefaults.
     func load() {
-        do {
-            if FileManager.default.fileExists(atPath: indexURL.path) {
-                let data = try Data(contentsOf: indexURL)
-                let decoder = JSONDecoder()
-                decoder.dateDecodingStrategy = .iso8601
-                skins = try decoder.decode([SavedSkin].self, from: data)
-            } else {
-                skins = []
-            }
-        } catch {
-            message = error.localizedDescription
-        }
+        // An index that does not decode is kept as "index.json.corrupt" before the presets below write a new one.
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        skins = SafeJSON.read([SavedSkin].self, from: indexURL, decoder: decoder) ?? []
 
         if let savedEquipped = UserDefaults.standard.string(forKey: "equippedSkinID"),
            let uuid = UUID(uuidString: savedEquipped) {
@@ -86,16 +78,7 @@ final class SkinStore: ObservableObject {
                 return data
             }
         }
-        let fallbackPaths = [
-            skinsDirectory.appendingPathComponent("\(name).png").path,
-            "/tmp/\(name).png"
-        ]
-        for path in fallbackPaths {
-            if let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
-                return data
-            }
-        }
-        return nil
+        return try? Data(contentsOf: skinsDirectory.appendingPathComponent("\(name).png"))
     }
 
     /// Imports a PNG skin from a file URL, validating its pixel dimensions (64x64 or 64x32).

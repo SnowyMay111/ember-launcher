@@ -68,6 +68,10 @@ final class AccountStore: ObservableObject {
         if current.isExpired {
             do {
                 current = try await auth.refresh(current)
+                // Signed out while the request was in flight: stay signed out and play offline.
+                guard session != nil else {
+                    return (MinecraftAccount(offline: try OfflineAccount(name: offlineName)), nil)
+                }
                 store(current)
             } catch {
                 let offline = MinecraftAccount(offline: try OfflineAccount(name: offlineName))

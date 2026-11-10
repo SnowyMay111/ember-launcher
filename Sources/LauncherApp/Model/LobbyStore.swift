@@ -245,6 +245,8 @@ final class LobbyStore: ObservableObject {
                 message = L("Someone in the lobby already uses this nickname.")
             case .notReady:
                 message = L("The host is still starting the server. Try again in a moment.")
+            case .rateLimited:
+                message = L("Too many wrong codes. Wait a minute and try again.")
             }
         } catch {
             message = L("Could not reach the lobby service.")

@@ -194,6 +194,8 @@ public enum LobbyJoinOutcome: Sendable, Equatable {
     case full
     case nickTaken
     case notReady
+    /// Too many wrong join codes within a minute.
+    case rateLimited
 }
 
 /// A single row of a lobby's roster.
@@ -765,6 +767,8 @@ public struct EmberLobbies: Sendable {
             return .nickTaken
         case "not_ready":
             return .notReady
+        case "rate_limited":
+            return .rateLimited
         default:
             throw EmberAuthError.invalidResponse
         }

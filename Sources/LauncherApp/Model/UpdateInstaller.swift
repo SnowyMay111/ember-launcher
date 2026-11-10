@@ -1,5 +1,6 @@
 import Foundation
 import LauncherCore
+import Security
 
 /// One file download that reports whole percents. The file is moved to `destination` as soon as it has arrived.
 private final class FileDownload: NSObject, URLSessionDownloadDelegate, @unchecked Sendable {
@@ -111,13 +112,33 @@ enum UpdateInstaller {
             } ?? false
             guard plist?["CFBundleIdentifier"] as? String == bundleIdentifier, sameVersion else { throw UpdateError.wrongBuild }
 
+            guard await run("/usr/bin/codesign", ["--verify", "--deep", app.path]).status == 0,
+                  isSignedLikeRunningApp(app) else { throw UpdateError.badSignature }
             _ = await run("/usr/bin/xattr", ["-dr", "com.apple.quarantine", app.path])
-            guard await run("/usr/bin/codesign", ["--verify", "--deep", app.path]).status == 0 else { throw UpdateError.badSignature }
             return app
         } catch {
             try? fileManager.removeItem(at: workDir)
             throw error
         }
+    }
+
+    /// An update must be signed by whoever signed the app that is running: an intact signature alone proves nothing,
+    /// anyone can sign a bundle. A build signed ad hoc (run from source) has no certificate to compare with, so for
+    /// it an intact signature is all there is to check.
+    static func isSignedLikeRunningApp(_ app: URL, runningApp: URL = Bundle.main.bundleURL) -> Bool {
+        guard let expected = signingCertificate(of: runningApp) else { return true }
+        return signingCertificate(of: app) == expected
+    }
+
+    /// The certificate a bundle is signed with; nil for an ad-hoc signed or unsigned bundle.
+    private static func signingCertificate(of app: URL) -> Data? {
+        var code: SecStaticCode?
+        guard SecStaticCodeCreateWithPath(app as CFURL, [], &code) == errSecSuccess, let code else { return nil }
+        var information: CFDictionary?
+        guard SecCodeCopySigningInformation(code, SecCSFlags(rawValue: kSecCSSigningInformation), &information) == errSecSuccess,
+              let certificates = (information as? [String: Any])?[kSecCodeInfoCertificates as String] as? [SecCertificate],
+              let leaf = certificates.first else { return nil }
+        return SecCertificateCopyData(leaf) as Data
     }
 
     private static func fetch(_ info: UpdateInfo, to zipURL: URL, progress: @escaping @Sendable (Double) -> Void) async throws {
@@ -232,8 +253,13 @@ enum UpdateInstaller {
         if [ -e "$OLD" ]; then
             mv "$OLD" "$TRASH/$$ failed $BACKUP_NAME" 2>/dev/null || mv "$OLD" "$(dirname "$OLD")/$$ failed $BACKUP_NAME"
         fi
-        mv "$BACKUP" "$OLD"
-        /usr/bin/open "$OLD"
+        # A broken bundle that could not be moved away must not swallow the old app: run that from where it is.
+        if [ ! -e "$OLD" ] && mv "$BACKUP" "$OLD"; then
+            /usr/bin/open "$OLD"
+        else
+            echo "cannot put the old app back, it stays at $BACKUP"
+            /usr/bin/open "$BACKUP"
+        fi
         exit 1
     }
 

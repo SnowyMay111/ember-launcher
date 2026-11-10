@@ -22,6 +22,7 @@ final class EmberAccountStore: ObservableObject {
     @Published private(set) var phase: Phase = .idle
 
     private let auth = EmberAuth()
+    private let refreshing = SingleFlight<EmberSession>()
     private var task: Task<Void, Never>?
 
     private init() {
@@ -124,20 +125,26 @@ final class EmberAccountStore: ObservableObject {
         phase = .idle
     }
 
-    /// The session, refreshed when it is about to expire. A failed refresh signs out.
+    /// The session, refreshed when it is about to expire. Callers that ask at the same moment share one refresh.
+    /// Only a refusal from the server signs out; offline or a server fault keeps the session for the next try.
     func validSession() async -> EmberSession? {
-        guard var current = session else { return nil }
-        if current.isExpired {
-            do {
-                current = try await auth.refresh(current)
-                store(current)
-            } catch {
-                signOut()
-                phase = .failed(L("Your Ember session expired. Sign in again."))
-                return nil
-            }
+        guard let current = session else { return nil }
+        guard current.isExpired else { return current }
+        do {
+            let fresh = try await refreshing.run { [auth] in try await auth.refresh(current) }
+            // Signed out, or signed in again, while the request was in flight: that choice wins over the refresh.
+            guard let now = session else { return nil }
+            guard now.refreshToken == current.refreshToken else { return now }
+            store(fresh)
+            return fresh
+        } catch let error as EmberAuthError where error.endsSession {
+            guard session?.refreshToken == current.refreshToken else { return session }
+            signOut()
+            phase = .failed(L("Your Ember session expired. Sign in again."))
+            return nil
+        } catch {
+            return nil
         }
-        return current
     }
 
     private func store(_ value: EmberSession) {

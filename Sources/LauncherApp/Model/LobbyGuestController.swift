@@ -65,7 +65,7 @@ final class LobbyGuestController: ObservableObject {
     func play(settings: SettingsStore, app: AppState, play: PlayController) {
         guard case .room = state, !play.isBusy,
               LobbyStore.shared.current?.isRunning == true,
-              let port = LobbyStore.shared.tunnelPort,
+              LobbyStore.shared.tunnelPort != nil,
               let roomInstance
         else { return }
         errorMessage = nil
@@ -73,6 +73,13 @@ final class LobbyGuestController: ObservableObject {
         Task {
             do {
                 try await LobbyRoom.shared.pull(final: true)
+                // The guest left while the content was installing: nothing to launch, and `leave` set the state.
+                guard case .preparing = state, self.roomInstance == roomInstance else { return }
+                // The host stopped the server or the tunnel moved meanwhile: stay in the room with the port of now.
+                guard LobbyStore.shared.current?.isRunning == true, let port = LobbyStore.shared.tunnelPort else {
+                    state = .room
+                    return
+                }
                 guard let item = app.instances.first(where: { $0.id == roomInstance }) else {
                     throw LobbyGuestError.instanceMissing
                 }
@@ -80,6 +87,7 @@ final class LobbyGuestController: ObservableObject {
                 play.play(item, settings: settings, app: app, quickPlayServer: "127.0.0.1:\(port)")
                 state = .room
             } catch {
+                guard case .preparing = state else { return }
                 errorMessage = error.localizedDescription
                 state = .room
             }

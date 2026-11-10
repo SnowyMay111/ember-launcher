@@ -646,6 +646,7 @@
   "This lobby has closed.": "Це лобі закрите.",
   "You cannot join this lobby.": "Ви не можете увійти до цього лобі.",
   "The lobby is full.": "Лобі заповнене.",
+  "Too many wrong codes. Wait a minute and try again.": "Забагато неправильних кодів. Зачекайте хвилину і спробуйте знову.",
   "Someone in the lobby already uses this nickname.": "Цей нік уже зайнятий у лобі.",
   "The host is still starting the server. Try again in a moment.": "Хост ще запускає сервер. Спробуйте за хвилину.",
   "Invitation sent.": "Запрошення надіслано.",

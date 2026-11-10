@@ -172,6 +172,16 @@ public enum EmberAuthError: Error, LocalizedError, Sendable {
     case http(Int, String)
     case invalidResponse
 
+    /// True when the server refused the session itself, so only a new sign-in helps. A dropped connection, a rate
+    /// limit or a server fault says nothing about the session and must not sign the user out.
+    public var endsSession: Bool {
+        switch self {
+        case .invalidCredentials: return true
+        case .http(let status, _): return (400...403).contains(status)
+        default: return false
+        }
+    }
+
     public var errorDescription: String? {
         switch self {
         case .notConfigured:

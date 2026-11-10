@@ -172,13 +172,7 @@ public final class ModManager: Sendable {
     }
 
     func loadRecords(instance name: String) -> [ModRecord] {
-        let jsonURL = modsJSONURL(for: name)
-        guard FileManager.default.fileExists(atPath: jsonURL.path),
-              let data = try? Data(contentsOf: jsonURL),
-              let records = try? JSONDecoder().decode([ModRecord].self, from: data) else {
-            return []
-        }
-        return records
+        SafeJSON.read([ModRecord].self, from: modsJSONURL(for: name)) ?? []
     }
 
     func saveRecords(_ records: [ModRecord], instance name: String) throws {

@@ -232,13 +232,7 @@ public final class ContentInstaller: Sendable {
 
     /// Loads content records from content.json for an instance.
     public func loadContentRecords(instance name: String) -> [ContentRecord] {
-        let url = contentJSONURL(for: name)
-        guard FileManager.default.fileExists(atPath: url.path),
-              let data = try? Data(contentsOf: url),
-              let records = try? JSONDecoder().decode([ContentRecord].self, from: data) else {
-            return []
-        }
-        return records
+        SafeJSON.read([ContentRecord].self, from: contentJSONURL(for: name)) ?? []
     }
 
     /// Saves content records to content.json for an instance.

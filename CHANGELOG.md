@@ -5,6 +5,17 @@ Versions follow [Semantic Versioning](https://semver.org); downloads are on the 
 
 ## [Unreleased]
 
+### Fixed
+- Ember account: you are no longer signed out at random. Friends and lobbies refreshed the session at the same moment and one of them lost it; now they share one refresh. Being offline no longer signs you out either, and signing out while a refresh is running stays signed out (the same for the Microsoft account).
+- A damaged list file (mods, content, skins) is no longer treated as empty and overwritten: it is kept next to the original as `.corrupt`.
+- Lobby guest: leaving the lobby while its content is installing no longer starts the game afterwards.
+- Updater: if the new version cannot be put in place and the broken one cannot be moved away, the old app is opened from where it is instead of being moved inside the broken bundle.
+
+### Security
+- Updater: an update must be signed with the same certificate as the running app, not merely carry an intact signature. Builds run from source (ad-hoc signed) are not affected.
+- Cloud: dead lobbies are deleted, tunnel signals and wrong join codes are rate limited (ten wrong codes a minute), the tunnel key is replaced when a lobby is reopened, join codes come from a cryptographic source, profiles are readable by signed-in users only, and `id` / `created_at` of a profile can no longer be written.
+- CurseForge proxy: no browser access (CORS removed), request bodies up to 64 KB, a per-address request limit, a timeout for CurseForge, and errors are no longer cached for five minutes.
+
 ## [0.4.4] - 2026-11-04
 
 ### Added

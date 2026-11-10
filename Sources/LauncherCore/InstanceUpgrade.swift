@@ -314,12 +314,7 @@ public final class InstanceUpgrader: Sendable {
         let modsJSONURL = store.instanceDirectory(for: name).appendingPathComponent("mods.json")
         try fm.createDirectory(at: modsDir, withIntermediateDirectories: true, attributes: nil)
 
-        var records: [ModRecord] = []
-        if fm.fileExists(atPath: modsJSONURL.path),
-           let data = try? Data(contentsOf: modsJSONURL),
-           let decoded = try? JSONDecoder().decode([ModRecord].self, from: data) {
-            records = decoded
-        }
+        var records = SafeJSON.read([ModRecord].self, from: modsJSONURL) ?? []
 
         var updatedTitles: [String] = []
         var disabledTitles: [String] = []
