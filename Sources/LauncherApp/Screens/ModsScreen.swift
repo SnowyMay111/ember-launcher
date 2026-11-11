@@ -397,7 +397,7 @@ struct ModsScreen: View {
         .background(Color(hex: 0x1b191b))
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(Theme.lineStrong, lineWidth: 1))
-        .shadow(color: .black.opacity(0.55), radius: 24, y: 14)
+        .shadow(color: Theme.black55, radius: 24, y: 14)
     }
 
     private func installQueue() {

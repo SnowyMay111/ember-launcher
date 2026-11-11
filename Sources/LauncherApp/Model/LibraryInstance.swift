@@ -143,7 +143,10 @@ struct LibraryInstance: Identifiable, Equatable {
         L("%.1f GB", Double(memoryMB) / 1024)
     }
 
+    /// "25 min", "2 h", "2 h 5 min": the hours part is left out under an hour, the minutes part on a whole hour.
     static func duration(minutes: Int) -> String {
-        L("%d h %d min", minutes / 60, minutes % 60)
+        if minutes < 60 { return L("%d min", minutes) }
+        if minutes % 60 == 0 { return L("%d h", minutes / 60) }
+        return L("%d h %d min", minutes / 60, minutes % 60)
     }
 }

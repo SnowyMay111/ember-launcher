@@ -55,10 +55,8 @@ struct EmberHealthCard: View {
                 Text(tr: hasWarning ? "One thing to check" : "Ember is ready")
                     .style(
                         .init(
-                            size: 10,
+                            size: 12,
                             weight: .medium,
-                            mono: true,
-                            tracking: 0.13,
                             color: Color(red: 142/255, green: 105/255, blue: 126/255)
                         )
                     )
@@ -127,7 +125,7 @@ struct SettingsGroup<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text(tr: title)
-                .style(.init(size: 11, weight: .medium, mono: true, tracking: 0.14, color: Theme.textMuted))
+                .style(.init(size: 12, weight: .medium, color: Theme.textMuted))
                 .padding(.horizontal, 24)
                 .padding(.top, 16)
                 .padding(.bottom, 10)
@@ -225,11 +223,11 @@ struct MemoryPresetItem {
     let gb: Int
 }
 
-private let memoryPresets: [MemoryPresetItem] = [
+let memoryPresets: [MemoryPresetItem] = [
     MemoryPresetItem(name: "Light", gb: 4),
     MemoryPresetItem(name: "Balanced", gb: 6),
     MemoryPresetItem(name: "Modded", gb: 8),
-    MemoryPresetItem(name: "Heavy", gb: 12)
+    MemoryPresetItem(name: "Heavy", gb: 10)
 ]
 
 /// Preset button with ember highlight when active.
@@ -281,6 +279,7 @@ struct MemoryPresetButton: View {
         .disabled(isDisabled)
         .opacity(isDisabled ? 0.4 : 1.0)
         .onHover { isHovered = $0 }
+        .help(isDisabled ? L("This Mac can give the game up to %d GB", Int(SettingsStore.memoryRange.upperBound)) : "")
         .accessibilityLabel("\(preset.name), \(preset.gb) GB")
     }
 }

@@ -21,11 +21,6 @@ struct SocialScreen: View {
                 // Intro header
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(verbatim: L("Social"))
-                            .font(Theme.font(size: 26, weight: .semibold))
-                            .tracking(-0.8)
-                            .foregroundColor(Theme.text)
-
                         Text(verbatim: L("A quiet place for friends, invitations, and temporary worlds."))
                             .font(Theme.font(size: 13, weight: .regular))
                             .foregroundColor(Theme.textSecondary)

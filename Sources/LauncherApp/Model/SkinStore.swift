@@ -4,6 +4,15 @@ import UniformTypeIdentifiers
 import LauncherCore
 
 /// Model representing a saved Minecraft player skin.
+extension SavedSkin {
+    /// Downloaded files are often named by a hash ("95e4178fde89ceec") or a UUID, which says nothing to a player.
+    var displayName: String {
+        let compact = name.replacingOccurrences(of: "-", with: "")
+        if compact.count >= 12, compact.allSatisfy(\.isHexDigit) { return L("Imported skin") }
+        return name
+    }
+}
+
 struct SavedSkin: Identifiable, Codable, Equatable {
     var id: UUID
     var name: String

@@ -180,7 +180,7 @@ struct HomeLaunchPanel<MenuContent: View>: View {
             .overlay(
                 RoundedRectangle(cornerRadius: 15, style: .continuous)
                     .strokeBorder(
-                        LinearGradient(colors: [Color.white.opacity(0.35), .clear], startPoint: .top, endPoint: .init(x: 0.5, y: 0.25)),
+                        LinearGradient(colors: [Theme.white35, .clear], startPoint: .top, endPoint: .init(x: 0.5, y: 0.25)),
                         lineWidth: 1
                     )
                     .padding(1)

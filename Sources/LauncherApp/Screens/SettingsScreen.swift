@@ -66,8 +66,13 @@ struct SettingsScreen: View {
     }
 
     private var recommendedMemoryText: String {
-        let range = JVMArgumentsBuilder.memoryRecommendation(isModded: false).recommendedRangeMB
-        return L("Recommended: %d-%d GB", range.lowerBound / 1024, range.upperBound / 1024)
+        let vanilla = JVMArgumentsBuilder.memoryRecommendation(isModded: false).recommendedRangeMB
+        let modded = JVMArgumentsBuilder.memoryRecommendation(isModded: true).recommendedRangeMB
+        var text = L("Recommended: %d-%d GB for Vanilla, %d-%d GB for modpacks", vanilla.lowerBound / 1024, vanilla.upperBound / 1024, modded.lowerBound / 1024, modded.upperBound / 1024)
+        if memoryPresets.contains(where: { Double($0.gb) > SettingsStore.memoryRange.upperBound }) {
+            text += " " + L("This Mac can give the game up to %d GB", Int(SettingsStore.memoryRange.upperBound)) + "."
+        }
+        return text
     }
 
     /// The language the running app was started with; a different pick needs a restart.

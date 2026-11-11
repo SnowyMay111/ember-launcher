@@ -59,7 +59,7 @@ struct HomeHeroCard: View {
                         .tracking(-1.2)
                         .foregroundColor(Color(red: 238/255, green: 229/255, blue: 217/255))
                         .lineLimit(1)
-                        .shadow(color: Color.black.opacity(0.5), radius: 8, y: 3)
+                        .shadow(color: Theme.black50, radius: 8, y: 3)
 
                     // Editorial Metadata Strip
                     HStack(spacing: 12) {
@@ -71,13 +71,13 @@ struct HomeHeroCard: View {
 
                         // Last played
                         HStack(alignment: .firstTextBaseline, spacing: 6) {
-                            Text(verbatim: "LAST PLAYED")
-                                .font(Theme.font(size: 8, weight: .medium, mono: true))
+                            Text(verbatim: L("Last played"))
+                                .font(Theme.font(size: 12, weight: .medium))
                                 .tracking(1.2)
                                 .foregroundColor(Color(red: 118/255, green: 111/255, blue: 104/255))
 
-                            Text(eyebrow.replacingOccurrences(of: "Last played · ", with: ""))
-                                .font(Theme.font(size: 11, weight: .medium, mono: true))
+                            Text(eyebrow.replacingOccurrences(of: L("Last played") + " · ", with: ""))
+                                .font(Theme.font(size: 12, weight: .medium))
                                 .foregroundColor(Color(red: 178/255, green: 170/255, blue: 161/255))
                         }
 
@@ -88,7 +88,7 @@ struct HomeHeroCard: View {
 
                         // Loader
                         Text(loader)
-                            .font(Theme.font(size: 11, weight: .regular, mono: true))
+                            .font(Theme.font(size: 12, weight: .regular))
                             .foregroundColor(Color(red: 165/255, green: 158/255, blue: 149/255))
 
                         if !playtime.isEmpty && playtime != "0 h 0 min" {
@@ -97,7 +97,7 @@ struct HomeHeroCard: View {
                                 .frame(width: 1, height: 16)
 
                             Text(playtime)
-                                .font(Theme.font(size: 11, weight: .regular, mono: true))
+                                .font(Theme.font(size: 12, weight: .regular, mono: true))
                                 .foregroundColor(Color(red: 165/255, green: 158/255, blue: 149/255))
                         }
                     }

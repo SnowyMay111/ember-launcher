@@ -34,7 +34,9 @@ struct LibraryScreen: View {
                         ForEach(LoaderFilter.allCases) { filter in
                             FilterChip(title: filter.rawValue, isActive: app.filter == filter, compact: false) { app.filter = filter }
                         }
-                        FilterChip(title: "All versions", isActive: false, compact: false) { app.modal = .allVersions }
+                        // Opens a window, so it is a button, not one more filter.
+                        SecondaryPill(title: "All versions…", height: 34) { app.modal = .allVersions }
+                            .padding(.leading, 8)
                         Spacer(minLength: 16)
                         Text(verbatim: L("%d instances", items.count) + " · " + LibraryInstance.duration(minutes: items.reduce(0) { $0 + $1.playtimeSeconds } / 60) + " · " + L("%d mods", items.reduce(0) { $0 + $1.modCount }))
                             .style(.init(size: 13, color: Theme.textSecondary))
@@ -65,7 +67,6 @@ struct LibraryScreen: View {
                                     onDelete: {
                                         pendingDelete = item.name
                                     },
-                                    onFolder: { app.openFolder(item.name) },
                                     onSettings: { app.modal = .instanceSettings(item.name) }
                                 )
                                 .contextMenu {

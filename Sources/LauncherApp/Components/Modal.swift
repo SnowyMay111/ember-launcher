@@ -72,7 +72,7 @@ struct EmberModal<Content: View, Footer: View>: View {
                 .strokeBorder(Color(hex: 0x342e34), lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .shadow(color: Color.black.opacity(0.7), radius: 35, x: 0, y: 20)
+        .shadow(color: Theme.black70, radius: 35, x: 0, y: 20)
         .shadow(color: Theme.violet.opacity(0.08), radius: 35, x: 0, y: 0)
         .opacity(isAppeared ? 1 : 0)
         .offset(y: reduceMotion ? 0 : (isAppeared ? 0 : 12))

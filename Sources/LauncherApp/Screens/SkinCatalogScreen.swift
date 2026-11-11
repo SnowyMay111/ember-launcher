@@ -128,8 +128,9 @@ struct SkinCatalogScreen: View {
                 PageHeader(
                     eyebrow: "CATALOG",
                     title: "Skin Catalog",
-                    subtitle: "Discover new Minecraft skins, preview Boba in 3D, and add directly to your wardrobe.",
-                    alignment: .leading
+                    subtitle: "Discover new Minecraft skins, preview them in 3D, and add them to your wardrobe.",
+                    alignment: .leading,
+                    showsTitle: true
                 )
                 .frame(maxWidth: 1120, alignment: .leading)
                 .frame(maxWidth: .infinity, alignment: .center)
@@ -259,7 +260,7 @@ struct SkinCatalogScreen: View {
                 Text(verbatim: activeSkinName)
                     .style(.init(size: 15, weight: .semibold, color: Theme.text))
                 Text(tr: "Drag with mouse to rotate 360° · Double-click to reset")
-                    .style(.init(size: 11, weight: .regular, mono: true, color: Theme.textMuted))
+                    .style(.init(size: 12, weight: .regular, color: Theme.textMuted))
             }
             .padding(.bottom, 16)
         }
@@ -278,8 +279,8 @@ struct SkinCatalogScreen: View {
 
     private func catalogListPane(width: CGFloat, height: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: Theme.Space.s) {
-            Text("PRESET STYLES")
-                .style(.init(size: 11, weight: .semibold, mono: true, color: Theme.textMuted))
+            Text("Preset styles")
+                .style(.init(size: 12, weight: .semibold, color: Theme.textMuted))
                 .padding(.horizontal, 16)
                 .padding(.top, 16)
 

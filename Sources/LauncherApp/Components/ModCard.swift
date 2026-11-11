@@ -33,7 +33,7 @@ struct ModCard<Actions: View>: View {
             iconView
                 .frame(width: 55, height: 55)
                 .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous).strokeBorder(Color.white.opacity(0.08)))
+                .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous).strokeBorder(Theme.white08))
             VStack(alignment: .leading, spacing: 4) {
                 Text(verbatim: category)
                     .style(.init(size: 12, weight: .medium, color: Color(hex: 0xa9809c)))

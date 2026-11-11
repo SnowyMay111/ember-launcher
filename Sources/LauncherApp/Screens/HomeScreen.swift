@@ -174,6 +174,8 @@ struct HomeScreen: View {
                 GeometryReader { geo in
                     let width = min(1120, geo.size.width - 56)
                     let topPad = max(34, min(72, 0.06 * (geo.size.height + 116)))
+                    // The hero takes the height left after the launch panel (76) and the gaps, so nothing hangs in empty space.
+                    let heroHeight = min(680, max(460, geo.size.height - topPad - 18 - 76 - 34))
                     ScrollView {
                         VStack(spacing: 0) {
                             HomeHeroCard(
@@ -188,7 +190,7 @@ struct HomeScreen: View {
                                 playtime: playtime,
                                 viewport: geo.size.width + 84
                             )
-                            .frame(width: width)
+                            .frame(width: width, height: heroHeight)
                             
                             Spacer().frame(height: 18)
                             
@@ -270,7 +272,7 @@ struct HomeScreen: View {
             CubeIcon()
                 .stroke(Color.white, style: StrokeStyle(lineWidth: 1.7, lineCap: .round, lineJoin: .round))
                 .frame(width: 80, height: 80)
-                .shadow(color: Color.white.opacity(0.4), radius: 22)
+                .shadow(color: Theme.white40, radius: 22)
                 .accessibilityHidden(true)
             Text(tr: "No instances yet")
                 .font(Theme.font(size: 24, weight: .bold, mono: false))

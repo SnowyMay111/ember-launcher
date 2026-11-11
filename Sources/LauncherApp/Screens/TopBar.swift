@@ -31,17 +31,17 @@ struct TopBar: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            if app.screen != .settings {
-                VStack(alignment: .leading, spacing: 7) {
+            VStack(alignment: .leading, spacing: 7) {
+                if app.screen == .play {
                     Text(verbatim: L("Welcome back"))
                         .font(Theme.font(size: 12, weight: .medium))
                         .foregroundColor(Color(red: 0x7b/255, green: 0x77/255, blue: 0x71/255))
-
-                    Text(pageTitle)
-                        .font(Theme.font(size: 23, weight: .semibold))
-                        .tracking(-0.69)
-                        .foregroundColor(Theme.text)
                 }
+
+                Text(pageTitle)
+                    .font(Theme.font(size: 23, weight: .semibold))
+                    .tracking(-0.69)
+                    .foregroundColor(Theme.text)
             }
 
             Spacer(minLength: 16)

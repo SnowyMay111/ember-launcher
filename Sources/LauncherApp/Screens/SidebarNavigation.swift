@@ -70,14 +70,6 @@ public struct SidebarNavigation: View {
 
             Spacer()
 
-            // Operational status indicator
-            Circle()
-                .fill(Theme.success)
-                .frame(width: 8, height: 8)
-                .help(L("All systems operational"))
-                .accessibilityLabel(L("All systems operational"))
-                .padding(.bottom, 14)
-
             // Pinned settings destination
             navButton(
                 screen: .settings,

@@ -457,11 +457,10 @@ public struct Skin3DView: NSViewRepresentable {
                 return cg
             }
         }
-        // Fallback: check app support or tmp
+        // Fallback: the skins folder in Application Support
         let root = LauncherPaths().root
         let paths = [
-            root.appendingPathComponent("skins/\(name).png").path,
-            "/tmp/\(name).png"
+            root.appendingPathComponent("skins/\(name).png").path
         ]
         for path in paths {
             if let data = try? Data(contentsOf: URL(fileURLWithPath: path)),

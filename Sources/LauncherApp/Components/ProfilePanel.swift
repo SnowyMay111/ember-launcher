@@ -12,7 +12,7 @@ struct ProfilePanel: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text(tr: "YOUR PROFILE").style(.eyebrow)
+                    Text(tr: "Your profile").style(.eyebrow)
                         .padding(.bottom, 4)
                     Text(displayName)
                         .font(Theme.font(size: 25, weight: .semibold))
@@ -99,7 +99,7 @@ struct ProfilePanel: View {
                 .strokeBorder(Color(red: 0x34/255, green: 0x2e/255, blue: 0x34/255), lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .shadow(color: .black.opacity(0.7), radius: 35, x: 0, y: 20)
+        .shadow(color: Theme.black70, radius: 35, x: 0, y: 20)
         .shadow(color: Color(red: 105/255, green: 62/255, blue: 125/255).opacity(0.08), radius: 35, x: 0, y: 0)
         .opacity(isAppeared ? 1 : 0)
         .offset(y: reduceMotion ? 0 : (isAppeared ? 0 : 12))

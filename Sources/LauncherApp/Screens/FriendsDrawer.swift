@@ -57,8 +57,8 @@ struct FriendsDrawer: View {
                 // Current Group
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
-                        Text(verbatim: "YOUR GROUP")
-                            .font(Theme.font(size: 9, weight: .medium, mono: true))
+                        Text(verbatim: L("Your group"))
+                            .font(Theme.font(size: 12, weight: .medium))
                             .tracking(1.2)
                             .foregroundColor(Color(red: 143/255, green: 109/255, blue: 89/255))
                         Spacer()
@@ -150,7 +150,7 @@ struct FriendsDrawer: View {
                     .stroke(Color(red: 56/255, green: 49/255, blue: 44/255), lineWidth: 1)
             )
             .padding(14)
-            .shadow(color: Color.black.opacity(0.55), radius: 30, x: -10, y: 0)
+            .shadow(color: Theme.black55, radius: 30, x: -10, y: 0)
             .transition(.move(edge: .trailing).combined(with: .opacity))
         }
     }

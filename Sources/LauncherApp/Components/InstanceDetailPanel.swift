@@ -12,7 +12,7 @@ struct InstanceDetailPanel: View {
             // Header
             HStack {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text(tr: "INSTANCE DETAILS").style(.eyebrow)
+                    Text(tr: "Instance details").style(.eyebrow)
                         .padding(.bottom, 4)
                     Text(verbatim: instance.name)
                         .font(Theme.font(size: 25, weight: .semibold))
@@ -126,7 +126,7 @@ struct InstanceDetailPanel: View {
                 .strokeBorder(Color(red: 0x34/255, green: 0x2e/255, blue: 0x34/255), lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .shadow(color: .black.opacity(0.7), radius: 35, x: 0, y: 20)
+        .shadow(color: Theme.black70, radius: 35, x: 0, y: 20)
         .shadow(color: Color(red: 105/255, green: 62/255, blue: 125/255).opacity(0.08), radius: 35, x: 0, y: 0)
         .opacity(isAppeared ? 1 : 0)
         .offset(y: reduceMotion ? 0 : (isAppeared ? 0 : 12))

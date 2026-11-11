@@ -37,7 +37,8 @@ extension EnvironmentValues {
     }
 }
 
-/// Page header (prototype `.page-intro`): mono eyebrow, big tight-tracked title, copy, optional trailing primary action.
+/// Page intro under the top bar: one line of copy and an optional trailing primary action.
+/// The top bar already shows the screen name, so the title is drawn only for sub-pages (`showsTitle`).
 struct PageHeader: View {
     let eyebrow: String
     let title: String
@@ -45,17 +46,14 @@ struct PageHeader: View {
     var alignment: HorizontalAlignment = .center
     var actionTitle: String? = nil
     var action: (() -> Void)? = nil
-
-    @Environment(\.windowWidth) private var windowWidth
-
-    /// clamp(34px, 5vw, 58px)
-    private var titleSize: CGFloat { min(max(34, 0.05 * windowWidth), 58) }
+    var showsTitle = false
 
     init(
         eyebrow: String,
         title: String,
         subtitle: String? = nil,
         alignment: HorizontalAlignment = .center,
+        showsTitle: Bool = false,
         actionTitle: String? = nil,
         action: (() -> Void)? = nil
     ) {
@@ -63,26 +61,22 @@ struct PageHeader: View {
         self.title = title
         self.subtitle = subtitle
         self.alignment = alignment
+        self.showsTitle = showsTitle
         self.actionTitle = actionTitle
         self.action = action
     }
 
     var body: some View {
-        HStack(alignment: .bottom, spacing: Theme.Space.l) {
-            VStack(alignment: alignment, spacing: 0) {
-                Text(tr: eyebrow)
-                    .style(.init(size: 10, weight: .medium, mono: true, tracking: 0.2, color: Color(hex: 0x7b7771)))
-                    .padding(.bottom, 7)
-                Text(tr: title)
-                    .style(.init(size: titleSize, weight: .bold, tracking: -0.055, color: Theme.text))
-                    .lineLimit(1)
-                    // Negative tracking shortens the layout width; keep room so the last letter is not cut.
-                    .padding(.trailing, titleSize * 0.06)
-                    .frame(height: titleSize)
+        HStack(alignment: .center, spacing: Theme.Space.l) {
+            VStack(alignment: alignment, spacing: 6) {
+                if showsTitle {
+                    Text(tr: title)
+                        .style(.init(size: 22, weight: .semibold, tracking: -0.03, color: Theme.text))
+                        .lineLimit(1)
+                }
                 if let subtitle {
                     Text(tr: subtitle)
-                        .style(.init(size: 12, weight: .regular, color: Color(hex: 0x7f7a73)))
-                        .padding(.top, 12)
+                        .style(.init(size: 13, weight: .regular, color: Theme.textSecondary))
                 }
             }
             if let actionTitle, let action {
@@ -280,12 +274,34 @@ struct InstanceCard: View {
     var onOpen: () -> Void
     var onPlay: () -> Void = {}
     var onDelete: (() -> Void)? = nil
-    var onFolder: (() -> Void)? = nil
     var onSettings: (() -> Void)? = nil
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Local private var isHovered = false
     @Local private var manageHovered = false
+    @Local private var settingsHovered = false
+
+    private struct Chip { let systemImage: String; let text: String }
+
+    private var cardChips: [Chip] {
+        var chips: [Chip] = []
+        if instance.loader != .vanilla || instance.modCount > 0 {
+            chips.append(Chip(systemImage: "puzzlepiece.extension", text: instance.modsText))
+        }
+        chips.append(Chip(systemImage: "memorychip", text: String(format: L("%@ RAM"), instance.memoryText)))
+        if instance.playtimeSeconds >= 60 {
+            chips.append(Chip(systemImage: "clock", text: instance.playtimeText))
+        }
+        return chips
+    }
+
+    private func chipRow(_ chips: ArraySlice<Chip>) -> some View {
+        HStack(spacing: 8) {
+            ForEach(Array(chips.enumerated()), id: \.offset) { _, chip in
+                InstanceChip(systemImage: chip.systemImage, text: chip.text)
+            }
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -301,7 +317,7 @@ struct InstanceCard: View {
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
-                    .background(Capsule().fill(Color.black.opacity(0.5)))
+                    .background(Capsule().fill(Theme.black50))
                     .padding(10)
                 }
                 .padding(10)
@@ -321,20 +337,12 @@ struct InstanceCard: View {
             .padding(.horizontal, 17)
             .padding(.top, 6)
 
-            let memoryRAM = String(format: L("%@ RAM"), instance.memoryText)
+            // No "0 mods" on a Vanilla instance and no "0 min" before the first game.
+            let chips = cardChips
             ViewThatFits(in: .horizontal) {
-                HStack(spacing: 8) {
-                    InstanceChip(systemImage: "puzzlepiece.extension", text: instance.modsText)
-                    InstanceChip(systemImage: "memorychip", text: memoryRAM)
-                    InstanceChip(systemImage: "clock", text: instance.playtimeText)
-                }
-                HStack(spacing: 8) {
-                    InstanceChip(systemImage: "puzzlepiece.extension", text: instance.modsText)
-                    InstanceChip(systemImage: "memorychip", text: memoryRAM)
-                }
-                HStack(spacing: 8) {
-                    InstanceChip(systemImage: "puzzlepiece.extension", text: instance.modsText)
-                }
+                chipRow(chips.prefix(3))
+                chipRow(chips.prefix(2))
+                chipRow(chips.prefix(1))
             }
             .padding(.horizontal, 17)
             .padding(.top, 14)
@@ -348,11 +356,15 @@ struct InstanceCard: View {
                     .style(.init(size: 13, weight: .regular, color: Theme.textSecondary))
                     .lineLimit(1)
                 Spacer(minLength: 8)
-                if let onFolder {
-                    CardIconButton(systemImage: "folder", help: L("Open folder"), action: onFolder)
-                }
                 if let onSettings {
-                    CardIconButton(systemImage: "slider.horizontal.3", help: L("Instance settings"), action: onSettings)
+                    Button(action: onSettings) {
+                        Text(tr: "Settings")
+                            .style(.init(size: 14, weight: .medium, color: settingsHovered ? Theme.ember : Theme.textSecondary))
+                    }
+                    .buttonStyle(.plain)
+                    .onHover { settingsHovered = $0 }
+                    .help(L("Instance settings"))
+                    .padding(.leading, 8)
                 }
                 Button(action: onOpen) {
                     Text(tr: "Manage")
@@ -384,7 +396,7 @@ struct InstanceCard: View {
                         .font(Theme.font(size: 14))
                         .foregroundColor(Color(hex: 0xd8d2ca))
                         .frame(width: 32, height: 32)
-                        .background(Circle().fill(Color.black.opacity(0.45)))
+                        .background(Circle().fill(Theme.black45))
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -411,7 +423,7 @@ struct StatCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.s) {
             Text(tr: label)
-                .style(.init(size: 10, weight: .medium, mono: true, tracking: 0.14, color: Theme.textMuted))
+                .style(.init(size: 12, weight: .medium, color: Theme.textMuted))
             Text(verbatim: value)
                 .style(.statValue)
         }

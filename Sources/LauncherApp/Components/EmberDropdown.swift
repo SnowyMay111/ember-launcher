@@ -231,7 +231,7 @@ private struct DropdownCard: View {
         .background(shape.fill(Theme.surface))
         .overlay(shape.strokeBorder(Theme.line, lineWidth: 1))
         .clipShape(shape)
-        .shadow(color: .black.opacity(0.45), radius: 24, y: 12)
+        .shadow(color: Theme.black45, radius: 24, y: 12)
         .scaleEffect(appeared ? 1 : 0.97, anchor: opensUp ? .bottom : .top)
         .opacity(appeared ? 1 : 0)
     }

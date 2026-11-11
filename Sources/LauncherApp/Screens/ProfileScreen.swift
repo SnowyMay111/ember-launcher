@@ -71,7 +71,7 @@ struct ProfileScreen: View {
     // MARK: - Groups
 
     private var signedOutCard: some View {
-        SettingsGroup(title: "EMBER ACCOUNT") {
+        SettingsGroup(title: "Ember account") {
             SettingsRow(title: "Not signed in", detail: "An account gives you a profile, friends and your settings on every Mac. Playing without one works as before.", isLast: true) {
                 actionButton("Sign in or create account") { app.modal = .emberSignIn }
             }

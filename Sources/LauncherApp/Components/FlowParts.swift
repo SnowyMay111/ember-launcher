@@ -99,8 +99,8 @@ struct NamePreviewCard: View {
             }
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(tr: "YOUR NEW INSTANCE")
-                    .style(.init(size: 8, weight: .medium, mono: true, tracking: 0.1, color: Color(hex: 0x676068)))
+                Text(tr: "Your new instance")
+                    .style(.init(size: 12, weight: .medium, color: Color(hex: 0x676068)))
 
                 Text(verbatim: name)
                     .style(.init(size: 13, weight: .semibold, color: .white))
@@ -127,7 +127,7 @@ struct SummaryCard: View {
             ForEach(Array(rows.enumerated()), id: \.offset) { idx, row in
                 HStack {
                     Text(tr: row.label)
-                        .style(.init(size: 9, weight: .medium, mono: true, tracking: 0.1, color: Color(hex: 0x655f65)))
+                        .style(.init(size: 12, weight: .medium, color: Color(hex: 0x655f65)))
 
                     Spacer()
 

@@ -94,7 +94,7 @@ struct WideSearchField: View {
                         .font(Theme.font(size: 11, weight: .semibold))
                         .foregroundColor(isClearHovered ? Theme.text : Theme.textSecondary)
                         .frame(width: 24, height: 24)
-                        .background(Circle().fill(Color.white.opacity(0.08)))
+                        .background(Circle().fill(Theme.white08))
                 }
                 .buttonStyle(.plain)
                 .onHover { isClearHovered = $0 }

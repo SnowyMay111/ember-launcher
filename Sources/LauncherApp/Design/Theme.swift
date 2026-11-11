@@ -37,9 +37,14 @@ public enum Theme {
     public static let white16 = Color.white.opacity(0.16)
     public static let white22 = Color.white.opacity(0.22)
     public static let white40 = Color.white.opacity(0.40)
+    public static let white08 = Color.white.opacity(0.08)
+    public static let white35 = Color.white.opacity(0.35)
     public static let black30 = Color.black.opacity(0.30)
     public static let black40 = Color.black.opacity(0.40)
     public static let black45 = Color.black.opacity(0.45)
+    public static let black50 = Color.black.opacity(0.50)
+    public static let black55 = Color.black.opacity(0.55)
+    public static let black70 = Color.black.opacity(0.70)
 
     // Radii
     public static let radiusHero: CGFloat = 20

@@ -51,7 +51,7 @@ struct PrimaryPill: View {
                 Capsule()
                     .strokeBorder(
                         LinearGradient(
-                            colors: [Color.white.opacity(0.35), Color.clear],
+                            colors: [Theme.white35, Color.clear],
                             startPoint: .top,
                             endPoint: .bottom
                         ),
@@ -224,8 +224,8 @@ struct MonoBadge: View {
     let text: String
 
     var body: some View {
-        Text(verbatim: text.uppercased())
-            .style(.init(size: 11, weight: .medium, mono: true, color: Theme.textSecondary))
+        Text(verbatim: text)
+            .style(.init(size: 12, weight: .medium, color: Theme.textSecondary))
             .padding(.horizontal, 12)
             .frame(height: 30)
             .background(Capsule().fill(Theme.elevated))
@@ -382,7 +382,7 @@ struct AccountPill: View {
                 PixelAvatar(isHovered: isHovered)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(verbatim: name).style(.init(size: 13, weight: .semibold, color: Theme.text))
-                    Text(tr: isSignedIn ? "Online" : "Offline nickname").style(.init(size: 9, weight: .regular, mono: true, color: Color(red: 0x81/255, green: 0x7d/255, blue: 0x76/255)))
+                    Text(tr: isSignedIn ? "Online" : "Offline nickname").style(.init(size: 12, weight: .regular, color: Color(red: 0x81/255, green: 0x7d/255, blue: 0x76/255)))
                 }
                 .frame(minWidth: 72, alignment: .leading)
                 Image(systemName: "chevron.down")
@@ -529,8 +529,8 @@ struct StatusBadge: View {
                 .font(Theme.font(size: 10, weight: .semibold))
                 .foregroundColor(color)
                 .accessibilityHidden(true)
-            Text(verbatim: text.uppercased())
-                .style(.init(size: 10, weight: .medium, mono: true, color: color))
+            Text(verbatim: text)
+                .style(.init(size: 12, weight: .medium, color: color))
         }
         .padding(.horizontal, Theme.Space.s)
         .padding(.vertical, Theme.Space.xs)

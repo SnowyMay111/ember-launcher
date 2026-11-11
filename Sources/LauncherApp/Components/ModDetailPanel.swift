@@ -13,7 +13,7 @@ struct ModDetailPanel: View {
     @ViewBuilder private var headerRow: some View {
             HStack {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text(tr: "MODRINTH PROJECT")
+                    Text(tr: "Modrinth project")
                         .style(.eyebrow)
                         .padding(.bottom, 4)
                     Text(verbatim: hit.title)
@@ -61,19 +61,19 @@ struct ModDetailPanel: View {
                 .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: 13, style: .continuous)
-                        .strokeBorder(Color.white.opacity(0.08), lineWidth: 1)
+                        .strokeBorder(Theme.white08, lineWidth: 1)
                 )
 
                 VStack(alignment: .leading, spacing: 4) {
                     // Category
                     if let cat = ModDetailPanel.firstValidCategory(from: hit.categories) {
-                        Text(cat.uppercased())
-                            .font(Theme.font(size: 8, weight: .medium, mono: true))
+                        Text(cat.capitalized)
+                            .font(Theme.font(size: 12, weight: .medium))
                             .tracking(0.12)
                             .foregroundColor(Color(hex: 0x8b657f))
                     } else {
-                        Text(tr: "MOD")
-                            .font(Theme.font(size: 8, weight: .medium, mono: true))
+                        Text(tr: "Mod")
+                            .font(Theme.font(size: 12, weight: .medium))
                             .tracking(0.12)
                             .foregroundColor(Color(hex: 0x8b657f))
                     }
@@ -227,7 +227,7 @@ struct ModDetailPanel: View {
                 .strokeBorder(Color(red: 0x34/255, green: 0x2e/255, blue: 0x34/255), lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .shadow(color: .black.opacity(0.7), radius: 35, x: 0, y: 20)
+        .shadow(color: Theme.black70, radius: 35, x: 0, y: 20)
         .shadow(color: Color(red: 105/255, green: 62/255, blue: 125/255).opacity(0.08), radius: 35, x: 0, y: 0)
         .opacity(isAppeared ? 1 : 0)
         .offset(y: reduceMotion ? 0 : (isAppeared ? 0 : 12))
@@ -244,7 +244,7 @@ struct ModDetailPanel: View {
     private func statCell(labelKey: String, value: String) -> some View {
         VStack(alignment: .leading, spacing: 5) {
             Text(tr: labelKey)
-                .font(Theme.font(size: 8, weight: .medium, mono: true))
+                .font(Theme.font(size: 12, weight: .medium))
                 .tracking(0.1)
                 .foregroundColor(Color(hex: 0x625c62))
             Text(value)

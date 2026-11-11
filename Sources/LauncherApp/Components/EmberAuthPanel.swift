@@ -69,7 +69,7 @@ struct EmberAuthPanel: View {
         .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Color(red: 0x11/255, green: 0x10/255, blue: 0x11/255)))
         .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(Color(red: 0x34/255, green: 0x2e/255, blue: 0x34/255), lineWidth: 1))
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .shadow(color: .black.opacity(0.7), radius: 35, x: 0, y: 20)
+        .shadow(color: Theme.black70, radius: 35, x: 0, y: 20)
         .opacity(isAppeared ? 1 : 0)
         .offset(y: reduceMotion ? 0 : (isAppeared ? 0 : 12))
         .onAppear {
@@ -87,7 +87,7 @@ struct EmberAuthPanel: View {
     private var header: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text(tr: "EMBER ACCOUNT").style(.eyebrow)
+                Text(tr: "Ember account").style(.eyebrow)
                 Text(tr: mode == .signIn ? "Sign in" : "Create account")
                     .font(Theme.font(size: 25, weight: .semibold))
                     .tracking(-1)

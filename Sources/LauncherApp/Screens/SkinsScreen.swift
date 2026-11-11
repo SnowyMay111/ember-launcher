@@ -271,10 +271,10 @@ struct SkinsScreen: View {
         VStack(spacing: 0) {
             HStack {
                 HStack(spacing: Theme.Space.xs) {
-                    FilterChip(title: "3D Boba", isActive: is3DMode, compact: true) {
+                    FilterChip(title: "3D", isActive: is3DMode, compact: true) {
                         is3DMode = true
                     }
-                    FilterChip(title: "2D Flat", isActive: !is3DMode, compact: true) {
+                    FilterChip(title: "2D", isActive: !is3DMode, compact: true) {
                         is3DMode = false
                     }
                 }
@@ -291,22 +291,6 @@ struct SkinsScreen: View {
                 }
 
                 Spacer()
-
-                Button(action: { isCatalogOpen = true }) {
-                    HStack(spacing: 5) {
-                        Image(systemName: "sparkles")
-                            .font(.system(size: 11, weight: .semibold))
-                        Text(tr: "Catalog")
-                            .font(Theme.font(size: 11, weight: .semibold))
-                    }
-                    .foregroundColor(Theme.ember)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(Theme.elevated)
-                    .clipShape(Capsule())
-                    .overlay(Capsule().strokeBorder(Theme.border, lineWidth: 1))
-                }
-                .buttonStyle(.plain)
             }
             .padding(.horizontal, 16)
             .padding(.top, 16)
@@ -347,17 +331,17 @@ struct SkinsScreen: View {
 
             if let skin = activeSkin {
                 VStack(spacing: 4) {
-                    Text(verbatim: "\(skin.name) · \(skin.slim ? "Slim" : "Classic")")
-                        .style(.init(size: 12, weight: .medium, mono: true, color: Theme.textSecondary))
+                    Text(verbatim: skin.displayName + " · " + L(skin.slim ? "Slim" : "Classic"))
+                        .style(.init(size: 12, weight: .medium, color: Theme.textSecondary))
                     if is3DMode {
-                        Text("Drag with mouse to rotate Boba 360° · Double-click to reset")
-                            .style(.init(size: 10, weight: .regular, mono: true, color: Theme.textMuted))
+                        Text("Drag with mouse to rotate 360° · Double-click to reset")
+                            .style(.init(size: 12, weight: .regular, color: Theme.textMuted))
                     }
                 }
             }
 
             Text(tr: "Skins are stored on this Mac. In offline mode the game shows its default skin; your selection is applied after Microsoft sign-in.")
-                .style(.init(size: 9, weight: .regular, mono: true, color: Color(hex: 0x4F4A50)))
+                .style(.init(size: 12, weight: .regular, color: Color(hex: 0x4F4A50)))
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, 16)
@@ -388,7 +372,7 @@ struct SkinsScreen: View {
                         path.move(to: CGPoint(x: 0, y: y))
                         path.addLine(to: CGPoint(x: size.width, y: y))
                     }
-                    context.stroke(path, with: .color(Color.white.opacity(0.02)), lineWidth: 1)
+                    context.stroke(path, with: .color(Theme.white02), lineWidth: 1)
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
 
@@ -404,8 +388,7 @@ struct SkinsScreen: View {
     private func collectionPane(width: CGFloat, height: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                // NEWKEY: YOUR COLLECTION
-                Text("YOUR COLLECTION")
+                Text("Your collection")
                     .style(.eyebrow)
                 Spacer()
             }
@@ -429,10 +412,10 @@ struct SkinsScreen: View {
                                     .frame(width: 45, height: 45)
 
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(verbatim: skin.name)
+                                    Text(verbatim: skin.displayName)
                                         .style(.init(size: 11, weight: .bold, color: isSelected ? Color(hex: 0xEEE7EF) : Color(hex: 0xAAA3AB)))
                                         .lineLimit(1)
-                                    Text(tr: skin.id == store.equippedID ? "Currently equipped" : "Saved skin")
+                                    Text(tr: skin.id == store.equippedID ? "Equipped" : (skin.slim ? "Slim" : "Classic"))
                                         .style(.init(size: 8, weight: .regular, color: Color(hex: 0x625D63)))
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -462,7 +445,7 @@ struct SkinsScreen: View {
                     // Model selector (Classic 4px / Slim 3px)
                     HStack(alignment: .center) {
                         Text(tr: "Model")
-                            .style(.init(size: 11, weight: .semibold, mono: true, color: Theme.textMuted))
+                            .style(.init(size: 12, weight: .semibold, color: Theme.textMuted))
 
                         Spacer()
 
