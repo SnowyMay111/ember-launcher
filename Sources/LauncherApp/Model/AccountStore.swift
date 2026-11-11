@@ -32,7 +32,8 @@ final class AccountStore: ObservableObject {
     func signIn() {
         guard signInTask == nil else { return }
         phase = .idle
-        signInTask = Task {
+        signInTask = Task { [weak self] in
+            guard let self else { return }
             defer { signInTask = nil }
             do {
                 let result = try await auth.signIn { [weak self] prompt in

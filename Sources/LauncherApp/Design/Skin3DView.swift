@@ -507,8 +507,9 @@ public final class SkinSCNView: SCNView {
     public var autoRotate: Bool = true
 
     private var lastMousePoint: CGPoint = .zero
-    private var idleResumeTimer: Timer?
-    private var displayTimer: Timer?
+    // Only touched on the main thread; `nonisolated(unsafe)` lets `deinit` invalidate them.
+    nonisolated(unsafe) private var idleResumeTimer: Timer?
+    nonisolated(unsafe) private var displayTimer: Timer?
 
     override public func mouseDown(with event: NSEvent) {
         lastMousePoint = convert(event.locationInWindow, from: nil)
@@ -537,16 +538,18 @@ public final class SkinSCNView: SCNView {
 
         idleResumeTimer?.invalidate()
         idleResumeTimer = Timer.scheduledTimer(withTimeInterval: 2.5, repeats: false) { [weak self] _ in
-            self?.autoRotate = true
+            MainActor.assumeIsolated { self?.autoRotate = true }
         }
     }
 
     public func startAnimationLoop() {
         displayTimer?.invalidate()
         displayTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
-            guard let self = self, self.autoRotate, let node = self.characterNode else { return }
-            self.eulerY += 0.0075
-            node.eulerAngles = SCNVector3(self.eulerX, self.eulerY, 0)
+            MainActor.assumeIsolated {
+                guard let self, self.autoRotate, let node = self.characterNode else { return }
+                self.eulerY += 0.0075
+                node.eulerAngles = SCNVector3(self.eulerX, self.eulerY, 0)
+            }
         }
     }
 
@@ -556,6 +559,7 @@ public final class SkinSCNView: SCNView {
     }
 
     deinit {
-        stopAnimationLoop()
+        displayTimer?.invalidate()
+        idleResumeTimer?.invalidate()
     }
 }

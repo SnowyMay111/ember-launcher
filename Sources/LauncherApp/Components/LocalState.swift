@@ -10,6 +10,7 @@ private final class LocalBox<Value>: ObservableObject {
 
 /// View-local state, used like `@State`. In this SDK `@State` is a macro that needs Xcode's macro plugin,
 /// which Command Line Tools do not ship, so the same thing is built on `@StateObject`.
+@MainActor
 @propertyWrapper
 struct Local<Value>: DynamicProperty {
     @StateObject private var box: LocalBox<Value>
@@ -24,6 +25,6 @@ struct Local<Value>: DynamicProperty {
     }
 
     var projectedValue: Binding<Value> {
-        Binding(get: { box.value }, set: { box.value = $0 })
+        $box.value
     }
 }

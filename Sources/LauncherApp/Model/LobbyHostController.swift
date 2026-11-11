@@ -394,7 +394,7 @@ final class LobbyHostController: ObservableObject {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.server?.terminateNow()
+            MainActor.assumeIsolated { self?.server?.terminateNow() }
         }
     }
 

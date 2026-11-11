@@ -21,6 +21,27 @@ private final class ConnectResult: @unchecked Sendable {
     }
 }
 
+private final class EchoResults: @unchecked Sendable {
+    private let lock = NSLock()
+    private var values: [Data?]
+
+    init(count: Int) {
+        values = [Data?](repeating: nil, count: count)
+    }
+
+    func set(_ index: Int, _ value: Data?) {
+        lock.lock()
+        values[index] = value
+        lock.unlock()
+    }
+
+    func get(_ index: Int) -> Data? {
+        lock.lock()
+        defer { lock.unlock() }
+        return values[index]
+    }
+}
+
 private final class EchoServer: @unchecked Sendable {
     private let listener: TCPSocket
     private let lock = NSLock()
@@ -252,8 +273,7 @@ func threeConnectionsRoundTripSimultaneously() throws {
     let payloads = (0..<3).map {
         pseudoRandomData(count: 50_000, seed: UInt32(100 + $0))
     }
-    let resultsLock = NSLock()
-    var results = [Data?](repeating: nil, count: sockets.count)
+    let results = EchoResults(count: sockets.count)
     let done = DispatchSemaphore(value: 0)
 
     for index in sockets.indices {
@@ -263,9 +283,7 @@ func threeConnectionsRoundTripSimultaneously() throws {
                 bytes: payloads[index],
                 timeout: 20
             )
-            resultsLock.lock()
-            results[index] = result
-            resultsLock.unlock()
+            results.set(index, result)
             done.signal()
         }.start()
     }
@@ -275,10 +293,7 @@ func threeConnectionsRoundTripSimultaneously() throws {
     }
 
     for index in sockets.indices {
-        resultsLock.lock()
-        let result = results[index]
-        resultsLock.unlock()
-        #expect(result == payloads[index])
+        #expect(results.get(index) == payloads[index])
     }
 }
 

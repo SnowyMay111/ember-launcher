@@ -76,7 +76,7 @@ struct EmberAuthPanel: View {
             ember.clearMessage()
             withAnimation(.easeOut(duration: 0.28)) { isAppeared = true }
         }
-        .onChange(of: ember.isSignedIn) { signedIn in
+        .onChange(of: ember.isSignedIn) { _, signedIn in
             if signedIn { app.modal = .profile }
         }
         .onExitCommand { app.modal = nil }

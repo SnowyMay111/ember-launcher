@@ -40,7 +40,7 @@ final class WindowConfiguratorView: NSView {
                 object: window,
                 queue: .main
             ) { [weak self] _ in
-                self?.configureWindow()
+                MainActor.assumeIsolated { self?.configureWindow() }
             }
             observers.append(obs)
         }
