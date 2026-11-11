@@ -3,7 +3,7 @@
 All notable changes to Ember.
 Versions follow [Semantic Versioning](https://semver.org); downloads are on the [Releases](https://github.com/SnowyMay111/ember-launcher/releases) page.
 
-## [Unreleased]
+## [0.4.6] - 2026-11-12
 
 ### Changed
 - Less work when idle: the animated background and the home scene draw 10 times a second instead of 15, and stop while another app is in front or Minecraft is running.
