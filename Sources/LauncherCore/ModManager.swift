@@ -492,19 +492,22 @@ public final class ModManager: Sendable {
             : modsDir.appendingPathComponent(newFile.filename)
 
         let tempURL = modsDir.appendingPathComponent("\(newFile.filename).download.\(UUID().uuidString)")
+        // Gone already after a successful move; a failed download or swap must not leave it in the mods folder.
+        defer { try? fm.removeItem(at: tempURL) }
         try await downloader.download(url: newFile.url, to: tempURL, sha1: newFile.sha1, size: newFile.size)
 
         #if os(macOS)
         if fm.fileExists(atPath: oldFileURL.path) {
             try fm.trashItem(at: oldFileURL, resultingItemURL: nil)
         }
+        // A file that already has the new name (another mod, or one dropped in by hand) goes to the Trash too.
+        if fm.fileExists(atPath: targetURL.path) {
+            try fm.trashItem(at: targetURL, resultingItemURL: nil)
+        }
         #else
         throw InstanceStoreError.trashUnsupported
         #endif
 
-        if fm.fileExists(atPath: targetURL.path) {
-            try fm.removeItem(at: targetURL)
-        }
         try fm.moveItem(at: tempURL, to: targetURL)
 
         var records = loadRecords(instance: name)

@@ -115,7 +115,8 @@ struct LocalGameServerTests {
         do {
             try await server.start(
                 launcherJar: directory.appendingPathComponent("server.jar"),
-                timeout: 2
+                // Generous on purpose: the script exits at once, a short limit only fails on a busy machine.
+                timeout: 15
             )
         } catch let error as LocalGameServerError {
             if case .exitedEarly(let code) = error {

@@ -131,7 +131,8 @@ public final class UDPSocket: @unchecked Sendable {
 
         var hostBuffer = [CChar](repeating: 0, count: Int(INET6_ADDRSTRLEN))
         inet_ntop(AF_INET, &address.sin_addr, &hostBuffer, socklen_t(hostBuffer.count))
-        let endpoint = TunnelEndpoint(host: String(cString: hostBuffer), port: UInt16(bigEndian: address.sin_port))
+        let host = String(decoding: hostBuffer.prefix { $0 != 0 }.map { UInt8(bitPattern: $0) }, as: UTF8.self)
+        let endpoint = TunnelEndpoint(host: host, port: UInt16(bigEndian: address.sin_port))
 
         return (Data(buffer[0..<received]), endpoint)
     }

@@ -96,12 +96,22 @@ public struct WorldBackups: Sendable {
     public func restore(_ backup: SingleplayerBackup, as world: String, at date: Date = Date()) throws {
         let fm = FileManager.default
         let current = savesDirectory.appendingPathComponent(world, isDirectory: true)
+        var parked: URL?
         if fm.fileExists(atPath: current.path) {
             let folder = backupsRoot.appendingPathComponent(world, isDirectory: true)
             try fm.createDirectory(at: folder, withIntermediateDirectories: true)
-            try fm.moveItem(at: current, to: folder.appendingPathComponent(Self.parkedPrefix + Self.stamp(date), isDirectory: true))
+            let destination = folder.appendingPathComponent(Self.parkedPrefix + Self.stamp(date), isDirectory: true)
+            try fm.moveItem(at: current, to: destination)
+            parked = destination
         }
-        try fm.copyItem(at: backup.url, to: current)
+        do {
+            try fm.copyItem(at: backup.url, to: current)
+        } catch {
+            // The copy failed half way: drop what it wrote and put the world back, so saves never loses it.
+            try? fm.removeItem(at: current)
+            if let parked { try? fm.moveItem(at: parked, to: current) }
+            throw error
+        }
     }
 
     private func worldURL(_ name: String) throws -> URL {

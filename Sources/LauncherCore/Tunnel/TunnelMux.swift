@@ -70,7 +70,7 @@ public struct TunnelFrameCodec: Sendable {
                 guard let kind = TunnelFrame.Kind(rawValue: buffer[base]) else {
                     isCorrupt = true
                     buffer.removeAll()
-                    return []
+                    return frames
                 }
 
                 let channel = readUInt32(buffer, at: base + 1)
@@ -78,7 +78,7 @@ public struct TunnelFrameCodec: Sendable {
                 guard length <= maxPayloadSize else {
                     isCorrupt = true
                     buffer.removeAll()
-                    return []
+                    return frames
                 }
 
                 guard buffer.count >= headerSize + length else { break }

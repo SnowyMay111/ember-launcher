@@ -127,6 +127,8 @@ public final class VersionInstaller: Sendable {
                         if let excludes = item.exclude {
                             for pattern in excludes {
                                 let clean = pattern.hasSuffix("/") ? String(pattern.dropLast()) : pattern
+                                // An exclude is a path inside the natives folder; one that climbs out of it is ignored.
+                                guard !clean.contains("..") else { continue }
                                 let target = nativesDir.appendingPathComponent(clean)
                                 try? fm.removeItem(at: target)
                             }

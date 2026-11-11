@@ -193,6 +193,10 @@ public final class InstanceStore: Sendable {
 
     public func create(_ instance: Instance) throws {
         _ = try validatedInstanceDirectory(for: instance.name)
+        // Never write over an instance that is already there: its settings would be lost.
+        guard !FileManager.default.fileExists(atPath: instanceJSON(for: instance.name).path) else {
+            throw InstanceStoreError.nameTaken(instance.name)
+        }
         let instDir = instanceDirectory(for: instance.name)
         let gameDir = gameDirectory(for: instance.name)
         let fm = FileManager.default

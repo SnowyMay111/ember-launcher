@@ -125,7 +125,8 @@ public enum STUNClient {
                 var addressCopy = address.sin_addr
                 var hostBuffer = [CChar](repeating: 0, count: Int(INET6_ADDRSTRLEN))
                 inet_ntop(AF_INET, &addressCopy, &hostBuffer, socklen_t(hostBuffer.count))
-                endpoints.append(TunnelEndpoint(host: String(cString: hostBuffer), port: port))
+                let host = String(decoding: hostBuffer.prefix { $0 != 0 }.map { UInt8(bitPattern: $0) }, as: UTF8.self)
+                endpoints.append(TunnelEndpoint(host: host, port: port))
             }
             current = info.pointee.ai_next
         }
