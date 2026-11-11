@@ -872,5 +872,21 @@
   "Custom window size": "Свій розмір вікна",
   "Off: the game opens in its own default window. On: it opens at this size in pixels.": "Вимк.: гра відкривається у своєму вікні за замовчуванням. Увімк.: вікно потрібного розміру в пікселях.",
   "Borderless window": "Вікно без рамок",
-  "No title bar and borders, for old Minecraft versions up to 1.16. Set the window size to your screen size to fill it without full screen mode.": "Без заголовка й рамок, для старого Minecraft до 1.16. Задай розмір вікна як у екрана, щоб закрити весь екран без повноекранного режиму."
+  "No title bar and borders, for old Minecraft versions up to 1.16. Set the window size to your screen size to fill it without full screen mode.": "Без заголовка й рамок, для старого Minecraft до 1.16. Задай розмір вікна як у екрана, щоб закрити весь екран без повноекранного режиму.",
+  "%.1f GB": "%.1f ГБ",
+  "%@ could not be added to the lobby.": "Не вдалося додати %@ до лобі.",
+  "This lobby no longer exists.": "Цього лобі більше немає.",
+  "Could not rename the server: %@": "Не вдалося перейменувати сервер: %@",
+  "Could not save the server settings: %@": "Не вдалося зберегти налаштування сервера: %@",
+  "Could not switch %@: %@": "Не вдалося перемкнути %@: %@",
+  "Health must be a number from 1 to 1024.": "Здоров'я: число від 1 до 1024.",
+  "In game": "У грі",
+  "Instance Details": "Про збірку",
+  "Less memory": "Менше пам'яті",
+  "More memory": "Більше пам'яті",
+  "Modrinth Project": "Проєкт Modrinth",
+  "Open Social center →": "Відкрити «Друзі» →",
+  "Unknown player": "Невідомий гравець",
+  "Welcome home.": "З поверненням додому.",
+  "Your Profile": "Ваш профіль"
 }

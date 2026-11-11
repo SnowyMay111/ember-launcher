@@ -90,7 +90,8 @@ struct SettingsScreen: View {
         let task = Process()
         task.executableURL = URL(fileURLWithPath: "/bin/sh")
         task.arguments = ["-c", "sleep 1; open -n \"\(url.path)\""]
-        try? task.run()
+        // Quitting without the helper that reopens the app would just close Ember.
+        guard (try? task.run()) != nil else { return }
         NSApp.terminate(nil)
     }
 

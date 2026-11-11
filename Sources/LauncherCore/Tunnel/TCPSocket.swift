@@ -197,6 +197,8 @@ public final class TCPSocket: @unchecked Sendable {
         let milliseconds = Int32(max(0, min(timeout, Double(Int32.max) / 1000) * 1000))
         let pollResult = poll(&pollDescriptor, 1, milliseconds)
         guard pollResult > 0 else { return .timeout }
+        // A reset peer or an fd closed mid-poll surfaces as POLLERR/POLLNVAL, not POLLIN/POLLHUP.
+        if pollDescriptor.revents & Int16(POLLERR | POLLNVAL) != 0 { return .closed }
         guard pollDescriptor.revents & Int16(POLLIN | POLLHUP) != 0 else { return .timeout }
 
         lock.lock()

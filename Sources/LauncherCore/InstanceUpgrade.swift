@@ -126,17 +126,23 @@ public final class InstanceUpgrader: Sendable {
         let modsJSONSrc = instDir.appendingPathComponent("mods.json")
         let instanceJSONSrc = store.instanceJSON(for: name)
 
-        if fm.fileExists(atPath: savesSrc.path) {
-            try fm.copyItem(at: savesSrc, to: snapshotDir.appendingPathComponent("saves", isDirectory: true))
-        }
-        if fm.fileExists(atPath: modsSrc.path) {
-            try fm.copyItem(at: modsSrc, to: snapshotDir.appendingPathComponent("mods", isDirectory: true))
-        }
-        if fm.fileExists(atPath: modsJSONSrc.path) {
-            try fm.copyItem(at: modsJSONSrc, to: snapshotDir.appendingPathComponent("mods.json"))
-        }
-        if fm.fileExists(atPath: instanceJSONSrc.path) {
-            try fm.copyItem(at: instanceJSONSrc, to: snapshotDir.appendingPathComponent("instance.json"))
+        do {
+            if fm.fileExists(atPath: savesSrc.path) {
+                try fm.copyItem(at: savesSrc, to: snapshotDir.appendingPathComponent("saves", isDirectory: true))
+            }
+            if fm.fileExists(atPath: modsSrc.path) {
+                try fm.copyItem(at: modsSrc, to: snapshotDir.appendingPathComponent("mods", isDirectory: true))
+            }
+            if fm.fileExists(atPath: modsJSONSrc.path) {
+                try fm.copyItem(at: modsJSONSrc, to: snapshotDir.appendingPathComponent("mods.json"))
+            }
+            if fm.fileExists(atPath: instanceJSONSrc.path) {
+                try fm.copyItem(at: instanceJSONSrc, to: snapshotDir.appendingPathComponent("instance.json"))
+            }
+        } catch {
+            // don't leave a partial snapshot directory behind for listSnapshots to enumerate
+            try? fm.removeItem(at: snapshotDir)
+            throw error
         }
 
         var gameVersion: String? = nil
@@ -232,17 +238,6 @@ public final class InstanceUpgrader: Sendable {
         let currentSaves = gameDir.appendingPathComponent("saves", isDirectory: true)
         let currentMods = gameDir.appendingPathComponent("mods", isDirectory: true)
 
-        #if os(macOS)
-        if fm.fileExists(atPath: currentSaves.path) {
-            try fm.trashItem(at: currentSaves, resultingItemURL: nil)
-        }
-        if fm.fileExists(atPath: currentMods.path) {
-            try fm.trashItem(at: currentMods, resultingItemURL: nil)
-        }
-        #else
-        throw InstanceStoreError.trashUnsupported
-        #endif
-
         try fm.createDirectory(at: gameDir, withIntermediateDirectories: true, attributes: nil)
 
         let snapSaves = snapshotDir.appendingPathComponent("saves", isDirectory: true)
@@ -250,12 +245,36 @@ public final class InstanceUpgrader: Sendable {
         let snapModsJSON = snapshotDir.appendingPathComponent("mods.json")
         let snapInstanceJSON = snapshotDir.appendingPathComponent("instance.json")
 
+        // Copied next to the live folders first: a failed copy (disk full, damaged snapshot) leaves the instance as it was.
+        let tempSaves = gameDir.appendingPathComponent("saves.restoring", isDirectory: true)
+        let tempMods = gameDir.appendingPathComponent("mods.restoring", isDirectory: true)
+        try? fm.removeItem(at: tempSaves)
+        try? fm.removeItem(at: tempMods)
+        defer {
+            try? fm.removeItem(at: tempSaves)
+            try? fm.removeItem(at: tempMods)
+        }
+
         if fm.fileExists(atPath: snapSaves.path) {
-            try fm.copyItem(at: snapSaves, to: currentSaves)
+            try fm.copyItem(at: snapSaves, to: tempSaves)
         }
         if fm.fileExists(atPath: snapMods.path) {
-            try fm.copyItem(at: snapMods, to: currentMods)
+            try fm.copyItem(at: snapMods, to: tempMods)
         }
+
+        #if os(macOS)
+        // The live folder goes to the Trash, not away for good, and only once its replacement is ready.
+        for (temp, live) in [(tempSaves, currentSaves), (tempMods, currentMods)] {
+            if fm.fileExists(atPath: live.path) {
+                try fm.trashItem(at: live, resultingItemURL: nil)
+            }
+            if fm.fileExists(atPath: temp.path) {
+                try fm.moveItem(at: temp, to: live)
+            }
+        }
+        #else
+        throw InstanceStoreError.trashUnsupported
+        #endif
 
         let currentModsJSON = instDir.appendingPathComponent("mods.json")
         if fm.fileExists(atPath: snapModsJSON.path) {

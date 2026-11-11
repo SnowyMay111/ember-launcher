@@ -15,8 +15,12 @@ struct LocalGameServerStrayTests {
         #expect(process.isRunning)
 
         await LocalGameServer.stopStrayProcesses(in: dir)
-        process.waitUntilExit()
+        // Not waitUntilExit: on a Swift concurrency thread it can miss the exit and hang the whole test run.
+        for _ in 0..<50 where process.isRunning {
+            try await Task.sleep(nanoseconds: 100_000_000)
+        }
         #expect(!process.isRunning)
+        if process.isRunning { process.terminate() }
     }
 
     @Test func leavesOtherFoldersAlone() async throws {

@@ -218,8 +218,8 @@ public final class JavaRuntimeManager: Sendable {
         }
 
         try paths.ensureDirectories()
-        let work = paths.runtimes.appendingPathComponent("jre-legacy-arm64.download", isDirectory: true)
-        try? fileManager.removeItem(at: work)
+        // Unique per call so overlapping installs don't wipe each other's in-progress download.
+        let work = paths.runtimes.appendingPathComponent("jre-legacy-arm64.download-\(UUID().uuidString)", isDirectory: true)
         try fileManager.createDirectory(at: work, withIntermediateDirectories: true, attributes: nil)
         defer { try? fileManager.removeItem(at: work) }
 

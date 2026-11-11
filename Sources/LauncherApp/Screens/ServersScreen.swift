@@ -644,6 +644,7 @@ private struct ServerPlayersTab: View {
     @ObservedObject private var host = LobbyHostController.shared
     @EnvironmentObject private var friends: FriendsStore
     @EnvironmentObject private var app: AppState
+    @EnvironmentObject private var toasts: ToastCenter
     @Local private var healthPlayer = ""
     @Local private var healthValue = "20"
 
@@ -683,7 +684,11 @@ private struct ServerPlayersTab: View {
                     EmberInput(label: "Health", text: $healthValue, width: 64, alignment: .center)
                     action(L("Apply")) {
                         let target = healthPlayer.isEmpty ? (host.players.first ?? "") : healthPlayer
-                        send(ServerCommand.setMaxHealth(Int(healthValue) ?? 20, target, minecraftVersion: profile.minecraftVersion))
+                        guard let value = Int(healthValue.trimmingCharacters(in: .whitespaces)), (1...1024).contains(value) else {
+                            toasts.show(L("Health must be a number from 1 to 1024."), kind: .error)
+                            return
+                        }
+                        send(ServerCommand.setMaxHealth(value, target, minecraftVersion: profile.minecraftVersion))
                     }
                 }
             }
@@ -801,6 +806,7 @@ private struct ServerWorldTab: View {
     let running: Bool
     let onChanged: () -> Void
     let onDeleted: () -> Void
+    @EnvironmentObject private var toasts: ToastCenter
     @Local private var newName = ""
     @Local private var autoBackup = false
     @Local private var settingsNote = ""
@@ -915,8 +921,12 @@ private struct ServerWorldTab: View {
         row(L("Name")) {
             EmberInput(label: "Server name", text: $newName, width: 220)
             SecondaryPill(title: L("Save"), height: 30) {
-                try? host.library.rename(profile.instanceName, to: newName)
-                onChanged()
+                do {
+                    try host.library.rename(profile.instanceName, to: newName)
+                    onChanged()
+                } catch {
+                    toasts.show(L("Could not rename the server: %@", error.localizedDescription), kind: .error)
+                }
             }
             .disabled(newName.trimmingCharacters(in: .whitespaces).isEmpty || newName == profile.name)
         }
@@ -1063,11 +1073,15 @@ private struct ServerWorldTab: View {
     }
 
     private func save(_ values: [String: String]) {
-        try? ServerProperties.update(in: directory, values: values)
-        if let max = values["max-players"].flatMap(Int.init) {
-            var updated = profile
-            updated.maxPlayers = max
-            try? host.library.save(updated)
+        do {
+            try ServerProperties.update(in: directory, values: values)
+            if let max = values["max-players"].flatMap(Int.init) {
+                var updated = profile
+                updated.maxPlayers = max
+                try host.library.save(updated)
+            }
+        } catch {
+            toasts.show(L("Could not save the server settings: %@", error.localizedDescription), kind: .error)
         }
     }
 }
@@ -1078,6 +1092,7 @@ private struct ServerModsTab: View {
     let profile: ServerProfile
     let running: Bool
     @EnvironmentObject var app: AppState
+    @EnvironmentObject private var toasts: ToastCenter
     @Local private var mods: [InstalledMod] = []
 
     var body: some View {
@@ -1117,7 +1132,11 @@ private struct ServerModsTab: View {
     }
 
     private func toggle(_ mod: InstalledMod, _ enabled: Bool) {
-        try? manager().setEnabled(instance: profile.instanceName, fileName: mod.fileName, enabled: enabled)
+        do {
+            try manager().setEnabled(instance: profile.instanceName, fileName: mod.fileName, enabled: enabled)
+        } catch {
+            toasts.show(L("Could not switch %@: %@", mod.displayTitle, error.localizedDescription), kind: .error)
+        }
         reload()
     }
 }

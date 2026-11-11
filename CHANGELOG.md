@@ -10,6 +10,17 @@ Versions follow [Semantic Versioning](https://semver.org); downloads are on the 
 - A damaged list file (mods, content, skins) is no longer treated as empty and overwritten: it is kept next to the original as `.corrupt`.
 - Lobby guest: leaving the lobby while its content is installing no longer starts the game afterwards.
 - Updater: if the new version cannot be put in place and the broken one cannot be moved away, the old app is opened from where it is instead of being moved inside the broken bundle.
+- Worlds and instances: updating a mod no longer deletes another file with the same name, a failed world restore puts the world back, creating an instance never overwrites an existing one, and a failed duplicate leaves no half-copied instance behind.
+- Instance snapshots (version change): a failed snapshot leaves no half-made copy, and a restore first copies the snapshot and only then moves the current saves and mods to the Trash, so a full disk can no longer leave the instance without worlds.
+- Servers screen: errors when renaming a server, saving its settings or switching a mod are shown instead of being ignored; "Max health" accepts 1 to 1024 only; two world backups made within one second no longer fail.
+- Lobbies: leaving a lobby no longer clears one you joined in the meantime, content that cannot be added says why, lobby settings go back to the saved values when the change fails, and a shader and a resource pack with the same file name no longer overwrite each other in the content list.
+- Mods: a slow old search can no longer refill the list after you switched away, a failed automatic update check is retried next time, and a mod present as both `.jar` and `.jar.disabled` is listed once and removed completely.
+- Shaders and resource packs: updating one moves the old version's file to the Trash instead of leaving both active; nothing is downloaded when the project cannot be looked up; choosing a shader pack turns shaders on even when Iris had them off; a pack name with quotes no longer breaks the game options.
+- Downloads and installs: leftover temporary files are removed after a failed download, cancelling a Forge install stops its Java process, a failed natives extraction is no longer remembered as done, and two launches at once no longer wipe each other's Java 8 download.
+- Session health: an out-of-memory error now lowers the smoothness score (it stayed at 100), and memory stalls count too. The health report and player heads no longer show data from the instance or player selected before.
+- Game log: characters split between two reads are no longer lost. Lobby tunnel: a reset connection is reported as closed instead of timing out again and again.
+- Account and Settings: a profile that finishes loading after you signed out is not shown; "Restart" no longer quits Ember when the relaunch cannot be started; the version check shows its error instead of "no results"; memory is shown as "1.5 GB" instead of "1 GB".
+- Russian and Ukrainian: 16 strings that were shown in English are translated.
 
 ### Security
 - Updater: an update must be signed with the same certificate as the running app, not merely carry an intact signature. Builds run from source (ad-hoc signed) are not affected.

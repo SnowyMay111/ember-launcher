@@ -214,7 +214,14 @@ public struct ServerLibrary: Sendable {
         }
         let backups = backupsDirectory(for: instanceName)
         try FileManager.default.createDirectory(at: backups, withIntermediateDirectories: true)
-        let target = backups.appendingPathComponent((automatic ? Self.autoBackupPrefix : "world-") + Self.stamp(date), isDirectory: true)
+        // Stamp only has one-second resolution, so disambiguate with a counter if the path already exists.
+        let base = (automatic ? Self.autoBackupPrefix : "world-") + Self.stamp(date)
+        var target = backups.appendingPathComponent(base, isDirectory: true)
+        var suffix = 1
+        while FileManager.default.fileExists(atPath: target.path) {
+            target = backups.appendingPathComponent("\(base)-\(suffix)", isDirectory: true)
+            suffix += 1
+        }
         try FileManager.default.copyItem(at: source, to: target)
         return target
     }
@@ -240,7 +247,14 @@ public struct ServerLibrary: Sendable {
         let fileManager = FileManager.default
         let world = worldDirectory(for: instanceName)
         if fileManager.fileExists(atPath: world.path) {
-            let parked = backupsDirectory(for: instanceName).appendingPathComponent("before-restore-\(Self.stamp(date))", isDirectory: true)
+            let parkedBase = "before-restore-\(Self.stamp(date))"
+            // Stamp only has one-second resolution, so disambiguate with a counter if the path already exists.
+            var parked = backupsDirectory(for: instanceName).appendingPathComponent(parkedBase, isDirectory: true)
+            var suffix = 1
+            while fileManager.fileExists(atPath: parked.path) {
+                parked = backupsDirectory(for: instanceName).appendingPathComponent("\(parkedBase)-\(suffix)", isDirectory: true)
+                suffix += 1
+            }
             try fileManager.createDirectory(at: parked.deletingLastPathComponent(), withIntermediateDirectories: true)
             try fileManager.moveItem(at: world, to: parked)
         }

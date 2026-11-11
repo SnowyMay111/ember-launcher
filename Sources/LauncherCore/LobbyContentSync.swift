@@ -157,7 +157,8 @@ public final class LobbyContentSyncer: Sendable {
                 result.packsInstalled += 1
             }
 
-            records.removeAll { $0.fileName == file.filename }
+            // Match kind too: a shader and resourcepack can share a filename without colliding.
+            records.removeAll { $0.fileName == file.filename && $0.kind == kind }
             records.append(ContentRecord(
                 fileName: file.filename,
                 projectId: version.projectId,

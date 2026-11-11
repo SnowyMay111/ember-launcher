@@ -206,6 +206,7 @@ public final class ModManager: Sendable {
         }
 
         var installed: [InstalledMod] = []
+        var indexByFileName: [String: Int] = [:]
         for entry in entries {
             var isDir: ObjCBool = false
             if fm.fileExists(atPath: entry.path, isDirectory: &isDir), isDir.boolValue {
@@ -223,8 +224,14 @@ public final class ModManager: Sendable {
             } else {
                 continue
             }
-            let rec = recordByFileName[enabledFileName]
-            installed.append(InstalledMod(fileName: enabledFileName, isEnabled: isEnabled, record: rec))
+            let mod = InstalledMod(fileName: enabledFileName, isEnabled: isEnabled, record: recordByFileName[enabledFileName])
+            // `mod.jar` next to `mod.jar.disabled` is one mod, and the game loads the enabled file.
+            if let index = indexByFileName[enabledFileName] {
+                if isEnabled { installed[index] = mod }
+                continue
+            }
+            indexByFileName[enabledFileName] = installed.count
+            installed.append(mod)
         }
         return installed.sorted {
             $0.displayTitle.localizedCaseInsensitiveCompare($1.displayTitle) == .orderedAscending
@@ -275,7 +282,8 @@ public final class ModManager: Sendable {
         #if os(macOS)
         if enabledExists {
             try fm.trashItem(at: enabledURL, resultingItemURL: nil)
-        } else if disabledExists {
+        }
+        if disabledExists {
             try fm.trashItem(at: disabledURL, resultingItemURL: nil)
         }
         #else

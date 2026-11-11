@@ -523,6 +523,9 @@ public final class ContentInstaller: Sendable {
             return .skipped("\(primaryFile.filename) is already present")
         }
 
+        // Looked up before the download: a failure here must not leave a file that no record knows about.
+        let project = try await client.project(idOrSlug: version.projectId)
+
         try await downloader.download(
             url: primaryFile.url,
             to: targetURL,
@@ -534,8 +537,13 @@ public final class ContentInstaller: Sendable {
             try? fm.createSymbolicLink(at: instTargetURL, withDestinationURL: targetURL)
         }
 
-        let project = try await client.project(idOrSlug: version.projectId)
         var records = loadContentRecords(instance: instanceName)
+        // The project's previous version has another file name; left in place, both versions stay active.
+        for old in records where old.projectId == project.id && old.fileName != primaryFile.filename {
+            for dir in Set([instTargetDir, gameTargetDir]) {
+                try? fm.trashItem(at: dir.appendingPathComponent(old.fileName), resultingItemURL: nil)
+            }
+        }
         let record = ContentRecord(
             fileName: primaryFile.filename,
             projectId: project.id,

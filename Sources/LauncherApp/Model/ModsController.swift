@@ -377,16 +377,20 @@ final class ModsController: ObservableObject {
     /// Popular projects when the query is empty. Shaders and resource packs follow the current instance's Minecraft version; modpacks have no filter.
     private func searchCatalog(query: String) async {
         let kind = self.kind
+        // Counted before the guard, so a search still in flight cannot refill the list cleared below.
+        searchCounter += 1
+        let searchID = searchCounter
         guard canBrowse else {
             results = []
             totalHits = 0
             searchNextOffset = nil
             lastHasMore = nil
+            isSearching = false
+            isLoadingMore = false
+            isChecking = false
             return
         }
 
-        searchCounter += 1
-        let searchID = searchCounter
         isSearching = true
         isLoadingMore = false
         defer {
@@ -781,7 +785,12 @@ final class ModsController: ObservableObject {
     func autoCheckUpdates() async {
         guard let name = instanceName, kind == .mod, autoCheckedInstance != name else { return }
         autoCheckedInstance = name
-        guard let found = try? await manager.updates(instance: name), instanceName == name else { return }
+        guard let found = try? await manager.updates(instance: name) else {
+            // A failed check does not count as done, or the next visit to the screen never retries.
+            if autoCheckedInstance == name { autoCheckedInstance = nil }
+            return
+        }
+        guard instanceName == name else { return }
         updates = found
     }
 }

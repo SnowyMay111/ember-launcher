@@ -102,7 +102,10 @@ final class EmberAccountStore: ObservableObject {
 
     func loadProfile() async {
         guard let current = await validSession() else { return }
-        profile = try? await auth.fetchProfile(current)
+        let loaded = try? await auth.fetchProfile(current)
+        // Signed out or switched account while the request was in flight: that profile is not this session's.
+        guard session?.userID == current.userID else { return }
+        profile = loaded
     }
 
     func save(_ update: EmberProfileUpdate) {

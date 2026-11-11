@@ -270,10 +270,13 @@ final class LobbyStore: ObservableObject {
             } catch {
                 message = L("Could not reach the lobby service.")
             }
-            self.stopTunnel()
-            self.current = nil
-            self.roster = []
-            self.items = []
+            // Another lobby may have been joined while the request was in flight; its state stays.
+            if self.current?.id == current.id {
+                self.stopTunnel()
+                self.current = nil
+                self.roster = []
+                self.items = []
+            }
             await refreshAfterAction()
         }
     }
@@ -310,8 +313,12 @@ final class LobbyStore: ObservableObject {
                     session: session
                 )
                 switch result {
-                case .ok, .duplicate, .invalid, .notFound:
+                case .ok, .duplicate:
                     break
+                case .invalid:
+                    message = L("%@ could not be added to the lobby.", draft.title)
+                case .notFound:
+                    message = L("This lobby no longer exists.")
                 case .forbidden:
                     message = L("You are not allowed to change this lobby's content.")
                 case .locked:
@@ -359,6 +366,12 @@ final class LobbyStore: ObservableObject {
             )
         } catch {
             message = L("Could not reach the lobby service.")
+            // The service kept the old settings, and the reload below can fail the same way.
+            if self.current?.id == current.id {
+                self.current?.editPolicy = current.editPolicy
+                self.current?.syncShaders = current.syncShaders
+                self.current?.syncResourcePacks = current.syncResourcePacks
+            }
         }
         await loadInfo(session: session)
     }

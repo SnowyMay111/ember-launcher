@@ -6,7 +6,11 @@ public enum PackActivation {
     public static func enableResourcePack(fileName: String, gameDirectory: URL) throws {
         let optionsURL = gameDirectory.appendingPathComponent("options.txt")
         let targetEntry = "file/\(fileName)"
-        let defaultLine = "resourcePacks:[\"vanilla\",\"\(targetEntry)\"]"
+        // Reuse the same escaping as the existing-array path so quotes/backslashes in fileName can't break the JSON.
+        let escapedEntry = targetEntry
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+        let defaultLine = "resourcePacks:[\"vanilla\",\"\(escapedEntry)\"]"
 
         let fm = FileManager.default
         if !fm.fileExists(atPath: optionsURL.path) {
@@ -87,17 +91,28 @@ public enum PackActivation {
                 return
             }
             lines[index] = "shaderPack=\(fileName)"
+            // Filling in a previously empty shaderPack must also enable shaders.
+            if let enableIndex = lines.firstIndex(where: { $0.hasPrefix("enableShaders=") }) {
+                lines[enableIndex] = "enableShaders=true"
+            } else {
+                lines.append("enableShaders=true")
+            }
             var newContent = lines.joined(separator: "\n")
             if hadTrailingNewline {
                 newContent.append("\n")
             }
             try newContent.write(to: irisURL, atomically: true, encoding: .utf8)
         } else {
-            var newContent = content
-            if !newContent.isEmpty && !newContent.hasSuffix("\n") {
+            lines.append("shaderPack=\(fileName)")
+            if let enableIndex = lines.firstIndex(where: { $0.hasPrefix("enableShaders=") }) {
+                lines[enableIndex] = "enableShaders=true"
+            } else {
+                lines.append("enableShaders=true")
+            }
+            var newContent = lines.joined(separator: "\n")
+            if hadTrailingNewline {
                 newContent.append("\n")
             }
-            newContent.append("shaderPack=\(fileName)\n")
             try newContent.write(to: irisURL, atomically: true, encoding: .utf8)
         }
     }

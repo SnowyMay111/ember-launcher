@@ -121,9 +121,11 @@ public final class VersionInstaller: Sendable {
             if !nativeExtractItems.isEmpty {
                 let fm = FileManager.default
                 try fm.createDirectory(at: nativesDir, withIntermediateDirectories: true, attributes: nil)
+                var extractedAll = true
                 for item in nativeExtractItems {
                     if fm.fileExists(atPath: item.url.path) {
-                        try? ZipArchive.extract(item.url, to: nativesDir)
+                        // A failure does not stop the install (the game may still start), but it is not marked done, so the next launch retries.
+                        do { try ZipArchive.extract(item.url, to: nativesDir) } catch { extractedAll = false }
                         if let excludes = item.exclude {
                             for pattern in excludes {
                                 let clean = pattern.hasSuffix("/") ? String(pattern.dropLast()) : pattern
@@ -135,7 +137,9 @@ public final class VersionInstaller: Sendable {
                         }
                     }
                 }
-                fm.createFile(atPath: nativesDir.appendingPathComponent(".extracted").path, contents: nil)
+                if extractedAll {
+                    fm.createFile(atPath: nativesDir.appendingPathComponent(".extracted").path, contents: nil)
+                }
             }
         }
 

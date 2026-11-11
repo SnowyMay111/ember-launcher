@@ -173,9 +173,12 @@ public struct SessionHealthReport: Codable, Sendable, Equatable {
             if minutes > 0 {
                 let penaltyPerMinute = (Double(stats.minorStutterCount) * 1.0
                     + Double(stats.criticalFreezeCount) * 6.0
+                    + Double(stats.allocationStallCount) * 3.0
                     + Double(stats.tickDropCount) * 0.5) / minutes
                 let deduction = Int((penaltyPerMinute * 10.0).rounded())
                 score = min(max(100 - deduction, 0), 100)
+                // Running out of memory is never a smooth session, however long it otherwise ran.
+                if stats.outOfMemoryCount > 0 { score = min(score, 40) }
             }
 
             if stats.criticalFreezeCount > 0 {

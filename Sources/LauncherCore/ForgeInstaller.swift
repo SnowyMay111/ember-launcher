@@ -219,7 +219,7 @@ public final class ForgeInstaller: Sendable {
             let log = try FileHandle(forWritingTo: logURL)
             defer { try? log.close() }
 
-            nonisolated(unsafe) let process = Process()
+            let process = Process()
             process.executableURL = java
             process.arguments = ["-jar", jar.path, flag, paths.root.path]
             process.currentDirectoryURL = installersDirectory
