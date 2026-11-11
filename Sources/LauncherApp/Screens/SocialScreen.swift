@@ -71,6 +71,8 @@ struct SocialScreen: View {
             InvitesStore.shared.markAllSeen()
             await FriendsStore.shared.refresh()
         }
+        .onAppear { LobbyStore.shared.beginBrowsing() }
+        .onDisappear { LobbyStore.shared.endBrowsing() }
         .onChange(of: invitesStore.invites.map(\.lobbyID)) { _, _ in
             InvitesStore.shared.markAllSeen()
         }

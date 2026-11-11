@@ -43,21 +43,19 @@ struct ModDetailPanel: View {
 
     @ViewBuilder private var titleRow: some View {
             HStack(spacing: 14) {
-                AsyncImage(url: hit.iconURL) { phase in
-                    if let image = phase.image {
-                        image
-                            .resizable()
-                            .scaledToFill()
-                    } else {
-                        LinearGradient(
-                            gradient: Gradient(colors: [
-                                Color(hex: ModDetailPanel.gradientColors(for: hit.projectId).0),
-                                Color(hex: ModDetailPanel.gradientColors(for: hit.projectId).1)
-                            ]),
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    }
+                CachedImage(url: hit.iconURL) { image in
+                    image
+                        .resizable()
+                        .scaledToFill()
+                } placeholder: {
+                    LinearGradient(
+                        gradient: Gradient(colors: [
+                            Color(hex: ModDetailPanel.gradientColors(for: hit.projectId).0),
+                            Color(hex: ModDetailPanel.gradientColors(for: hit.projectId).1)
+                        ]),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
                 }
                 .frame(width: 55, height: 55)
                 .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))

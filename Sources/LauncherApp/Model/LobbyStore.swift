@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import LauncherCore
 
@@ -39,6 +40,8 @@ final class LobbyStore: ObservableObject {
 
     private let lobbies = EmberLobbies()
     private var loop: Task<Void, Never>?
+    private var lastPoll = Date.distantPast
+    private var browsers = 0
     private var hostService: TunnelHostService?
     private var guestService: TunnelGuestService?
 
@@ -52,24 +55,49 @@ final class LobbyStore: ObservableObject {
         loop = Task { [weak self] in
             while !Task.isCancelled {
                 guard let self else { return }
-                guard let session = await EmberAccountStore.shared.validSession() else {
-                    if !self.visible.isEmpty { self.visible = [] }
-                    try? await Task.sleep(for: .seconds(5))
-                    continue
+                if let interval = self.pollInterval, Date().timeIntervalSince(self.lastPoll) >= interval {
+                    self.lastPoll = Date()
+                    await self.poll()
                 }
-
-                await self.loadVisible(session: session)
-                if let current = self.current {
-                    if current.isHost {
-                        try? await self.lobbies.heartbeat(lobby: current.id, session: session)
-                    }
-                    await self.loadRoster(lobby: current.id, session: session)
-                    await self.loadInfo(session: session)
-                    await self.loadItems(lobby: current.id, session: session)
-                }
-
-                try? await Task.sleep(for: .seconds(5))
+                // A short nap only checks the clock; the network is touched once per `pollInterval`.
+                try? await Task.sleep(for: .seconds(self.current != nil || NSApp.isActive ? 1 : 5))
             }
+        }
+    }
+
+    /// A screen that lists lobbies came on screen: refresh now and keep refreshing faster while it is shown.
+    func beginBrowsing() {
+        browsers += 1
+        if browsers == 1 { refreshSoon() }
+    }
+
+    func endBrowsing() { browsers = max(browsers - 1, 0) }
+
+    /// Makes the loop ask the lobby service on its next pass (within a second while the app is in front).
+    func refreshSoon() { lastPoll = .distantPast }
+
+    /// Seconds between two requests to the lobby service; nil while there is nobody to show the result to.
+    private var pollInterval: TimeInterval? {
+        if current != nil { return 5 }  // heartbeat and roster, also while the game is in front
+        guard NSApp.isActive else { return nil }
+        // Invitations arrive with this list, so the other screens still look, only less often.
+        return browsers > 0 ? 10 : 20
+    }
+
+    private func poll() async {
+        guard let session = await EmberAccountStore.shared.validSession() else {
+            if !visible.isEmpty { visible = [] }
+            return
+        }
+
+        await loadVisible(session: session)
+        if let current {
+            if current.isHost {
+                try? await lobbies.heartbeat(lobby: current.id, session: session)
+            }
+            await loadRoster(lobby: current.id, session: session)
+            await loadInfo(session: session)
+            await loadItems(lobby: current.id, session: session)
         }
     }
 

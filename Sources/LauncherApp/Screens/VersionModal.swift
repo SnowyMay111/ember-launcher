@@ -18,6 +18,7 @@ struct VersionModal: View {
     @Local private var progress = ""
     @Local private var report: UpgradeReport?
     @Local private var snapshots: [SnapshotInfo] = []
+    @Local private var snapshotsRequest = 0
     @Local private var confirmingRestore: String?
     @Local private var isRestoring = false
     @Local private var errorText = ""
@@ -218,7 +219,15 @@ struct VersionModal: View {
     }
 
     private func loadSnapshots() {
-        snapshots = (try? makeUpgrader().listSnapshots(instance: instance.name)) ?? []
+        snapshotsRequest += 1
+        let request = snapshotsRequest
+        let upgrader = makeUpgrader()
+        let name = instance.name
+        Task {
+            let found = await Task.detached { (try? upgrader.listSnapshots(instance: name)) ?? [] }.value
+            // A slower, older listing must not replace a newer one.
+            if request == snapshotsRequest { snapshots = found }
+        }
     }
 
     private func check() async {

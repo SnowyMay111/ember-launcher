@@ -24,7 +24,7 @@ public struct HeroScene: View {
     }
 
     public var body: some View {
-        TickView(every: 2, paused: reduceMotion) { date in
+        TickView(every: 3, paused: reduceMotion) { date in
             let elapsed = date.timeIntervalSinceReferenceDate
             GeometryReader { geo in
                 let w = geo.size.width

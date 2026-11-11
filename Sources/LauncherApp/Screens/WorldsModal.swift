@@ -14,6 +14,7 @@ struct WorldsModal: View {
     @Local private var restoringWorld = ""
     @Local private var statusText = ""
     @Local private var errorText = ""
+    @Local private var reloadRequest = 0
 
     private var backups: WorldBackups { WorldBackups(store: app.store, instance: instanceName) }
 
@@ -90,9 +91,21 @@ struct WorldsModal: View {
     }
 
     private func reload() {
+        reloadRequest += 1
+        let request = reloadRequest
         let source = backups
-        worlds = source.worlds()
-        copies = Dictionary(uniqueKeysWithValues: worlds.map { ($0.folderName, source.backups(of: $0.folderName)) })
+        Task {
+            // Reading every world and its copies touches a lot of files, so it stays off the main thread.
+            let (found, lists) = await Task.detached {
+                let found = source.worlds()
+                let lists = Dictionary(uniqueKeysWithValues: found.map { ($0.folderName, source.backups(of: $0.folderName)) })
+                return (found, lists)
+            }.value
+            // A slower, older listing must not replace a newer one.
+            guard request == reloadRequest else { return }
+            worlds = found
+            copies = lists
+        }
     }
 
     private func backUp(_ name: String) {

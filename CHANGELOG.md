@@ -5,6 +5,12 @@ Versions follow [Semantic Versioning](https://semver.org); downloads are on the 
 
 ## [Unreleased]
 
+### Changed
+- Less work when idle: the animated background and the home scene draw 10 times a second instead of 15, and stop while another app is in front or Minecraft is running.
+- Lobbies are asked for every 5 seconds only while you are in one. Otherwise the list (and invitations with it) refreshes every 10 seconds on Social and in the friends drawer, every 20 seconds elsewhere, and not at all while Ember is in the background.
+- Mod icons are downloaded once and kept (small copies in memory and on disk), so long lists scroll without loading them again.
+- Servers: the world size is measured in the background instead of on every redraw, and backup and snapshot lists are read off the main thread, so the window no longer stalls on big worlds.
+
 ## [0.4.5] - 2026-11-11
 
 ### Fixed

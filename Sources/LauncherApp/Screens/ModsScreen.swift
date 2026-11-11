@@ -329,41 +329,48 @@ struct ModsScreen: View {
         .accessibilityLabel(L("Remove"))
     }
 
+    // Both rows keep their concrete view type (no `AnyView`), so a redraw of the list only touches what changed.
+    @ViewBuilder
     private func installedRow(_ mod: InstalledMod) -> some View {
         if confirmingRemove == mod.fileName {
-            return AnyView(confirmRow(mod.displayTitle, iconURL: mod.record?.iconURL) { mods.remove(mod) })
-        }
-        let update = mods.updates.first { $0.record.fileName == mod.fileName }
-        var subtitle = mod.record?.versionNumber ?? ""
-        if mod.record?.isDependency == true, let owner = mod.record?.installedFor { subtitle = L("Dependency of %@", owner) }
-        if subtitle == mod.displayTitle { subtitle = "" }
-        let toggle = Binding(get: { mod.isEnabled }, set: { mods.setEnabled(mod, $0) })
-        return AnyView(buildRow(
-            iconURL: mod.record?.iconURL,
-            title: mod.displayTitle,
-            subtitle: subtitle,
-            isDimmed: mods.busy.contains(mod.fileName) || !mod.isEnabled
-        ) {
-            if let update {
-                ModActionButton(title: "Update") { Task { await mods.apply(update) } }.frame(width: 76)
+            confirmRow(mod.displayTitle, iconURL: mod.record?.iconURL) { mods.remove(mod) }
+        } else {
+            let update = mods.updates.first { $0.record.fileName == mod.fileName }
+            buildRow(
+                iconURL: mod.record?.iconURL,
+                title: mod.displayTitle,
+                subtitle: installedSubtitle(mod),
+                isDimmed: mods.busy.contains(mod.fileName) || !mod.isEnabled
+            ) {
+                if let update {
+                    ModActionButton(title: "Update") { Task { await mods.apply(update) } }.frame(width: 76)
+                }
+                EmberToggle(label: "Enable", isOn: Binding(get: { mod.isEnabled }, set: { mods.setEnabled(mod, $0) }))
+                removeButton(mod.fileName)
             }
-            EmberToggle(label: "Enable", isOn: toggle)
-            removeButton(mod.fileName)
-        })
+        }
     }
 
+    private func installedSubtitle(_ mod: InstalledMod) -> String {
+        var subtitle = mod.record?.versionNumber ?? ""
+        if mod.record?.isDependency == true, let owner = mod.record?.installedFor { subtitle = L("Dependency of %@", owner) }
+        return subtitle == mod.displayTitle ? "" : subtitle
+    }
+
+    @ViewBuilder
     private func contentRow(_ record: ContentRecord) -> some View {
         if confirmingRemove == record.fileName {
-            return AnyView(confirmRow(record.title, iconURL: record.iconURL) { mods.remove(record) })
+            confirmRow(record.title, iconURL: record.iconURL) { mods.remove(record) }
+        } else {
+            buildRow(
+                iconURL: record.iconURL,
+                title: record.title,
+                subtitle: record.versionNumber,
+                isDimmed: mods.busy.contains(record.fileName)
+            ) {
+                removeButton(record.fileName)
+            }
         }
-        return AnyView(buildRow(
-            iconURL: record.iconURL,
-            title: record.title,
-            subtitle: record.versionNumber,
-            isDimmed: mods.busy.contains(record.fileName)
-        ) {
-            removeButton(record.fileName)
-        })
     }
 
     // MARK: - Basket
@@ -567,7 +574,8 @@ struct ModsScreen: View {
                 browseHeading("Big builds")
                 ForEach(mods.featured, id: \.projectId) { browseRow($0) }
                 browseHeading("All modpacks")
-                ForEach(shown.filter { hit in !mods.featured.contains { $0.projectId == hit.projectId } }, id: \.projectId) { browseRow($0) }
+                let featuredIDs = Set(mods.featured.map(\.projectId))
+                ForEach(shown.filter { !featuredIDs.contains($0.projectId) }, id: \.projectId) { browseRow($0) }
             } else {
                 ForEach(shown, id: \.projectId) { browseRow($0) }
             }
@@ -736,7 +744,7 @@ struct ModIcon: View {
             .frame(width: 36, height: 36)
             .overlay {
                 if let url {
-                    AsyncImage(url: url) { image in
+                    CachedImage(url: url, maxPixel: 96) { image in
                         image.resizable().scaledToFill()
                     } placeholder: {
                         Color.clear

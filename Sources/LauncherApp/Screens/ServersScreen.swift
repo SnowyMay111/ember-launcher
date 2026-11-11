@@ -21,6 +21,9 @@ struct ServersScreen: View {
     @Local private var consoleOpen = false
     @Local private var backupBusy = false
     @Local private var lastBackup: Date?
+    @Local private var worldBytes: Int64 = 0
+    /// Counts `refreshBackup` calls, so a slow older answer never replaces a newer one.
+    @Local private var statsRequest = 0
     @Local private var backupNote = ""
     @EnvironmentObject private var lobbies: LobbyStore
 
@@ -84,8 +87,20 @@ struct ServersScreen: View {
     }
 
     private func refreshBackup() {
-        guard let profile = selected else { lastBackup = nil; return }
-        lastBackup = host.library.listBackups(for: profile.instanceName).first?.date
+        statsRequest += 1
+        let request = statsRequest
+        guard let profile = selected else { lastBackup = nil; worldBytes = 0; return }
+        let library = host.library
+        let name = profile.instanceName
+        Task {
+            // Walking the world and every backup folder is slow on big worlds, so it stays off the main thread.
+            let (date, bytes) = await Task.detached {
+                (library.listBackups(for: name).first?.date, library.worldFolderSize(for: name))
+            }.value
+            guard request == statsRequest else { return }
+            lastBackup = date
+            worldBytes = bytes
+        }
     }
 
     // MARK: - Server chips
@@ -319,16 +334,16 @@ struct ServersScreen: View {
     private func statsRow(_ profile: ServerProfile, running: Bool) -> some View {
         HStack(spacing: 10) {
             stat(L("Players"), running ? "\(host.players.count) / \(profile.maxPlayers)" : "– / \(profile.maxPlayers)")
-            stat(L("World size"), worldSize(profile))
+            stat(L("World size"), worldSize)
             stat(L("Last backup"), lastBackup.map { $0.formatted(.relative(presentation: .named)) } ?? L("Never"))
         }
         .padding(.top, 4)
     }
 
-    private func worldSize(_ profile: ServerProfile) -> String {
-        let bytes = host.library.worldFolderSize(for: profile.instanceName)
-        guard bytes > 0 else { return "–" }
-        return ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
+    /// Measured by `refreshBackup`, not while drawing: the screen redraws on every console line.
+    private var worldSize: String {
+        guard worldBytes > 0 else { return "–" }
+        return ByteCountFormatter.string(fromByteCount: worldBytes, countStyle: .file)
     }
 
     private func stat(_ label: String, _ value: String) -> some View {
@@ -809,6 +824,7 @@ private struct ServerWorldTab: View {
     @EnvironmentObject private var toasts: ToastCenter
     @Local private var newName = ""
     @Local private var autoBackup = false
+    @Local private var backupsRequest = 0
     @Local private var settingsNote = ""
     @ObservedObject private var host = LobbyHostController.shared
     @Local private var difficulty = "easy"
@@ -913,7 +929,7 @@ private struct ServerWorldTab: View {
             load()
             newName = profile.name
             autoBackup = profile.autoBackup
-            backups = host.library.listBackups(for: profile.instanceName)
+            await loadBackups()
         }
     }
 
@@ -1030,7 +1046,7 @@ private struct ServerWorldTab: View {
             case .success: backupNote = L("Backup saved.")
             case .failure: backupNote = L("Could not back up the world.")
             }
-            backups = library.listBackups(for: name)
+            await loadBackups()
             backupBusy = false
         }
     }
@@ -1043,7 +1059,18 @@ private struct ServerWorldTab: View {
         } catch {
             backupNote = L("Could not restore the backup.")
         }
-        backups = host.library.listBackups(for: profile.instanceName)
+        Task { await loadBackups() }
+    }
+
+    /// Each backup's size is measured by walking its folder, so the list is read off the main thread.
+    private func loadBackups() async {
+        backupsRequest += 1
+        let request = backupsRequest
+        let library = host.library
+        let name = profile.instanceName
+        let found = await Task.detached { library.listBackups(for: name) }.value
+        // A slower, older listing must not replace a newer one.
+        if request == backupsRequest { backups = found }
     }
 
     private func ruleButton(_ title: String, _ name: String, _ value: Bool) -> some View {

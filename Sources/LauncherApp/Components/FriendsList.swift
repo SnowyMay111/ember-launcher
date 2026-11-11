@@ -29,6 +29,9 @@ struct FriendsList: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .onAppear { LobbyStore.shared.beginBrowsing() }
+        .onDisappear { LobbyStore.shared.endBrowsing() }
+        .onChange(of: ember.isSignedIn) { _, _ in LobbyStore.shared.refreshSoon() }
     }
 
     private var signedInContent: some View {

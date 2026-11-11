@@ -69,6 +69,7 @@ struct RootView: View {
             LobbyStore.shared.start()
         }
         .onChange(of: player.isBusy) { _, busy in updates.gameIsBusy = busy }
+        .onChange(of: player.state == .running) { _, running in TickClock.shared.gameRunning = running }
         .onChange(of: host.state) { _, state in
             guard state == .running, settings.joinOwnServer else { return }
             host.play(settings: settings, app: app, play: player)

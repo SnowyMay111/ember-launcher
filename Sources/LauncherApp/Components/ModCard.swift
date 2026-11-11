@@ -82,17 +82,12 @@ struct ModCard<Actions: View>: View {
     @ViewBuilder
     private var iconView: some View {
         if let url = iconURL {
-            AsyncImage(url: url) { phase in
-                switch phase {
-                case .empty, .failure:
-                    placeholder
-                case .success(let image):
-                    image
-                        .resizable()
-                        .scaledToFill()
-                @unknown default:
-                    placeholder
-                }
+            CachedImage(url: url) { image in
+                image
+                    .resizable()
+                    .scaledToFill()
+            } placeholder: {
+                placeholder
             }
         } else {
             placeholder
