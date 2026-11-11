@@ -48,9 +48,39 @@ public final class LogFollower: @unchecked Sendable {
         }
 
         let data = handle.readData(ofLength: length)
-        offset += UInt64(data.count)
+        // Don't decode a multibyte UTF-8 sequence that was cut off by this read;
+        // leave its bytes for the next poll by not advancing offset past them.
+        let validLength = Self.validUTF8PrefixLength(data)
+        offset += UInt64(validLength)
 
-        return String(decoding: data, as: UTF8.self)
+        return String(decoding: data.prefix(validLength), as: UTF8.self)
+    }
+
+    private static func validUTF8PrefixLength(_ data: Data) -> Int {
+        let bytes = [UInt8](data)
+        let count = bytes.count
+        guard count > 0 else { return 0 }
+
+        var back = 0
+        while back < 4 && back < count {
+            let byte = bytes[count - 1 - back]
+            if byte & 0xC0 != 0x80 {
+                let seqLen: Int
+                if byte & 0x80 == 0 { seqLen = 1 }
+                else if byte & 0xE0 == 0xC0 { seqLen = 2 }
+                else if byte & 0xF0 == 0xE0 { seqLen = 3 }
+                else if byte & 0xF8 == 0xF0 { seqLen = 4 }
+                else { seqLen = 1 }
+
+                if back + 1 < seqLen {
+                    return count - (back + 1)
+                } else {
+                    return count
+                }
+            }
+            back += 1
+        }
+        return count
     }
 }
 

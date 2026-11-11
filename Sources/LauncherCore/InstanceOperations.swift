@@ -99,13 +99,19 @@ extension InstanceStore {
         // Version-change backups belong to the original, so they stay out of the copy.
         let fm = FileManager.default
         try fm.createDirectory(at: dst, withIntermediateDirectories: true)
-        for item in try fm.contentsOfDirectory(at: src, includingPropertiesForKeys: nil) where item.lastPathComponent != "backups" {
-            try fm.copyItem(at: item, to: dst.appendingPathComponent(item.lastPathComponent))
+        // Remove the partially-created dst on any failure so a failed duplicate doesn't look like a real instance.
+        do {
+            for item in try fm.contentsOfDirectory(at: src, includingPropertiesForKeys: nil) where item.lastPathComponent != "backups" {
+                try fm.copyItem(at: item, to: dst.appendingPathComponent(item.lastPathComponent))
+            }
+            instance.name = sanitized
+            instance.lastPlayed = nil
+            instance.playtimeSeconds = 0
+            try save(instance)
+        } catch {
+            try? fm.removeItem(at: dst)
+            throw error
         }
-        instance.name = sanitized
-        instance.lastPlayed = nil
-        instance.playtimeSeconds = 0
-        try save(instance)
         return instance
     }
 

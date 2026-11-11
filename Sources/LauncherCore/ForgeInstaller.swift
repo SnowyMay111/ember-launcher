@@ -219,16 +219,25 @@ public final class ForgeInstaller: Sendable {
             let log = try FileHandle(forWritingTo: logURL)
             defer { try? log.close() }
 
-            let process = Process()
+            nonisolated(unsafe) let process = Process()
             process.executableURL = java
             process.arguments = ["-jar", jar.path, flag, paths.root.path]
             process.currentDirectoryURL = installersDirectory
             process.standardOutput = log
             process.standardError = log
 
-            let status: Int32 = try await withCheckedThrowingContinuation { continuation in
-                process.terminationHandler = { continuation.resume(returning: $0.terminationStatus) }
-                do { try process.run() } catch { continuation.resume(throwing: error) }
+            // A cancelled task must terminate the installer, and a cancel racing process.run() must not start it unterminated.
+            let status: Int32 = try await withTaskCancellationHandler {
+                try await withCheckedThrowingContinuation { continuation in
+                    if Task.isCancelled {
+                        continuation.resume(throwing: CancellationError())
+                        return
+                    }
+                    process.terminationHandler = { continuation.resume(returning: $0.terminationStatus) }
+                    do { try process.run() } catch { continuation.resume(throwing: error) }
+                }
+            } onCancel: {
+                process.terminate()
             }
             if status == 0 { return }
 

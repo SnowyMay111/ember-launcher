@@ -121,40 +121,44 @@ public final class Downloader: Sendable {
         let maxAttempts = 3
 
         for attempt in 1...maxAttempts {
+            var tempLocalURL: URL?
+            var targetTempURL: URL?
             do {
                 try Task.checkCancellation()
-                let (tempLocalURL, response) = try await session.download(from: url)
+                let (downloadedURL, response) = try await session.download(from: url)
+                tempLocalURL = downloadedURL
                 if let httpResponse = response as? HTTPURLResponse, !(200...299).contains(httpResponse.statusCode) {
-                    try? fileManager.removeItem(at: tempLocalURL)
                     throw DownloaderError.invalidHTTPResponse(statusCode: httpResponse.statusCode, url: url)
                 }
 
                 if let expectedSha1 = sha1, !expectedSha1.isEmpty {
-                    let actualSha1 = try sha1Hex(of: tempLocalURL)
+                    let actualSha1 = try sha1Hex(of: downloadedURL)
                     if actualSha1.caseInsensitiveCompare(expectedSha1) != .orderedSame {
-                        try? fileManager.removeItem(at: tempLocalURL)
                         throw DownloaderError.checksumMismatch(expected: expectedSha1, actual: actualSha1, url: url)
                     }
                 } else if let expectedSize = size {
-                    let actualSize = (try? fileManager.attributesOfItem(atPath: tempLocalURL.path))?[.size] as? Int
+                    let actualSize = (try? fileManager.attributesOfItem(atPath: downloadedURL.path))?[.size] as? Int
                     if let actualSize, actualSize != expectedSize {
-                        try? fileManager.removeItem(at: tempLocalURL)
                         throw DownloaderError.downloadFailed(underlying: "File size mismatch: expected \(expectedSize), got \(actualSize)")
                     }
                 }
 
-                let targetTempURL = parentDir.appendingPathComponent("\(dest.lastPathComponent).tmp.\(UUID().uuidString)")
-                if fileManager.fileExists(atPath: targetTempURL.path) {
-                    try? fileManager.removeItem(at: targetTempURL)
+                let tempTarget = parentDir.appendingPathComponent("\(dest.lastPathComponent).tmp.\(UUID().uuidString)")
+                targetTempURL = tempTarget
+                if fileManager.fileExists(atPath: tempTarget.path) {
+                    try? fileManager.removeItem(at: tempTarget)
                 }
-                try fileManager.moveItem(at: tempLocalURL, to: targetTempURL)
+                try fileManager.moveItem(at: downloadedURL, to: tempTarget)
 
                 if fileManager.fileExists(atPath: dest.path) {
                     try fileManager.removeItem(at: dest)
                 }
-                try fileManager.moveItem(at: targetTempURL, to: dest)
+                try fileManager.moveItem(at: tempTarget, to: dest)
                 return
             } catch {
+                // clean up any leftover temp files so retries don't accumulate orphans on disk
+                if let tempLocalURL { try? fileManager.removeItem(at: tempLocalURL) }
+                if let targetTempURL { try? fileManager.removeItem(at: targetTempURL) }
                 if error is CancellationError {
                     throw error
                 }

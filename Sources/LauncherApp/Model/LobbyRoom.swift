@@ -18,6 +18,7 @@ final class LobbyRoom: ObservableObject {
     private var subscription: AnyCancellable?
     private var pulling = false
     private var pullAgainNeeded = false
+    private var pullTask: Task<Void, Never>?
 
     private init() {
         content = ContentInstaller(store: GameLauncher(paths: LauncherPaths()).store)
@@ -30,7 +31,7 @@ final class LobbyRoom: ObservableObject {
         subscription = LobbyStore.shared.$items
             .dropFirst()
             .sink { [weak self] _ in
-                Task { @MainActor [weak self] in
+                self?.pullTask = Task { @MainActor [weak self] in
                     await self?.coalescedPull()
                 }
             }
@@ -39,6 +40,9 @@ final class LobbyRoom: ObservableObject {
     func detach() {
         subscription?.cancel()
         subscription = nil
+        pullTask?.cancel()
+        pullTask = nil
+        pulling = false
         instanceName = nil
         progress = nil
     }
@@ -82,10 +86,18 @@ final class LobbyRoom: ObservableObject {
         let items = LobbyStore.shared.items
         let syncer = LobbyContentSyncer(content: content)
         let relay = ModProgressRelay { [weak self] done, total in
-            Task { @MainActor in self?.progress = L("Installing the lobby's content %d/%d", done, total) }
+            Task { @MainActor in
+                // Drop stale progress updates from a pull whose instance has since changed.
+                guard let self, !Task.isCancelled, self.instanceName == instanceName else { return }
+                self.progress = L("Installing the lobby's content %d/%d", done, total)
+            }
         }
         do {
+            try Task.checkCancellation()
+            guard self.instanceName == instanceName else { return }
             _ = try await syncer.sync(items, options: options, into: instanceName) { relay.report($0, $1) }
+            try Task.checkCancellation()
+            guard self.instanceName == instanceName else { return }
             progress = nil
         } catch {
             progress = nil

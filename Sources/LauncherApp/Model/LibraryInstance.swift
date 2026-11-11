@@ -138,7 +138,10 @@ struct LibraryInstance: Identifiable, Equatable {
 
     var modsText: String { L("%d mods", modCount) }
 
-    var memoryText: String { L("%d GB", memoryMB / 1024) }
+    var memoryText: String {
+        // Format as a Double so sub-1024 or non-multiple-of-1024 values aren't truncated to the wrong GB figure.
+        L("%.1f GB", Double(memoryMB) / 1024)
+    }
 
     static func duration(minutes: Int) -> String {
         L("%d h %d min", minutes / 60, minutes % 60)

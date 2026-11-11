@@ -225,10 +225,17 @@ struct VersionModal: View {
         guard !target.isEmpty, !isUpgrading else { return }
         checks = nil
         isChecking = true
-        let result = try? await ModManager(store: app.store).checkUpgrade(instance: instance.name, to: target)
-        guard !Task.isCancelled else { return }
-        checks = result
-        isChecking = false
+        do {
+            let result = try await ModManager(store: app.store).checkUpgrade(instance: instance.name, to: target)
+            guard !Task.isCancelled else { return }
+            checks = result
+            isChecking = false
+        } catch {
+            // Surface the failure instead of silently showing "no results".
+            guard !Task.isCancelled else { return }
+            errorText = error.localizedDescription
+            isChecking = false
+        }
     }
 
     private func upgrade() {

@@ -30,23 +30,34 @@ struct PlayerHead: View {
 
     private func load() async {
         let key = cleanName.lowercased()
+        // Only apply results that are still current; a cancelled/stale task must not clobber a newer assignment.
+        func apply(_ value: NSImage?) {
+            guard !Task.isCancelled, key == cleanName.lowercased() else { return }
+            image = value
+        }
         guard !key.isEmpty, key.count <= 16,
               key.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "_") }) else {
-            image = nil
+            apply(nil)
             return
         }
         if let cached = Self.cache[key] {
-            image = cached
+            apply(cached)
             return
         }
         guard let url = URL(string: "https://minotar.net/helm/\(key)/128") else { return }
-        guard let (data, response) = try? await URLSession.shared.data(from: url),
-              (response as? HTTPURLResponse)?.statusCode == 200,
-              let loaded = NSImage(data: data) else {
-            image = nil
-            return
+        do {
+            let (data, response) = try await URLSession.shared.data(from: url)
+            guard (response as? HTTPURLResponse)?.statusCode == 200,
+                  let loaded = NSImage(data: data) else {
+                apply(nil)
+                return
+            }
+            Self.cache[key] = loaded
+            apply(loaded)
+        } catch {
+            if !Task.isCancelled {
+                apply(nil)
+            }
         }
-        Self.cache[key] = loaded
-        image = loaded
     }
 }

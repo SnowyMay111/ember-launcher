@@ -134,6 +134,8 @@ final class PlayController: ObservableObject {
     private let launcher: GameLauncher
     private let refreshRateBox = DisplayRefreshRateBox()
     private let diagnosticsEngine: SessionDiagnosticsEngine
+    /// The most recently requested instance, so an older overlapping load can't overwrite a newer one's result.
+    private var latestReportRequest: String?
 
     init() {
         launcher = GameLauncher(paths: paths)
@@ -165,13 +167,13 @@ final class PlayController: ObservableObject {
     }
 
     func loadLastReport(for instanceName: String) {
+        latestReportRequest = instanceName
         Task { [weak self] in
             guard let self else { return }
             let report = await self.diagnosticsEngine.loadLastReport(instanceName: instanceName)
-            if self.healthInstance != instanceName || self.health == nil {
-                self.health = report
-                self.healthInstance = instanceName
-            }
+            guard self.latestReportRequest == instanceName else { return }
+            self.health = report
+            self.healthInstance = instanceName
         }
     }
 
@@ -196,9 +198,10 @@ final class PlayController: ObservableObject {
                 self.fixLabel = ""
                 app?.reload()
                 let updatedInstance = try launcher.store.load(name: instanceName)
+                let priorPlaytime = (self.healthInstance == instanceName ? self.health?.totalPlaytimeSeconds : nil) ?? 0
                 let newReport = await diagnosticsEngine.analyze(
                     instance: updatedInstance,
-                    playtime: self.health?.totalPlaytimeSeconds ?? 0,
+                    playtime: priorPlaytime,
                     javaExecutable: nil
                 )
                 self.health = newReport
