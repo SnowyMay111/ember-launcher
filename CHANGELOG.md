@@ -5,6 +5,8 @@ Versions follow [Semantic Versioning](https://semver.org); downloads are on the 
 
 ## [Unreleased]
 
+## [0.4.5] - 2026-11-11
+
 ### Fixed
 - Ember account: you are no longer signed out at random. Friends and lobbies refreshed the session at the same moment and one of them lost it; now they share one refresh. Being offline no longer signs you out either, and signing out while a refresh is running stays signed out (the same for the Microsoft account).
 - A damaged list file (mods, content, skins) is no longer treated as empty and overwritten: it is kept next to the original as `.corrupt`.
