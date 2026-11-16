@@ -3,7 +3,7 @@
 All notable changes to Ember.
 Versions follow [Semantic Versioning](https://semver.org); downloads are on the [Releases](https://github.com/SnowyMay111/ember-launcher/releases) page.
 
-## [Unreleased]
+## [0.4.7] - 2026-11-16
 
 ### Added
 - Instance covers: every loader has its own colours, each instance its own scene, an instance made from a Modrinth modpack shows the pack's icon, and Instance settings → Cover puts your own picture on the card.
