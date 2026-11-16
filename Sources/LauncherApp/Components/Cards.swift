@@ -104,16 +104,19 @@ struct PageHeader: View {
     }
 }
 
-/// The four instance artworks of the prototype (`.instance-art`): the same dusk scene in different palettes.
+/// Instance artworks: one drawn scene, a palette of its own for every loader, so the loader reads at a glance.
 enum PreviewVariant {
-    case dusk, violet, gold, void
+    case meadow, sand, violet, steel, ember, void
 
-    fileprivate var palette: (Color, Color, Color) {
+    /// Sky top, sky bottom, ground, sun.
+    fileprivate var palette: (Color, Color, Color, Color) {
         switch self {
-        case .dusk: (Color(hex: 0x31233b), Color(hex: 0x34211b), Color(hex: 0x151512))
-        case .violet: (Color(hex: 0x281e38), Color(hex: 0x4a2941), Color(hex: 0x121311))
-        case .gold: (Color(hex: 0x56434a), Color(hex: 0x7b4d2d), Color(hex: 0x1b1913))
-        case .void: (Color(hex: 0x19151f), Color(hex: 0x2c1a39), Color(hex: 0x0c0c0d))
+        case .meadow: (Color(hex: 0x1c3440), Color(hex: 0x2f5136), Color(hex: 0x10150f), Color(hex: 0xe9c46a))
+        case .sand: (Color(hex: 0x3d3340), Color(hex: 0x8a6a45), Color(hex: 0x1a1711), Color(hex: 0xf2d8a7))
+        case .violet: (Color(hex: 0x281e38), Color(hex: 0x4a2941), Color(hex: 0x121311), Color(hex: 0xe99a61))
+        case .steel: (Color(hex: 0x16202f), Color(hex: 0x2c3d57), Color(hex: 0x0f1114), Color(hex: 0xcfd9e6))
+        case .ember: (Color(hex: 0x56434a), Color(hex: 0x7b4d2d), Color(hex: 0x1b1913), Color(hex: 0xe99a61))
+        case .void: (Color(hex: 0x19151f), Color(hex: 0x2c1a39), Color(hex: 0x0c0c0d), Color(hex: 0xe99a61))
         }
     }
 }
@@ -122,9 +125,11 @@ extension LibraryInstance {
     var previewVariant: PreviewVariant {
         if minecraftVersion.range(of: #"^\d+\.\d+(\.\d+)?$"#, options: .regularExpression) == nil { return .void }
         switch loader {
-        case .vanilla: return .dusk
-        case .fabric, .quilt: return .violet
-        default: return .gold
+        case .vanilla: return .meadow
+        case .fabric: return .sand
+        case .quilt: return .violet
+        case .forge: return .steel
+        case .neoforge: return .ember
         }
     }
 }
@@ -158,9 +163,20 @@ private struct PreviewTree: View {
 /// Instance artwork: hard-horizon gradient, sun and three trees, as in the prototype.
 struct InstancePreview: View {
     let variant: PreviewVariant
+    /// The instance name: the same name always gets the same scene, two names rarely the same one.
+    var seed = ""
+
+    /// Mirrored or not, and where the sun stands (as fractions of the width and the height).
+    private var layout: (flipped: Bool, sunX: CGFloat, sunY: CGFloat) {
+        guard !seed.isEmpty else { return (false, 0.16, 0.22) }
+        var hash: UInt32 = 5381
+        for byte in seed.utf8 { hash = hash &* 33 &+ UInt32(byte) }
+        return (hash % 2 == 1, 0.12 + CGFloat((hash / 2) % 30) / 100, 0.14 + CGFloat((hash / 60) % 22) / 100)
+    }
 
     var body: some View {
-        let (top, mid, ground) = variant.palette
+        let (top, mid, ground, sun) = variant.palette
+        let layout = layout
         GeometryReader { proxy in
             let w = proxy.size.width, h = proxy.size.height
             ZStack {
@@ -174,17 +190,57 @@ struct InstancePreview: View {
                     startPoint: UnitPoint(x: 0.454, y: -0.223),
                     endPoint: UnitPoint(x: 0.546, y: 1.223)
                 )
-                Circle()
-                    .fill(Color(hex: 0xe99a61))
-                    .frame(width: 35, height: 35)
-                    .shadow(color: Color(hex: 0xe99a61, opacity: 0.5), radius: 15)
-                    .position(x: w - 0.16 * w - 17.5, y: 0.22 * h + 17.5)
-                PreviewTree(scale: 1).position(x: w - 0.12 * w - 4, y: h - 27.5)
-                PreviewTree(scale: 0.75).position(x: w - 0.33 * w - 4, y: h - 27.5)
-                PreviewTree(scale: 0.55).position(x: 0.20 * w + 4, y: h - 27.5)
+                ZStack {
+                    Circle()
+                        .fill(sun)
+                        .frame(width: 35, height: 35)
+                        .shadow(color: sun.opacity(0.5), radius: 15)
+                        .position(x: w - layout.sunX * w - 17.5, y: layout.sunY * h + 17.5)
+                    PreviewTree(scale: 1).position(x: w - 0.12 * w - 4, y: h - 27.5)
+                    PreviewTree(scale: 0.75).position(x: w - 0.33 * w - 4, y: h - 27.5)
+                    PreviewTree(scale: 0.55).position(x: 0.20 * w + 4, y: h - 27.5)
+                }
+                .scaleEffect(x: layout.flipped ? -1 : 1, y: 1)
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
+        .accessibilityHidden(true)
+    }
+}
+
+/// What an instance looks like on its cards: the player's own cover when there is one, otherwise the drawn
+/// scene in the loader's colours, with the modpack icon on it when the instance came from a modpack.
+struct InstanceCover: View {
+    let instance: LibraryInstance
+    var cornerRadius: CGFloat = 11
+
+    @EnvironmentObject private var app: AppState
+    @ObservedObject private var art = InstanceArtStore.shared
+
+    var body: some View {
+        Group {
+            if let cover = art.picture(.cover, instance: instance.name) {
+                Color.clear
+                    .overlay(Image(decorative: cover, scale: 1).resizable().scaledToFill())
+                    .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            } else {
+                InstancePreview(variant: instance.previewVariant, seed: instance.name)
+                    .overlay(alignment: .bottomLeading) {
+                        if let icon = art.picture(.icon, instance: instance.name) {
+                            Image(decorative: icon, scale: 1)
+                                .resizable()
+                                .interpolation(.high)
+                                .scaledToFill()
+                                .frame(width: 52, height: 52)
+                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Theme.white16, lineWidth: 1))
+                                .shadow(color: Theme.black50, radius: 8, y: 3)
+                                .padding(12)
+                        }
+                    }
+            }
+        }
+        .task(id: instance.name) { await art.refresh(instance: instance.name, store: app.store) }
         .accessibilityHidden(true)
     }
 }
@@ -305,7 +361,7 @@ struct InstanceCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            InstancePreview(variant: instance.previewVariant)
+            InstanceCover(instance: instance)
                 .frame(height: 150)
                 .overlay(alignment: .topLeading) {
                     HStack(spacing: 6) {

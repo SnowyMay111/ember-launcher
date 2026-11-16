@@ -32,6 +32,8 @@ struct RootView: View {
                             screen
                                 .frame(maxWidth: app.screen == .play || app.screen == .library ? .infinity : 1120)
                                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                                .modifier(ScreenFadeIn())
+                                .id(app.screen)
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                         .overlay(alignment: .top) { UpdateNotice() }
@@ -42,6 +44,9 @@ struct RootView: View {
             }
         }
         .ignoresSafeArea()
+        // While a dialog is open the screen behind it takes no keyboard focus, no shortcuts and no VoiceOver cursor.
+        .disabled(app.modal != nil)
+        .accessibilityHidden(app.modal != nil)
         .overlay {
             modalLayer
                 .animation(reduceMotion ? nil : .easeInOut(duration: 0.28), value: app.modal != nil)
@@ -91,8 +96,8 @@ struct RootView: View {
     @ViewBuilder private var modalLayer: some View {
         if let modal = app.modal {
             ZStack {
-                Color.black.opacity(0.62)
-                    .background(.ultraThinMaterial)
+                // Dimmed, not blurred: the screen behind the dialog stays recognisable.
+                Theme.black55
                     .ignoresSafeArea()
                     .contentShape(Rectangle())
                     .onTapGesture {}
@@ -138,6 +143,7 @@ struct RootView: View {
                 }
             }
             .transition(.opacity)
+            .accessibilityAddTraits(.isModal)
         }
     }
 
@@ -152,5 +158,23 @@ struct RootView: View {
         case .skins: SkinsScreen()
         case .profile: ProfileScreen()
         }
+    }
+}
+
+/// The new screen fades in quickly on its own. The old one is already gone, so the two never overlap.
+private struct ScreenFadeIn: ViewModifier {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Local private var shown = false
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(shown ? 1 : 0)
+            .onAppear {
+                if reduceMotion {
+                    shown = true
+                } else {
+                    withAnimation(.easeOut(duration: 0.12)) { shown = true }
+                }
+            }
     }
 }

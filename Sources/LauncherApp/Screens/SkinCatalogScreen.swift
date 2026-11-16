@@ -159,6 +159,7 @@ struct SkinCatalogScreen: View {
                                     .foregroundColor(Theme.textMuted)
                             }
                             .buttonStyle(.plain)
+                            .accessibilityLabel(L("Clear"))
                         }
                     }
                     .padding(.horizontal, 14)
@@ -438,7 +439,8 @@ private struct CatalogSkinRow: View {
                         .clipShape(Circle())
                 }
                 .buttonStyle(.plain)
-                .help("Add directly to wardrobe")
+                .help(L("Add directly to wardrobe"))
+                .accessibilityLabel(L("Add directly to wardrobe"))
             }
             .padding(10)
             .background(isSelected ? Theme.elevated : Theme.surface)

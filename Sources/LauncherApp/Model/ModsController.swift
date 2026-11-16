@@ -559,6 +559,7 @@ final class ModsController: ObservableObject {
                 publishToLobby(instance: name)
             case .modpack:
                 let report = try await content.createInstance(fromModpack: hit.projectId, gameVersion: modpackGameVersion, loader: modpackLoader)
+                await InstanceArtStore.shared.savePackIcon(from: hit.iconURL, instance: report.instanceName, store: app.store)
                 app.reload()
                 app.currentID = report.instanceName
                 app.screen = .play
@@ -640,6 +641,7 @@ final class ModsController: ObservableObject {
         defer { busy.remove(hit.projectId) }
         do {
             let report = try await content.createInstance(fromPreview: preview, excludedPaths: excludedPaths)
+            await InstanceArtStore.shared.savePackIcon(from: hit.iconURL, instance: report.instanceName, store: app.store)
             self.preview = nil
             closePreview()
             app.reload()

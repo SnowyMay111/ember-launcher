@@ -77,6 +77,7 @@ struct ModCard<Actions: View>: View {
                 open()
             }
         }
+        .accessibilityAction(named: L("Details")) { onOpen?() }
     }
 
     @ViewBuilder

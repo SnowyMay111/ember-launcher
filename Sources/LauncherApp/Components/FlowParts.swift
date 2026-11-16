@@ -63,10 +63,12 @@ struct ChoiceCard: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
 
                     Text(tr: subtitle)
-                        .style(.init(size: 10, color: Color(hex: 0x676168)))
+                        .style(.init(size: 12, color: Color(hex: 0x8a838a)))
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
-            .frame(minHeight: 78)
+            .frame(minHeight: 50, alignment: .top)
             .padding(13)
             .background(isSelected ? Color(hex: 0x211b22) : Color(hex: 0x171517))
             .overlay(

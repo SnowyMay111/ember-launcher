@@ -153,6 +153,9 @@ struct ModpackPreviewPanel: View {
         .overlay(alignment: .top) { hairline }
         .contentShape(Rectangle())
         .onTapGesture { mods.toggle(entry) }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
+        .accessibilityAction { mods.toggle(entry) }
     }
 
     private func checkbox(selected: Bool) -> some View {

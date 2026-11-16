@@ -38,7 +38,7 @@ struct InstanceDetailPanel: View {
             .padding(.bottom, 20)
 
             // Hero preview
-            InstancePreview(variant: instance.previewVariant)
+            InstanceCover(instance: instance, cornerRadius: 13)
                 .frame(height: 150)
                 .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
                 .padding(.horizontal, 22)

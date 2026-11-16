@@ -2,7 +2,6 @@ import SwiftUI
 
 public struct SidebarNavigation: View {
     @EnvironmentObject private var app: AppState
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ObservedObject private var invites = InvitesStore.shared
 
     public var compact: Bool
@@ -56,7 +55,7 @@ public struct SidebarNavigation: View {
                 navButton(
                     screen: .mods,
                     title: L("Explore"),
-                    systemName: "arrow.down.to.line",
+                    systemName: "puzzlepiece.extension",
                     shortcutKey: "4"
                 )
 
@@ -103,17 +102,9 @@ public struct SidebarNavigation: View {
             isSelected: app.screen == screen,
             showsBadge: showsBadge
         ) {
-            switchScreen(to: screen)
-        }
-    }
-
-    private func switchScreen(to screen: Screen) {
-        if reduceMotion {
+            // No animation on the screen itself: a cross-fade shows the old and the new screen at once.
+            // Only the button highlight animates (see `SidebarNavButton`).
             app.screen = screen
-        } else {
-            withAnimation(.easeOut(duration: 0.25)) {
-                app.screen = screen
-            }
         }
     }
 }
@@ -126,6 +117,7 @@ private struct SidebarNavButton: View {
     var showsBadge: Bool = false
     let action: () -> Void
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Local private var isHovered: Bool = false
     @FocusState private var isFocused: Bool
 
@@ -157,6 +149,7 @@ private struct SidebarNavButton: View {
                             .padding(10)
                     }
                 }
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: isSelected)
         }
         .buttonStyle(SidebarNavButtonStyle())
         .focused($isFocused)

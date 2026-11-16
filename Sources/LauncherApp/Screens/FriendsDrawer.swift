@@ -15,6 +15,9 @@ struct FriendsDrawer: View {
                         app.friendsDrawerOpen = false
                     }
                 }
+                .accessibilityLabel(L("Close"))
+                .accessibilityAddTraits(.isButton)
+                .accessibilityAction { app.friendsDrawerOpen = false }
 
             // Drawer container
             VStack(spacing: 0) {

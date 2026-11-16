@@ -40,6 +40,8 @@ struct EmberModal<Content: View, Footer: View>: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(L("Close"))
+                // Esc closes every dialog on every step, also where the footer has "Back" instead of "Cancel".
+                .keyboardShortcut(.cancelAction)
             }
             .padding(.top, 25)
             .padding(.horizontal, 27)
@@ -100,7 +102,7 @@ struct ModalField<Content: View>: View {
     }
 }
 
-/// Cancel button; Esc triggers it too.
+/// Cancel button. Esc belongs to the dialog's close button, so it works with or without this one.
 struct ModalCancel: View {
     @EnvironmentObject var app: AppState
     var title = "Cancel"
@@ -122,7 +124,6 @@ struct ModalCancel: View {
         .buttonStyle(.plain)
         .contentShape(Rectangle())
         .onHover { isHovered = $0 }
-        .keyboardShortcut(.cancelAction)
     }
 }
 

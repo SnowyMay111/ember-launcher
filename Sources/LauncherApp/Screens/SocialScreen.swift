@@ -4,6 +4,7 @@ import LauncherCore
 struct SocialScreen: View {
     @EnvironmentObject var app: AppState
     @EnvironmentObject var store: FriendsStore
+    @EnvironmentObject var ember: EmberAccountStore
     @EnvironmentObject var settings: SettingsStore
     @EnvironmentObject var play: PlayController
     @ObservedObject private var lobbyStore = LobbyStore.shared
@@ -16,6 +17,38 @@ struct SocialScreen: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
+        Group {
+            if ember.isSignedIn {
+                signedInBody
+            } else {
+                // Friends, lobbies and invitations all need the account, so one clear step replaces three empty panels.
+                EmptyState(
+                    systemImage: "person.2",
+                    title: L("Play with friends"),
+                    message: L("Sign in to your Ember account to add friends, see their lobbies and get invitations."),
+                    actionTitle: L("Sign in to Ember")
+                ) { app.modal = .emberSignIn }
+            }
+        }
+        // Runs again right after sign-in, so the lists do not wait for the next timed refresh.
+        .task(id: ember.isSignedIn) {
+            guard ember.isSignedIn else { return }
+            InvitesStore.shared.markAllSeen()
+            await FriendsStore.shared.refresh()
+        }
+        .onAppear { LobbyStore.shared.beginBrowsing() }
+        .onDisappear { LobbyStore.shared.endBrowsing() }
+        .onChange(of: invitesStore.invites.map(\.lobbyID)) { _, _ in
+            InvitesStore.shared.markAllSeen()
+        }
+        .onChange(of: store.message) { _, message in
+            guard pendingFriendTag != nil, let message else { return }
+            pendingFriendTag = nil
+            toasts.show(message, kind: .info)
+        }
+    }
+
+    private var signedInBody: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(alignment: .leading, spacing: 24) {
                 // Intro header
@@ -61,20 +94,6 @@ struct SocialScreen: View {
             }
             .padding(.horizontal, 56)
             .padding(.bottom, 48)
-        }
-        .task {
-            InvitesStore.shared.markAllSeen()
-            await FriendsStore.shared.refresh()
-        }
-        .onAppear { LobbyStore.shared.beginBrowsing() }
-        .onDisappear { LobbyStore.shared.endBrowsing() }
-        .onChange(of: invitesStore.invites.map(\.lobbyID)) { _, _ in
-            InvitesStore.shared.markAllSeen()
-        }
-        .onChange(of: store.message) { _, message in
-            guard pendingFriendTag != nil, let message else { return }
-            pendingFriendTag = nil
-            toasts.show(message, kind: .info)
         }
     }
 
@@ -133,47 +152,26 @@ struct SocialScreen: View {
 
             VStack(spacing: 12) {
                 if lobbyStore.visible.isEmpty {
-                    Text(verbatim: L("No lobbies from friends yet."))
-                        .font(Theme.font(size: 12, weight: .regular))
-                        .foregroundColor(Theme.textSecondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.vertical, 6)
+                    // The one "Create lobby" button is at the top of the screen; here is only the hint.
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(verbatim: L("No lobbies from friends yet."))
+                            .font(Theme.font(size: 12, weight: .regular))
+                            .foregroundColor(Theme.textSecondary)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(verbatim: L("Start from your world"))
+                                .font(Theme.font(size: 13, weight: .semibold))
+                                .foregroundColor(Theme.text)
+                            Text(verbatim: L("Friends join without changing your instance."))
+                                .font(Theme.font(size: 12, weight: .regular))
+                                .foregroundColor(Theme.textSecondary)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 6)
                 }
                 ForEach(lobbyStore.visible) { lobby in
                     lobbyCard(lobby)
                 }
-
-                // Start from your world
-                HStack(spacing: 12) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(verbatim: L("Start from your world"))
-                            .font(Theme.font(size: 13, weight: .semibold))
-                            .foregroundColor(Theme.text)
-                        Text(verbatim: L("Friends join without changing your instance."))
-                            .font(Theme.font(size: 12, weight: .regular))
-                            .foregroundColor(Theme.textSecondary)
-                    }
-
-                    Spacer()
-
-                    Button {
-                        app.modal = .lobby
-                    } label: {
-                        Text(verbatim: L("Create"))
-                            .font(Theme.font(size: 12, weight: .bold))
-                            .foregroundColor(Theme.ember)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
-                            .background(Theme.ember.opacity(0.12))
-                            .cornerRadius(6)
-                    }
-                    .buttonStyle(.plain)
-                }
-                .padding(12)
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color(red: 57/255, green: 51/255, blue: 45/255), style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
-                )
             }
             .padding(14)
         }

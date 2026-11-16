@@ -64,7 +64,7 @@ struct NewInstanceModal: View {
     /// The title shown at the top of the modal, varying by flow and state.
     private var wizardTitle: String {
         if isWorking { return "Preparing your world" }
-        if isWizard { return ["Name your adventure", "Choose a foundation", "Ready to create"][step - 1] }
+        if isWizard { return ["Choose a foundation", "Name your adventure"][step - 1] }
         return "New instance"
     }
 
@@ -100,13 +100,13 @@ struct NewInstanceModal: View {
     }
 
     var body: some View {
-        EmberModal(title: wizardTitle, eyebrow: "NEW INSTANCE") {
+        EmberModal(title: wizardTitle, eyebrow: wizardTitle == "New instance" ? nil : "New instance") {
             if isWorking {
                 FlowInstallState(title: installTitle, detail: isImporting ? importProgress : buildProgress, fraction: installFraction)
             } else {
                 VStack(alignment: .leading, spacing: 18) {
                     if isWizard {
-                        FlowStepper(step: step).frame(maxWidth: .infinity)
+                        FlowStepper(step: step, total: 2).frame(maxWidth: .infinity)
                     }
 
                     if !isWizard || step == 1 {
@@ -124,14 +124,8 @@ struct NewInstanceModal: View {
                         aiPicker
                     }
 
+                    // Step 1: loader and version. Step 2: name (its placeholder comes from step 1), group, summary.
                     if mode == .custom && step == 1 {
-                        ModalField(label: "Instance name") {
-                            EmberInput(label: "Name", text: $name, placeholder: namePlaceholder)
-                        }
-                        NamePreviewCard(name: displayName)
-                    }
-
-                    if mode == .custom && step == 2 {
                         LazyVGrid(columns: [GridItem(.flexible(), spacing: 9), GridItem(.flexible(), spacing: 9)], spacing: 9) {
                             ForEach(LoaderKind.allCases, id: \.self) { kind in
                                 ChoiceCard(title: kind.rawValue, subtitle: Self.loaderNotes[kind] ?? "", isSelected: loader == kind) {
@@ -142,16 +136,18 @@ struct NewInstanceModal: View {
                         versionMenu
                     }
 
-                    if mode == .custom && step == 3 {
-                        SummaryCard(rows: [
-                            ("NAME", displayName),
-                            ("VERSION", "Minecraft " + version),
-                            ("LOADER", loader.rawValue),
-                            ("MEMORY", "\(Int(settings.memoryGB)) GB")
-                        ])
+                    if mode == .custom && step == 2 {
+                        ModalField(label: "Instance name") {
+                            EmberInput(label: "Name", text: $name, placeholder: namePlaceholder)
+                        }
                         ModalField(label: "Group") {
                             GroupPicker(group: $group)
                         }
+                        SummaryCard(rows: [
+                            ("Version", "Minecraft " + version),
+                            ("Loader", loader.rawValue),
+                            ("Memory", "\(Int(settings.memoryGB)) GB")
+                        ])
                     }
 
                     if !isWizard && showsNameAndGroup {
@@ -186,8 +182,8 @@ struct NewInstanceModal: View {
                     FlowTextButton(title: "Back") { step -= 1 }
                 }
                 Spacer()
-                FlowPrimaryButton(title: step == 3 ? "Create instance →" : "Continue →", isDisabled: step >= 2 && version.isEmpty) {
-                    if step < 3 {
+                FlowPrimaryButton(title: step == 2 ? "Create instance →" : "Continue →", isDisabled: version.isEmpty) {
+                    if step < 2 {
                         step += 1
                     } else {
                         create()

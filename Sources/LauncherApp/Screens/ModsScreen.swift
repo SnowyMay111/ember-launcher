@@ -7,6 +7,7 @@ struct ModsScreen: View {
     @ObservedObject private var lobbyRoom = LobbyRoom.shared
     @StateObject private var mods: ModsController
     @Local private var query = ""
+    @Local private var installedQuery = ""
     @Local private var confirmingRemove: String?
     @Local private var searchTask: Task<Void, Never>?
     @Local private var queue: [ModrinthHit] = []
@@ -127,6 +128,7 @@ struct ModsScreen: View {
         }
         .onChange(of: app.currentID) { _, _ in
             queue = []
+            installedQuery = ""
             mods.reload()
             runSearch(delay: 0)
             Task { await mods.autoCheckUpdates() }
@@ -134,6 +136,7 @@ struct ModsScreen: View {
         .onChange(of: query) { _, _ in runSearch(delay: 350) }
         .onChange(of: mods.kind) { _, _ in
             queue = []
+            installedQuery = ""
             runSearch(delay: 0)
         }
         .onChange(of: mods.sort) { _, _ in runSearch(delay: 0) }
@@ -240,12 +243,32 @@ struct ModsScreen: View {
             }
             .padding(.horizontal, 18)
             .padding(.vertical, 14)
+            if showsInstalledSearch {
+                SearchField(placeholder: "Search in this build", text: $installedQuery, compact: true, fill: true)
+                    .padding(.horizontal, 18)
+                    .padding(.bottom, 14)
+            }
             hairline
             ScrollView {
                 LazyVStack(spacing: 0) { buildRows }
                     .padding(.bottom, queue.isEmpty ? 6 : 90)
             }
         }
+    }
+
+    /// Long lists only: a short one is quicker to scan than to search.
+    private var showsInstalledSearch: Bool {
+        guard app.current != nil else { return false }
+        switch mods.kind {
+        case .modpack: return false
+        case .mod: return mods.installed.count > 8
+        default: return mods.contentRecords.filter { $0.kind == mods.kind }.count > 8
+        }
+    }
+
+    private func matchesInstalledQuery(_ title: String) -> Bool {
+        let text = installedQuery.trimmingCharacters(in: .whitespaces)
+        return !showsInstalledSearch || text.isEmpty || title.localizedCaseInsensitiveContains(text)
     }
 
     @ViewBuilder
@@ -257,12 +280,22 @@ struct ModsScreen: View {
         } else {
             ForEach(queue, id: \.projectId) { queuedRow($0) }
             if mods.kind == .mod {
-                ForEach(mods.installed) { installedRow($0) }
-                if mods.installed.isEmpty, queue.isEmpty { buildNote("Nothing here yet. Add the first one from the right.") }
+                let shown = mods.installed.filter { matchesInstalledQuery($0.displayTitle) }
+                ForEach(shown) { installedRow($0) }
+                if mods.installed.isEmpty {
+                    if queue.isEmpty { buildNote("Nothing here yet. Add the first one from the right.") }
+                } else if shown.isEmpty {
+                    buildNote("Nothing found.")
+                }
             } else {
                 let records = mods.contentRecords.filter { $0.kind == mods.kind }
-                ForEach(records, id: \.fileName) { contentRow($0) }
-                if records.isEmpty, queue.isEmpty { buildNote("Nothing here yet. Add the first one from the right.") }
+                let shown = records.filter { matchesInstalledQuery($0.title) }
+                ForEach(shown, id: \.fileName) { contentRow($0) }
+                if records.isEmpty {
+                    if queue.isEmpty { buildNote("Nothing here yet. Add the first one from the right.") }
+                } else if shown.isEmpty {
+                    buildNote("Nothing found.")
+                }
             }
         }
     }
@@ -288,7 +321,11 @@ struct ModsScreen: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(verbatim: title).style(.init(size: 14, weight: .semibold)).lineLimit(1)
                 if !subtitle.isEmpty {
-                    Text(verbatim: subtitle).style(.init(size: 12, color: subtitleColor)).lineLimit(1)
+                    // Two lines and a cut in the middle: a long version keeps both its start and its end.
+                    Text(verbatim: subtitle).style(.init(size: 12, color: subtitleColor))
+                        .lineLimit(2)
+                        .truncationMode(.middle)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
             Spacer(minLength: 8)
@@ -485,7 +522,16 @@ struct ModsScreen: View {
                 }
             }
             .padding(.vertical, 2)
+            .padding(.trailing, 40)
         }
+        // The right edge fades out, so a chip cut in half reads as "scroll for more".
+        .mask(
+            HStack(spacing: 0) {
+                Rectangle()
+                LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing)
+                    .frame(width: 40)
+            }
+        )
     }
 
     private var clearCategoriesButton: some View {
@@ -681,6 +727,9 @@ struct ModsScreen: View {
         .overlay(alignment: .top) { hairline }
         .contentShape(Rectangle())
         .onTapGesture {
+            if kind == .modpack { Task { await mods.openPreview(hit) } } else { app.modal = .modProject(hit) }
+        }
+        .accessibilityAction(named: L("Details")) {
             if kind == .modpack { Task { await mods.openPreview(hit) } } else { app.modal = .modProject(hit) }
         }
     }

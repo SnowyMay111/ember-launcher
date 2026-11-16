@@ -274,6 +274,9 @@ private struct DropdownRow: View {
                 }
             }
             .onTapGesture(perform: run)
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction(.default, run)
             .background(
                 GeometryReader { proxy in
                     Color.clear.onAppear {

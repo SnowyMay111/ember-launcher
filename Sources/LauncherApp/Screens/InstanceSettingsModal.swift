@@ -4,6 +4,7 @@ import SwiftUI
 struct InstanceSettingsModal: View {
     @EnvironmentObject var app: AppState
     @EnvironmentObject var player: PlayController
+    @ObservedObject private var art = InstanceArtStore.shared
 
     let instance: LibraryInstance
 
@@ -48,8 +49,20 @@ struct InstanceSettingsModal: View {
                 ModalField(label: "Name") {
                     EmberInput(label: "Name", text: $name)
                 }
-                ModalField(label: "Group") {
-                    GroupPicker(group: $group)
+                // One row for both: the dialog is already as tall as a small window.
+                HStack(alignment: .top, spacing: 18) {
+                    ModalField(label: "Group") {
+                        GroupPicker(group: $group)
+                    }
+                    ModalField(label: "Cover") {
+                        HStack(spacing: 10) {
+                            SecondaryPill(title: "Choose image…", action: chooseCover)
+                            if art.picture(.cover, instance: instance.name) != nil {
+                                SecondaryPill(title: "Remove", action: removeCover)
+                            }
+                        }
+                        .disabled(art.isSavingCover)
+                    }
                 }
                 ModalField(label: "Memory") {
                     EmberSlider(label: "Memory", value: $memoryGB, range: memoryRange, valueText: L("%d GB", Int(memoryGB)))
@@ -110,6 +123,7 @@ struct InstanceSettingsModal: View {
             ModalCancel()
             PrimaryPill(title: "Save", action: save)
         }
+        .task { await art.refresh(instance: instance.name, store: app.store) }
     }
 
     private func save() {
@@ -153,6 +167,34 @@ struct InstanceSettingsModal: View {
         case .tunedG1GC: return L("Balanced (G1)")
         case .zeroStutterZGC: return L("Low pause (ZGC)")
         case .none: return L("Launcher default")
+        }
+    }
+
+    private func chooseCover() {
+        let panel = NSOpenPanel()
+        panel.title = L("Choose image…")
+        panel.allowedContentTypes = [.image]
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        errorText = ""
+        Task {
+            do {
+                try await art.setCover(from: url, instance: instance.name, store: app.store)
+            } catch {
+                errorText = error.localizedDescription
+            }
+        }
+    }
+
+    private func removeCover() {
+        errorText = ""
+        Task {
+            do {
+                try await art.removeCover(instance: instance.name, store: app.store)
+            } catch {
+                errorText = error.localizedDescription
+            }
         }
     }
 

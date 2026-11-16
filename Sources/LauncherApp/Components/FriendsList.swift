@@ -58,6 +58,7 @@ struct FriendsList: View {
                         store.message = nil
                     }
                     .contentShape(Rectangle())
+                    .accessibilityAction(named: L("Dismiss")) { store.message = nil }
             }
 
             if !store.incoming.isEmpty {
@@ -216,6 +217,7 @@ private struct FriendListRow: View {
         .contentShape(Rectangle())
         .onHover { isHovered = $0 }
         .onTapGesture { showCard = true }
+        .accessibilityAction(named: L("Profile")) { showCard = true }
         .popover(isPresented: $showCard, arrowEdge: .trailing) {
             friendCard
         }

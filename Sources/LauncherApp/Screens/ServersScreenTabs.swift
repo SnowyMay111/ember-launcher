@@ -204,6 +204,7 @@ struct ServerPlayersTab: View {
                                     .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
+                            .accessibilityLabel(L("Remove") + " " + player.name)
                             .help(L("Remove"))
                         }
                         .padding(.leading, 12)

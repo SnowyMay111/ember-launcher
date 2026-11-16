@@ -895,5 +895,12 @@
   "Open Social center →": "Відкрити «Друзі» →",
   "Unknown player": "Невідомий гравець",
   "Welcome home.": "З поверненням додому.",
-  "Your Profile": "Ваш профіль"
+  "Your Profile": "Ваш профіль",
+  "Search in this build": "Пошук у цій збірці",
+  "Play with friends": "Грайте з друзями",
+  "Sign in to your Ember account to add friends, see their lobbies and get invitations.": "Увійдіть в акаунт Ember, щоб додавати друзів, бачити їхні лобі та отримувати запрошення.",
+  "Cover": "Обкладинка",
+  "Choose image…": "Вибрати…",
+  "Couldn't read that picture.": "Не вдалося прочитати цю картинку.",
+  "Add directly to wardrobe": "Додати одразу до гардероба"
 }

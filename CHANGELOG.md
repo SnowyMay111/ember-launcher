@@ -3,6 +3,25 @@
 All notable changes to Ember.
 Versions follow [Semantic Versioning](https://semver.org); downloads are on the [Releases](https://github.com/SnowyMay111/ember-launcher/releases) page.
 
+## [Unreleased]
+
+### Added
+- Instance covers: every loader has its own colours, each instance its own scene, an instance made from a Modrinth modpack shows the pack's icon, and Instance settings → Cover puts your own picture on the card.
+- Explore: search inside "In this build", so a pack with hundreds of mods is easy to look through.
+
+### Changed
+- One header per screen, in the top bar; labels in normal case and from 12 pt, with the mono font kept for numbers and versions.
+- New instance takes two steps instead of three: loader and version first, then the name and group.
+- Dialogs dim the screen behind them instead of blurring it away, and Esc closes a dialog on any step.
+- Switching screens no longer shows the old and the new screen on top of each other.
+- Social without an account is one sign-in screen instead of three empty panels; "Create lobby" is one button.
+- Explore: long mod versions wrap instead of being cut, the category strip fades out where it continues, and the section has a new icon.
+- Instance cards: no "0 mods" on Vanilla and no playtime before the first minute; memory presets and skin names are clearer.
+
+### Fixed
+- While a dialog is open the screen behind it no longer takes keyboard focus or shortcuts, and VoiceOver stays in the dialog.
+- VoiceOver: menu rows, list rows that open details, and icon-only buttons now have names and actions.
+
 ## [0.4.6] - 2026-11-12
 
 ### Changed

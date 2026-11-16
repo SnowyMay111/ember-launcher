@@ -8,6 +8,8 @@ struct SearchField: View {
     @Binding var text: String
     /// Toolbar look of the prototype's `.search-field`: 280×42, 13 pt text.
     var compact = false
+    /// Takes the whole width of its container instead of the fixed toolbar width.
+    var fill = false
     @FocusState private var focused: Bool
     @Local private var isHovered = false
 
@@ -26,7 +28,8 @@ struct SearchField: View {
                 .accessibilityLabel(L(placeholder))
         }
         .padding(.horizontal, compact ? 13 : 14)
-        .frame(width: compact ? 280 : 260, height: compact ? 42 : 40)
+        .frame(width: fill ? nil : (compact ? 280 : 260), height: compact ? 42 : 40)
+        .frame(maxWidth: fill ? .infinity : nil)
         .background(
             RoundedRectangle(cornerRadius: radius, style: .continuous)
                 .fill(compact ? Color(hex: 0x10100f) : Theme.elevated)
@@ -377,6 +380,6 @@ struct EmberCheckbox: View {
         .opacity(isEnabled ? 1.0 : 0.45)
         .animation(.easeInOut(duration: 0.18), value: isHovered)
         .accessibilityLabel(L(label))
-        .accessibilityValue(isOn ? "on" : "off")
+        .accessibilityValue(isOn ? L("On") : L("Off"))
     }
 }
